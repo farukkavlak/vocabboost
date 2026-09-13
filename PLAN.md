@@ -379,18 +379,26 @@ BERT-bases, around 220M parameters, and ours has to fit in a browser at a tenth 
 Expect to land below 79.0. The number to beat is 65.5.
 
 - [ ] Read the bi-encoder paper and its code before writing any
-- [ ] Run `all-MiniLM-L6-v2` locally through `sentence-transformers`
-- [ ] Embed the line, embed every sense, take the nearest
-- [ ] Measure against phase 10, on the 150, never the 50
-- [ ] Measure whether the right sense is first, in the top three, and in the top five.
-      The card shows more than one, so a near miss still reaches the reader, and how
-      many it should show is a question these numbers answer rather than we do.
+- [x] Run the model locally through `sentence-transformers`
+- [x] Embed the line, embed every sense, take the nearest
+- [x] Measure against phase 10, on the 149, never the 51. 51.0% against a baseline of
+      45.6%, with no training at all.
+- [x] Measure whether the right sense is first, in the top three, and in the top five.
+      81.2% and 89.9%, so the card should list three and the gain is far larger than
+      the top-one figure suggests.
+- [x] Try more than one way of writing a sense down. Its examples beat its definition
+      by seven points, because the definitions are abstract and the question is a line
+      somebody spoke.
 - [ ] Look at 20 failures by hand and write down what kind they are. A wrong sense
       next door to the right one is not the same mistake as a wrong sense from another
       part of the language, and the two should not be counted together.
 
-**Exit:** accuracy with no training at all. This is usually well above the baseline, which
-is worth seeing before spending a week on training.
+**Exit:** accuracy with no training at all, and it is 51.0% against 45.6%. Worth seeing
+before spending a week on training.
+
+It comes with a catch. The model that scores 51% has 110M parameters and will not fit in
+a browser; the 22M one lands at 45.6%, level with the baseline and no better. Phase 14 has
+to close that gap, and now it has a number to close it to.
 
 ### 13 — `research/dataset`
 

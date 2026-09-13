@@ -181,3 +181,47 @@ people deciding what they could not distinguish, not derived from the graph.
 
 So: no clustering for now. Revisit it in phase 12, when a gloss encoder exists and
 can be asked the same question — it may see a likeness that word overlap cannot.
+
+## Phase 12 — embeddings, with no training
+
+An embedding model turns text into a list of numbers arranged so that close meanings
+land close together. Nothing here is trained on sense picking. The model has only seen
+English; we ask whether that alone beats showing the first sense in the dictionary.
+
+Best run: `all-mpnet-base-v2`, each sense represented by its definition and its example
+sentences, the target word written in front of the line.
+
+| band     | lines | first | first 3 | first 5 |
+| -------- | ----: | ----: | ------: | ------: |
+| everyday |    50 | 36.0% |   70.0% |   82.0% |
+| common   |    50 | 56.0% |   92.0% |   96.0% |
+| uncommon |    49 | 61.2% |   81.6% |   91.8% |
+| **all**  |   149 | 51.0% |   81.2% |   89.9% |
+
+51.0% against a baseline of 45.6%, without a single training step.
+
+### What moved the number
+
+| change                                           | effect      |
+| ------------------------------------------------ | ----------- |
+| represent a sense by its examples, not its gloss | 38.3 → 45.0 |
+| write the target word in front of the line       | 45.0 → 45.6 |
+| a 110M model instead of a 22M one                | 45.6 → 51.0 |
+
+Examples beat definitions by seven points, which is what the labelling turned up too:
+WordNet's definitions are dry and abstract — "the dark part of the diurnal cycle" —
+while its examples are how people speak, and the question we ask is a line somebody
+spoke.
+
+### The number that matters for the card
+
+The right sense is first 51% of the time, in the top three 81%, in the top five 90%.
+Show three senses and four readers in five see the right meaning on screen. That
+settles how many the card lists, and it is a far larger gain than the top-one figure
+suggests.
+
+### The problem it leaves
+
+The model that scores 51% has 110M parameters and is too heavy for a browser. The 22M
+one reached 45.6%, level with the baseline and no better. Closing that gap is what
+phase 14 is for: train the small model until it answers like the large one.
