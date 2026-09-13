@@ -288,20 +288,21 @@ provider. That is a real outcome, not a failure.
 **Learn:** what a test set is, why it is built before anything else, how accuracy is
 measured, and why the model must never see the test set while it is being trained.
 
-- [ ] `research/` with a Python environment and a `Makefile`
-- [ ] 200 lines pulled from OpenSubtitles, each with one word worth a lookup, spread
+- [x] `research/` with a Python environment and a `Makefile`
+- [x] 200 lines pulled from OpenSubtitles, each with one word worth a lookup, spread
       evenly over three frequency bands so the everyday words that carry the most
       meanings are not left out
-- [ ] Mark the right sense for each by hand, choosing from the sense list
-- [ ] Split them: 150 to work with, 50 sealed until phase 17
-- [ ] Measure how often "just show the first sense" is right, per band and overall
+- [x] Mark the right sense for each by hand, choosing from the sense list
+- [x] Split them: 149 to work with, 51 sealed until phase 17
+- [x] Measure how often "just show the first sense" is right, per band and overall.
+      45.6% overall, and 36.0% on the everyday words a beginner is likeliest to click.
 - [ ] Relabel 30 of them blind, days later, and measure how often you agree with
       yourself. No model can be judged past that number.
 - [ ] Run the phase 13 panel of models over the same 200 lines and compare it to the
       hand labels. How often a unanimous panel matches a person is what says whether
       phase 13 may label ten thousand lines without us reading them.
 
-**Exit:** one number. Every later phase is compared to it.
+**Exit:** one number, and it is 45.6%. Every later phase is compared to it.
 
 Doing this first is the whole discipline. Without it there is no way to tell an improvement
 from a change.
