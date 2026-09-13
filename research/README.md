@@ -64,6 +64,13 @@ with and without the doubtful lines.
 run time. If the line does not settle which meaning it is, neither of you can know,
 and `n` is the honest answer rather than a guess.
 
+**`n` and `x` are different answers.** `n` says the line is sound and no sense fits
+it — `club` in `club soda` carries none of its own meanings, and that is real evidence
+of the kind phase 15 learns from. `x` says the line is garbled and was never a fair
+question, so it leaves the set rather than teaching anything. Subtitle files carry
+their share of mangled text, and filing it under `n` would teach the model to
+recognise nonsense instead of ambiguity.
+
 **`make recheck` measures the ceiling.** Relabel thirty lines blind, days later, and
 see how often you agree with your earlier self. No model judged on these labels can
 honestly claim to beat that number, and a model score quoted without it means less
@@ -80,3 +87,28 @@ it. It comes with NLTK, the baseline measures ranking rather than coverage, and 
 existing hand-labelled WSD dataset uses its sense keys. Phase 11 measures WordNet and
 Wiktionary side by side and decides. Labels survive a switch, because the model
 compares the text of a sense, not its key.
+
+## Result so far
+
+Preliminary, from the first 100 lines labelled. The working set is 82 of them; the
+rest are sealed or were dropped as broken.
+
+| band     | lines | senses | guessing | first sense |
+| -------- | ----: | -----: | -------: | ----------: |
+| everyday |    33 |   10.8 |       9% |       45.5% |
+| common   |    25 |    7.0 |      14% |       64.0% |
+| uncommon |    24 |    5.6 |      18% |       45.8% |
+| **all**  |    82 |    8.1 |      12% |   **51.2%** |
+
+So the extension today shows the wrong meaning about half the time. That is four
+times better than guessing and nowhere near good enough, which is the whole reason
+for the phases that follow.
+
+Published all-words results put this baseline at 65.5 F1. Ours is lower because the
+set was built to be hard: every line has a word with at least three senses, where
+published evaluations include the single-sense words that are right for free.
+
+The everyday band is the worst of the three at 45.5%, which is the opposite of what
+you would guess. A word stays common by taking on more meanings — those lines carry
+10.8 senses each against 5.6 in the uncommon band — so the words a beginner is most
+likely to click are the ones the dictionary handles worst.

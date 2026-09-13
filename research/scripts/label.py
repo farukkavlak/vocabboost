@@ -10,6 +10,11 @@ how much noise the labels carry.
 The model will only ever see the same single line you see. If the line does not say
 which meaning it is, neither of you can know, and `n` is the honest answer.
 
+`n` and `x` are not the same. `n` means the line is fine and no sense fits it, which
+is real evidence and what phase 15 learns from — `club` in `club soda` carries none
+of its own meanings. `x` means the line is garbled and was never a fair question, so
+it leaves the set instead of teaching anything.
+
 Progress is written after every answer, so quitting halfway loses nothing. Answers
 are not final either: `--redo 4,9` reopens those lines, because reading a few more
 examples teaches you things you would like to apply to what you have already done.
@@ -26,6 +31,7 @@ HELP = """
   1        this sense
   1,3      both fit, they read the same to me
   n        no sense here fits
+  x        the line itself is broken, drop it from the set
   ?1,3     as above, but I am not sure
   s        skip for now
   q        save and quit
@@ -43,7 +49,7 @@ def show(row, done, total):
     random.Random(row["id"]).shuffle(order)
 
     text = row["text"].replace(row["word"], f"{BOLD}{row['word']}{OFF}", 1)
-    print(f"\n{DIM}{done}/{total} labelled  ·  {row['band']}{OFF}")
+    print(f"\n{DIM}{done}/{total} labelled  ·  {row['band']}  ·  id {row['id']}{OFF}")
     print(f"\n  {text}\n")
     print(f"  {BOLD}{row['lemma']}{OFF} ({row['pos']})\n")
 
@@ -72,6 +78,8 @@ def read_answer(row, order):
 
         if answer == "n":
             return [], unsure
+        if answer == "x":
+            return "broken", unsure
         picks = [p.strip() for p in answer.split(",") if p.strip()]
         if picks and all(p.isdigit() and 1 <= int(p) <= len(order) for p in picks):
             keys = [row["senses"][order[int(p) - 1]]["key"] for p in picks]
@@ -102,12 +110,17 @@ def main():
             break
         if answer == "s":
             continue
-        row["label"], row["unsure"] = answer, unsure
+        if answer == "broken":
+            row["label"], row["broken"] = [], True
+        else:
+            row["label"], row["unsure"] = answer, unsure
         save(args.file, rows)
 
     done = sum(1 for r in rows if r.get("label") is not None)
     unsure = sum(1 for r in rows if r.get("unsure"))
-    print(f"\n{done}/{total} labelled, {unsure} of them marked unsure.")
+    broken = sum(1 for r in rows if r.get("broken"))
+    print(f"\n{done}/{total} labelled, {unsure} of them marked unsure, "
+          f"{broken} dropped as broken.")
     print("Run `make label` again to carry on.\n")
 
 
