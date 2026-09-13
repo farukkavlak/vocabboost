@@ -6,3 +6,5 @@ data/vocab.db
 data/working.jsonl
 data/sealed.jsonl
 data/recheck.jsonl
+data/semcor.jsonl
+data/model/
