@@ -146,3 +146,34 @@ distinctions around 70% of the time, and that is still the ceiling. With the esc
 route closed, the remaining move is to cluster WordNet's own senses: merge the ones
 nobody can tell apart. The multiple answers accepted during phase 10 labelling are
 hand-made examples of exactly that.
+
+### Clustering senses: what did not work
+
+If the senses nobody can tell apart were merged, the ceiling would rise. The cheap
+version of that is to let WordNet find them itself, so the pairs a labeller accepted
+together were compared against the pairs they rejected, over five signals: the
+subject file a sense is filed under, two measures of distance through the is-a
+hierarchy, how much two senses share their synonyms, and how much their definitions
+share words.
+
+| nouns and verbs      | lexname | path |  wup | synonym | gloss | pairs |
+| -------------------- | ------: | ---: | ---: | ------: | ----: | ----: |
+| accepted together    |    0.50 | 0.17 | 0.39 |    0.49 |  0.06 |    16 |
+| accepted vs rejected |    0.39 | 0.16 | 0.36 |    0.48 |  0.04 |   138 |
+
+Nothing separates them. WordNet does not know which of its own senses a person cannot
+tell apart, and neither the synonyms nor the definitions give it away.
+
+Two caveats. Sixteen pairs is thin. And the signal is muddied, because two senses get
+accepted together for two different reasons: sometimes they read the same, and
+sometimes they are genuinely different and the line supports both — `only` as
+`merely` and as `exclusively`. Only the first kind is a candidate for merging, and
+the tool does not ask which is which.
+
+The idea itself is sound. OntoNotes merged WordNet senses until annotators agreed 90%
+of the time instead of 70%, and automatic disambiguation against that inventory
+reaches 87–89% where fine-grained WordNet reaches 79. But those merges were made by
+people deciding what they could not distinguish, not derived from the graph.
+
+So: no clustering for now. Revisit it in phase 12, when a gloss encoder exists and
+can be asked the same question — it may see a likeness that word overlap cannot.

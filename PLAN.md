@@ -335,14 +335,19 @@ are interjections and function words rather than slang. That keeps SemCor's 187,
 labels and the published numbers to compare against.
 
 The ceiling stays, and the way through it is to cluster WordNet's own senses rather than
-to swap the source.
+to swap the source. That is known to work when people do it: OntoNotes merged senses until
+annotators agreed 90% of the time rather than 70%, and disambiguation against the merged
+inventory reaches 87-89% where fine-grained WordNet reaches 79. Finding those merges
+automatically is the open question, and the cheap attempt at it failed.
 
 - [x] Pull the Wiktionary dump and measure both sources over 10,000 subtitle lines,
       before building anything on either
 - [ ] Build `vocab.db` (SQLite): WordNet senses where it has the word, Wiktionary for
       the rest, with word, part of speech, senses and examples
-- [ ] Cluster the senses nobody can tell apart and measure whether a person decides
-      more often against the clustered inventory than the raw one
+- [x] Try to find the senses nobody can tell apart from WordNet's own structure, its
+      synonyms and its definitions. None of the five signals separate the pairs a
+      labeller merged from the pairs they kept apart, so this is parked until phase 12
+      can ask a gloss encoder the same question.
 - [ ] Add a lemmatizer so `ran` finds `run`. This alone fixes the misses that made
       `dictionaryapi.dev` answer nothing for common past tenses.
 - [ ] Add CMUdict for pronunciation and a CEFR word list for level
