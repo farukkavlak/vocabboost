@@ -261,3 +261,66 @@ answered.
 
 The first two are fixable and account for most of the misses. The third is deferred,
 the fourth cannot be fixed, and the fifth is our own housekeeping.
+
+## Phase 11 — the dictionary
+
+`vocab.db` is 27 MB of SQLite: 117,659 senses stored once, 157,300 entries pointing at
+them, and 5,859 irregular forms so `ran` finds `run`. A sense belongs to more than one
+word — `run` and `go` share one — so storing it under each copies the same text twice.
+Storing senses once and pointing at them took the file from 40 MB to 27 MB.
+
+Two bugs were worth the build on their own. Senses were being stored in WordNet's file
+order rather than per word, which put the contraceptive sense of `safe` above the
+strongbox; the first-sense baseline would have been measuring nonsense. And
+`Confederacy` was overwriting `confederacy`, quietly dropping senses.
+
+### Phrases
+
+A third of WordNet's lemmas are phrases — 64,334 of them. `club soda`, `check out`,
+`pull together` are all there, so the idioms that phase 12's failures turned up were
+never a missing-data problem. They were a question problem: we were asking what `club`
+means in `club soda`.
+
+Matching them needs more than string equality. `check it out` is `check out` with a
+pronoun in the middle, and `ran into` is `run into` inflected, so each position is
+tried in its dictionary form and one object pronoun is allowed inside a two-word
+phrase. WordNet also files a few slang idioms under `the something` — `the boot` for
+dismissal — which collide with the plain noun on nearly every line, so those are not
+matched.
+
+25 of the 201 test lines turned out to be phrases. Their labels answered the wrong
+question and were made again, against an average of 2.0 senses instead of 8.3.
+
+### What it did to the numbers
+
+| first sense | before | after |
+| ----------- | -----: | ----: |
+| everyday    |  36.0% | 52.0% |
+| common      |  60.0% | 70.0% |
+| uncommon    |  40.8% | 42.9% |
+| **all**     |  45.6% | 55.0% |
+
+Nine and a half points from a dictionary, with no model involved.
+
+### And what it did to the model
+
+|              | lines | senses | baseline | model | top 3 |
+| ------------ | ----: | -----: | -------: | ----: | ----: |
+| phrases      |    18 |    2.0 |    88.9% | 83.3% | 94.4% |
+| single words |   131 |    7.7 |    50.4% | 51.9% | 83.2% |
+| all          |   149 |    7.0 |    55.0% | 55.7% | 84.6% |
+
+The untrained embeddings beat the old baseline by 5.4 points and beat this one by 0.7.
+On phrases they are worse than showing the first sense, which makes sense: a phrase
+carries two senses on average, the first is right nine times in ten, and the model
+sometimes picks the other one.
+
+So most of what the model appeared to be worth was it compensating for a badly asked
+question. That is worth knowing before phase 14 rather than after: the case for
+training now rests on training, and on nothing else. Published bi-encoders turn a 65.5
+baseline into 79.0, and whether that carries over here is the whole of phase 14.
+
+What does survive is the ranking. The right sense is in the top three 84.6% of the
+time and the top five 91.9%, untrained and offline. Even if nothing improves from
+here, a card listing three senses puts the right meaning in front of five readers in
+six, against 45.6% today.
