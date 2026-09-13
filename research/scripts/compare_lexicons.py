@@ -28,10 +28,15 @@ from pick_candidates import TAGS
 # Wiktionary names parts of speech in words; WordNet uses letters.
 WIKI_POS = {"noun": wn.NOUN, "verb": wn.VERB, "adj": wn.ADJ, "adv": wn.ADV}
 
+# Senses a person watching a film will never need, and which we would not ship.
+# `alt-of` and `alternative` are spelling variants pointing elsewhere, not meanings.
+SKIP = {"alt-of", "alternative", "abbreviation", "initialism", "obsolete", "archaic",
+        "rare", "historical", "dated"}
+
 lemmatizer = WordNetLemmatizer()
 
 
-def load_wiktionary(path):
+def load_wiktionary(path, filtered):
     """word + part of speech -> how many senses, ignoring pointers to other words."""
     counts = collections.Counter()
     with gzip.open(path, "rt", encoding="utf-8") as handle:
@@ -40,7 +45,9 @@ def load_wiktionary(path):
             pos = WIKI_POS.get(entry["pos"])
             if pos is None:
                 continue
-            real = [s for s in entry["senses"] if not s["form_of"]]
+            real = [s for s in entry["senses"]
+                    if not s["form_of"]
+                    and not (filtered and SKIP.intersection(s["tags"]))]
             if real:
                 counts[(entry["word"].lower(), pos)] += len(real)
     return counts
@@ -66,8 +73,8 @@ def report(name, senses, occurrences):
     all_tokens = sum(occurrences.values())
     ambiguous = [n for n in senses.values() if n > 1]
     average = sum(ambiguous) / len(ambiguous) if ambiguous else 0
-    print(f"{name:<12}{100 * types / all_types:>8.1f}%{100 * tokens / all_tokens:>9.1f}%"
-          f"{average:>11.1f}{sum(1 for n in senses.values() if n >= 10):>10}")
+    print(f"{name:<22}{100 * types / all_types:>8.1f}%{100 * tokens / all_tokens:>8.1f}%"
+          f"{average:>11.1f}{sum(1 for n in senses.values() if n >= 10):>11}")
 
 
 def main():
@@ -84,20 +91,20 @@ def main():
     occurrences = targets(pool[: args.lines])
     print(f"{len(occurrences):,} distinct words over {args.lines:,} lines\n")
 
-    wiktionary = load_wiktionary(args.wiktionary)
-
-    wordnet_senses, wiki_senses = {}, {}
+    wordnet_senses = {}
     for key in occurrences:
-        lemma, pos = key
-        found = wn.synsets(lemma, pos)
+        found = wn.synsets(key[0], key[1])
         if found:
             wordnet_senses[key] = len(found)
-        if key in wiktionary:
-            wiki_senses[key] = wiktionary[key]
 
-    print(f"{'':<12}{'by word':>9}{'by use':>9}{'senses':>11}{'10 or more':>10}")
+    print(f"{'':<22}{'by word':>9}{'by use':>9}{'senses':>11}{'10 or more':>11}")
     report("WordNet", wordnet_senses, occurrences)
-    report("Wiktionary", wiki_senses, occurrences)
+
+    for filtered in (False, True):
+        table = load_wiktionary(args.wiktionary, filtered)
+        wiki_senses = {k: table[k] for k in occurrences if k in table}
+        name = "Wiktionary, trimmed" if filtered else "Wiktionary"
+        report(name, wiki_senses, occurrences)
 
     shared = set(wordnet_senses) & set(wiki_senses)
     finer = sum(1 for k in shared if wordnet_senses[k] > wiki_senses[k])

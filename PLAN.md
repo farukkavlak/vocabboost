@@ -322,24 +322,34 @@ WordNet stopped in 2011 and was built from written English. Subtitles are spoken
 Wiktionary is updated daily and holds slang, `gonna`, and `sus`. `kaikki.org` publishes it
 as machine readable JSON, so it does not have to be scraped.
 
-There is a second reason, and it is the stronger one. Annotators asked to choose among
-WordNet's senses agree with each other between 67% and 78% of the time; on coarser sense
-inventories they agree around 90%. That gap is not a detail of the labelling process, it
-is a ceiling on the whole task. Senses nobody can tell apart cannot be told apart by a
-model either, and splitting `feel` into thirteen entries buys nothing a reader wants.
-Choosing the inventory may matter more than choosing the model.
+Annotators asked to choose among WordNet's senses agree with each other between 67% and
+78% of the time; on coarser inventories they agree around 90%. That gap is a ceiling on
+the whole task, because senses nobody can tell apart cannot be told apart by a model
+either. Choosing the inventory may matter more than choosing the model, which is why this
+phase measures before it builds.
 
-- [ ] Build `vocab.db` (SQLite) from the Wiktionary dump: word, part of speech, senses,
-      examples
+Measured, the expectation was wrong. Wiktionary covers no more of actual use than WordNet
+does — 95.4% against 95.2% — and splits meanings more finely, not less: 7.0 senses a word
+against 4.7. So WordNet is the inventory and Wiktionary fills the words it lacks, which
+are interjections and function words rather than slang. That keeps SemCor's 187,000 human
+labels and the published numbers to compare against.
+
+The ceiling stays, and the way through it is to cluster WordNet's own senses rather than
+to swap the source.
+
+- [x] Pull the Wiktionary dump and measure both sources over 10,000 subtitle lines,
+      before building anything on either
+- [ ] Build `vocab.db` (SQLite): WordNet senses where it has the word, Wiktionary for
+      the rest, with word, part of speech, senses and examples
+- [ ] Cluster the senses nobody can tell apart and measure whether a person decides
+      more often against the clustered inventory than the raw one
 - [ ] Add a lemmatizer so `ran` finds `run`. This alone fixes the misses that made
       `dictionaryapi.dev` answer nothing for common past tenses.
 - [ ] Add CMUdict for pronunciation and a CEFR word list for level
 - [ ] Fold in a phrasal verb list, so `run into` is not looked up as `run`
-- [ ] Measure coverage: of the distinct words in 10,000 subtitle lines, what share has an
-      entry? Report WordNet and Wiktionary side by side.
-- [ ] Count senses per word in both, and relabel 30 of the phase 10 lines against
-      Wiktionary. Coverage is only half the question; how often a person can decide is
-      the other half.
+- [x] Measure coverage over 10,000 subtitle lines, by distinct word and weighted by
+      how often each word occurs, with senses per word alongside it
+- [ ] Measure coverage again once Wiktionary is filling WordNet's gaps
 
 **Exit:** two coverage numbers, a count of how finely each source splits meanings, and a
 database file with a known size.
