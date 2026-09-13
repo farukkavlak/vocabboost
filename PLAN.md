@@ -389,9 +389,15 @@ Expect to land below 79.0. The number to beat is 65.5.
 - [x] Try more than one way of writing a sense down. Its examples beat its definition
       by seven points, because the definitions are abstract and the question is a line
       somebody spoke.
-- [ ] Look at 20 failures by hand and write down what kind they are. A wrong sense
-      next door to the right one is not the same mistake as a wrong sense from another
-      part of the language, and the two should not be counted together.
+- [x] Look at 20 failures by hand and write down what kind they are. Five kinds:
+      idioms where the word carries no meaning alone, everyday words with too many
+      senses, distinctions too fine to make, lines that need world knowledge, and
+      garbled lines we should have dropped. The first two are most of them and both
+      are fixable.
+- [x] Try to sort the misses by how wrong they are, and find that WordNet's hierarchy
+      cannot do it: its verbs are three levels deep against nine for nouns, so two
+      near-synonyms score further apart than two unrelated senses. Second time its
+      structure has failed to carry a human judgement.
 
 **Exit:** accuracy with no training at all, and it is 51.0% against 45.6%. Worth seeing
 before spending a week on training.
