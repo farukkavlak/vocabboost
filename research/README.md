@@ -225,3 +225,39 @@ suggests.
 The model that scores 51% has 110M parameters and is too heavy for a browser. The 22M
 one reached 45.6%, level with the baseline and no better. Closing that gap is what
 phase 14 is for: train the small model until it answers like the large one.
+
+### Where it goes wrong
+
+73 of 149 lines get the wrong sense first. 45 of those, 62%, still have a right sense
+in the top three, so the card recovers most of them.
+
+How badly wrong the rest are is not measured, because there is no honest way to do it
+with what we have. WordNet's hierarchy will not serve: its verbs are three levels deep
+against nine for nouns, so `buy` as trade against `buy` as purchase scores further
+apart than `hand` as a body part against `hand` as a card game. That is the second
+time WordNet's structure has failed to carry a judgement people make; the first was
+the clustering attempt.
+
+Read by hand, the misses fall into five kinds.
+
+**Idioms.** `pull yourself together`, `check it out`. The word carries no meaning of
+its own there, and looking it up alone cannot work. This is `club soda` again, and
+phase 11's compound handling is the fix — a dictionary problem, not a model problem.
+
+**Everyday words with many senses.** `hand` has 14, `check` has 25. This is why the
+everyday band sits at 36%, and it is where training should help most: choosing among
+many candidates is a learnable skill.
+
+**Distinctions too fine to make.** `man` as "an adult male with a manly character"
+against "an adult person who is male". `dear` as "earnest" against "dearly loved".
+Clustering would answer these, and clustering is parked.
+
+**World knowledge.** "So Yvonne's gone over to the enemy" is a wartime scene, and the
+line does not say so. Neither we nor Claude can read that off the sentence. Already
+written down as a real limit.
+
+**Broken lines** that should have been dropped with `x` during labelling rather than
+answered.
+
+The first two are fixable and account for most of the misses. The third is deferred,
+the fourth cannot be fixed, and the fifth is our own housekeeping.
