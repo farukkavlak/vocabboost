@@ -46,7 +46,7 @@ def line_text(row, focus):
         return row["text"]
     if focus == "named":
         return f'{row["text"]} The word "{row["word"]}" here means'
-    return f'{row["word"]}: {row["text"]}'
+    return f'{row["lemma"]}: {row["text"]}'
 
 
 def rank(model, rows, style, focus):
@@ -77,7 +77,7 @@ def main():
                         choices=["gloss", "synonyms", "examples", "all"])
     parser.add_argument("--focus", default="plain",
                         choices=["plain", "named", "prefixed"])
-    parser.add_argument("--baseline", type=float, default=45.6)
+    parser.add_argument("--baseline", type=float, default=55.0)
     args = parser.parse_args()
 
     rows = [json.loads(l) for l in open(args.file, encoding="utf-8")]

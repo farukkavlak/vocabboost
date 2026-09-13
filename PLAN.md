@@ -302,10 +302,11 @@ measured, and why the model must never see the test set while it is being traine
       hand labels. How often a unanimous panel matches a person is what says whether
       phase 13 may label ten thousand lines without us reading them.
 
-**Exit:** one number, and it is 45.6%. Every later phase is compared to it.
+**Exit:** one number, and it is 45.6%. Phase 11 raised it to 55.0% by asking about
+phrases rather than the words inside them, and 55.0% is what later phases are measured
+against.
 
-Doing this first is the whole discipline. Without it there is no way to tell an improvement
-from a change.
+Without this there is no way to tell an improvement from a change.
 
 These 200 are labelled by hand and no model touches them. Models agree with each other
 more readily than they are right, and unanimity concentrates on the easy lines, so a set
@@ -387,16 +388,17 @@ into a list of numbers. Pick the sense whose numbers sit closest to the line's.
 
 This shape has a name and a published result. Blevins and Zettlemoyer called it a
 bi-encoder: one encoder reads the line, another reads the gloss, and the nearest sense
-wins. It scored 79.0 F1 against a first-sense baseline of 65.5, and the code is open. We
+wins. It scored 79.0 F1 where a first-sense baseline scored 65.5, and the code is open. We
 are not inventing an architecture, we are shrinking a known one — their model is two
 BERT-bases, around 220M parameters, and ours has to fit in a browser at a tenth of that.
-Expect to land below 79.0. The number to beat is 65.5.
+Those figures are on a different test set and do not transfer; what transfers is the gap
+they found between a first-sense baseline and a trained bi-encoder.
 
 - [ ] Read the bi-encoder paper and its code before writing any
 - [x] Run the model locally through `sentence-transformers`
 - [x] Embed the line, embed every sense, take the nearest
-- [x] Measure against phase 10, on the 149, never the 51. 51.0% against a baseline of
-      45.6%, with no training at all.
+- [x] Measure against phase 10, on the 149, never the 51. 51.0% against the 45.6%
+      baseline of the time, with no training at all.
 - [x] Measure whether the right sense is first, in the top three, and in the top five.
       81.2% and 89.9%, so the card should list three and the gain is far larger than
       the top-one figure suggests.
@@ -413,12 +415,13 @@ Expect to land below 79.0. The number to beat is 65.5.
       near-synonyms score further apart than two unrelated senses. Second time its
       structure has failed to carry a human judgement.
 
-**Exit:** accuracy with no training at all, and it is 51.0% against 45.6%. Worth seeing
-before spending a week on training.
+**Exit:** accuracy with no training at all: 51.0% against the 45.6% baseline of the time.
+Worth seeing before spending a week on training. Phase 11 then raised the baseline to
+55.0% and left the untrained model worth 0.7 points.
 
 It comes with a catch. The model that scores 51% has 110M parameters and will not fit in
-a browser; the 22M one lands at 45.6%, level with the baseline and no better. Phase 14 has
-to close that gap, and now it has a number to close it to.
+a browser; the 22M one lands at 45.6%, level with the baseline of the time and no better.
+Phase 14 has to close that gap, and now it has a number to close it to.
 
 ### 13 — `research/dataset`
 
@@ -439,7 +442,8 @@ than alone, each seeing the senses in its own shuffled order, because the studen
 never be better than its labels and a single model is wrong more often than it sounds —
 one evaluation puts GPT-4 between 56% and 77% on this task depending on the setup.
 
-- [ ] Train on SemCor first and measure. It may be most of the distance.
+- [x] Train on SemCor first and measure. It was most of the distance: 59.1% against a
+      baseline of 55.0%, and +11.4 points over the same model untrained.
 - [ ] Pull 10,000 subtitle lines and put each one to several models independently
 - [ ] Where they agree, take the label. Where they split, keep the line and the split.
 - [ ] Check 100 of the labels by hand and report how often the teacher is wrong. A teacher
@@ -466,8 +470,9 @@ is a few dollars of API calls.
 **Learn:** the training loop itself. Loss, epoch, batch, learning rate, and what a loss
 curve looks like when a model is memorizing instead of learning.
 
-- [ ] Fine-tune the encoder so a line lands near its right sense and away from the wrong
-      ones
+- [x] Fine-tune the encoder so a line lands near its right sense and away from the
+      wrong ones. Five minutes on a free Colab T4; 42 seconds a step on a laptop, which
+      is why there is no local training script.
 - [ ] Watch training loss and validation loss together. Training loss falling while
       validation loss rises is overfitting, and it is the single most useful thing to learn
       to recognize.
@@ -475,10 +480,21 @@ curve looks like when a model is memorizing instead of learning.
 - [ ] Report it split by how common the sense is, not as one average. A model at 94 on
       commonest senses and 53 on the rest averages to something respectable and is still
       wrong exactly when it is asked.
-- [ ] Try one smaller and one larger model and record accuracy, size and speed for each
+- [x] Report it split by frequency band, against the baseline as it stands after phrase
+      matching: 52.0% against 52.0% on everyday words, 64.0% against 70.0% on common,
+      61.2% against 42.9% on uncommon. All of the gain is on uncommon words; on common
+      ones the dictionary's own ordering still wins.
+- [x] Try one smaller and one larger model and record accuracy, size and speed for
+      each. The trained 22M beats the untrained 110M by 3.4 points at a fifth of the
+      size, which is the only comparison that matters — the 110M was never going in a
+      browser.
 
-**Exit:** a trained model that beats phase 12, or evidence that it does not. Runs on a
-laptop CPU in under an hour, or on a free Colab GPU in minutes.
+**Exit:** a trained model that beats phase 12, and it does: 59.1% against 55.7% for the
+untrained 110M and 55.0% for the baseline. Five minutes on a free Colab GPU.
+
+On 149 lines, +4.1 over the baseline sits inside the error bar and settles nothing by
+itself. What settles it is the same model on the same lines gaining 11.4 points from
+training alone.
 
 The smaller and larger runs decide more than model choice. If the larger model is clearly
 better, the ceiling is size, and a model too big for a browser could be served from a
@@ -505,14 +521,13 @@ say so.
       taste. Showing every sense is what the extension does today, and a wall of
       thirteen definitions is the problem, not the fix. The ranking is what we add.
 
-**Exit:** a threshold with the accuracy and the answer rate that come with it. The easy
-majority is handled offline for free, and the hard remainder is handed over honestly.
+**Exit:** a threshold, with the accuracy and the answer rate that come with it.
 
-A reader is never shown a confident wrong answer, which matters more than the headline
-number. Being wrong quietly is what teaches someone the wrong word.
+The point is that a reader is never shown a confident wrong answer. That matters more than
+the headline number: a wrong meaning delivered with certainty is what gets learned.
 
-The card does not offer to call a model. Whoever wants one has already chosen it in
-settings, and for everyone else it is an advert in the middle of an answer.
+The card does not offer to call a model. Whoever wants one has chosen it in settings, and
+for everyone else it is an advert in the middle of an answer.
 
 ### 16 — `feat/local-provider`
 
@@ -540,7 +555,7 @@ worker cannot hold a model.
 
 **Learn:** how to report a result without overselling it.
 
-- [ ] Open the 50 sealed lines from phase 10 and score every provider on them, once
+- [ ] Open the 51 sealed lines from phase 10 and score every provider on them, once
 - [ ] A table of accuracy, latency, cost per lookup and download size for: first sense,
       untrained embeddings, our model, Haiku, GPT-4o-mini
 - [ ] Put the published numbers in the same table — a first-sense baseline of 65.5 and a

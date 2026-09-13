@@ -54,6 +54,12 @@ caption is often gone by the time you react to it. The panel is drawn in a shado
 so page styles cannot reach it. Lookups run in the background worker, which is why the
 key never touches the page.
 
+## research/
+
+Work on a meaning provider that needs no key and no network: a 23 MB encoder that picks
+which sense of a word a subtitle line is using. Not shipped yet. `research/README.md`
+has the numbers.
+
 ---
 
 Ömer Faruk Kavlak — [LinkedIn](https://www.linkedin.com/in/omerfarukkavlak/)

@@ -1,129 +1,118 @@
 # research
 
-Everything here builds the model. None of it ships. The extension only ever sees the
-files phase 16 exports, so this folder can stay slow, messy in its data, and written
-in Python.
+Builds the model. Nothing here ships — the extension only sees what phase 16 exports.
 
-`data/raw/` is downloaded and is not in git. Everything else in `data/` is small,
-hand-made, and worth keeping.
+Only `data/candidates.jsonl` is in git: 201 subtitle lines with their senses marked by
+hand. Everything else in `data/` is downloaded or built, and rebuilds from a make
+target.
 
-## Phase 10 — the baseline
+## Results
 
-The point of this phase is one number: how often is the extension right today, when
-it shows the first sense the dictionary lists? Every later phase is measured against
-it. Without it there is no way to tell an improvement from a change.
+Each number is the share of 149 hand-labelled lines where the right sense came first.
+`first 3` and `first 5` are the share where it was somewhere in the top three or five,
+which is what the card shows.
+
+|                               |   size |     first |   first 3 |   first 5 |
+| ----------------------------- | -----: | --------: | --------: | --------: |
+| first sense in the dictionary |      0 |     45.6% |         - |         - |
+| + phrase matching             |      0 |     55.0% |         - |         - |
+| untrained 22M encoder         |  23 MB |     47.7% |     75.2% |     88.6% |
+| untrained 110M encoder        | 110 MB |     55.7% |     80.5% |     89.3% |
+| **trained 22M encoder**       |  23 MB | **59.1%** | **82.6%** | **91.3%** |
+
+The extension today shows the first sense the dictionary lists and is wrong more often
+than right. The trained model is the only one small enough to ship and the best of the
+lot.
+
+By frequency band, both measured after phrase matching:
+
+| band     | senses a word | baseline | trained |
+| -------- | ------------: | -------: | ------: |
+| everyday |           9.3 |    52.0% |   52.0% |
+| common   |           5.8 |    70.0% |   64.0% |
+| uncommon |           6.0 |    42.9% |   61.2% |
+
+All of the model's gain is on uncommon words, where it is 18 points ahead. On everyday
+words it draws, and on common words it is 6 points behind — there the dictionary's own
+ordering is hard to beat, because a common word's commonest sense usually is the right
+one.
+
+That split matters for shipping. A reader who clicks `vaudeville` is much better served
+than one who clicks `play`, and the phrase layer rather than the model is what carries
+the everyday words.
+
+## Running it
 
 ```sh
-make setup       # a virtualenv and the NLTK data files
-make pool        # sample 200k subtitle lines, count word frequencies  (~7 min)
-make candidates  # pick 200 lines, one word each, worth looking up
-make label       # mark the right sense by hand                        (you, ~2 hours)
-make split       # 150 to work with, 51 sealed until phase 17
-make baseline    # the number
-make recheck     # a few days later: how often do you agree with yourself?
+make setup       # virtualenv and NLTK data
+make pool        # sample 200k subtitle lines, count word frequencies   (~7 min)
+make wiktionary  # download and trim the Wiktionary dump                (~30 min)
+make vocab       # build vocab.db from WordNet
+make semcor      # training examples from SemCor
 ```
 
-`make label` saves after every answer, so stopping and running it again is fine.
-`make label REDO=4,9` reopens lines you have already answered — the first twenty
-teach you how to read the sense list, and you will want to revisit some of them.
+Building the test set, in order:
 
-### Why the pieces are the way they are
+```sh
+make candidates  # pick 201 lines worth labelling
+make phrases     # point the lines that are really phrases at the phrase
+make label       # mark the right sense by hand                         (~2 hours)
+make split       # 149 to work with, 51 sealed until phase 17
+make recheck     # days later: how often do you agree with yourself?
+```
 
-**The corpus is streamed, not downloaded.** The OpenSubtitles file is 3.6 GB gzipped.
-We read it from the start, keep what is usable, and stop at a byte budget. Reservoir
-sampling spreads the sample over everything we read, so the set is not two hundred
-lines from the same three films.
+`make label` saves after every answer. `make label REDO=4,9` reopens answered lines.
 
-**The target word is chosen by frequency, not by ambiguity.** Picking the word with
-the most senses gives you `get`, `go` and `have` on every line, and nobody looks those
-up. Frequency comes from the pool itself, which measures the language of film rather
-than of English in general.
+Measuring:
 
-**The set is split into three frequency bands, and accuracy is reported for each.**
-Who clicks a word depends on their level: a beginner stops at `play` and `run`,
-someone further along only at `vaudeville`. Testing on rare words alone would hide
-the hardest cases, because a word stays common by carrying many meanings — the
-everyday band averages 11.8 senses a word against 6.3 in the uncommon band. One
-overall number would average that difference away. Words above five thousand
-occurrences are left out: `do` and `have` are tagged as verbs but are doing
-grammatical work, not carrying a meaning to look up.
+```sh
+make baseline    # what the extension does today
+make evaluate    # score data/model against the working set
+make compare     # every model side by side
+make failures    # the lines the model gets wrong
+make lookup      # check phrase matching on a few known cases
+```
 
-**The senses are shuffled before you see them.** WordNet lists senses commonest
-first. Shown in that order, a tired labeller drifts towards the first one — and how
-often the first one is right is the exact thing being measured. Shuffling keeps the
-answer honest.
+The one-off measurements quoted below have targets too, so their numbers can be
+reproduced: `lexicons`, `phrase-impact`, `phrase-split`, `sense-distance`.
 
-**Several senses can be accepted, and an answer can be marked unsure.** WordNet
-splits meanings far more finely than anyone can reliably tell apart — trained native
-annotators agree with each other on roughly three WordNet labels in four. That is a
-property of the sense list, not of the labeller, so the tool stops pretending
-otherwise: `1,3` accepts both, and `?1` records a doubt. The score is then reported
-with and without the doubtful lines.
+Training runs on Colab — see below.
 
-**Nothing but the line is shown, on purpose.** The model gets the same single line at
-run time. If the line does not settle which meaning it is, neither of you can know,
-and `n` is the honest answer rather than a guess.
+## Building the test set
 
-**`n` and `x` are different answers.** `n` says the line is sound and no sense fits
-it — `club` in `club soda` carries none of its own meanings, and that is real evidence
-of the kind phase 15 learns from. `x` says the line is garbled and was never a fair
-question, so it leaves the set rather than teaching anything. Subtitle files carry
-their share of mangled text, and filing it under `n` would teach the model to
-recognise nonsense instead of ambiguity.
+**The corpus is streamed, not downloaded.** OpenSubtitles is 3.6 GB gzipped. We read
+from the start, keep what is usable, and stop at a byte budget. Reservoir sampling
+spreads the sample across everything read, so the lines are not all from three films.
 
-**`make recheck` measures the ceiling.** Relabel thirty lines blind, days later, and
-see how often you agree with your earlier self. No model judged on these labels can
-honestly claim to beat that number, and a model score quoted without it means less
-than it appears to.
+**Target words are chosen by frequency, not by ambiguity.** Picking the most ambiguous
+word gives `get`, `go` and `have` every time, and nobody looks those up. Frequency
+comes from the pool itself, so it measures the language of film.
 
-**Fifty-one lines are sealed.** Anything tuned against a set of examples looks better
-on that set than it will in the wild. The sealed lines are opened once, in phase 17,
-and are spread evenly across the three bands so they cannot flatter us by accident.
+**Three frequency bands, reported separately.** A beginner stops at `play`; someone
+further along only at `vaudeville`. The bands are not equally hard — everyday words
+average 11.5 senses against 6.4 — and one overall number hides that. Words above five
+thousand occurrences are dropped: `do` and `have` are tagged as verbs but carry no
+meaning to look up.
 
-### On WordNet
+**Senses are shuffled before the labeller sees them.** WordNet lists them commonest
+first, and how often the first one is right is the thing being measured.
 
-Phase 10 uses WordNet as its sense list, and that is not the same as deciding to ship
-it. It comes with NLTK, the baseline measures ranking rather than coverage, and every
-existing hand-labelled WSD dataset uses its sense keys. Phase 11 measures WordNet and
-Wiktionary side by side and decides. Labels survive a switch, because the model
-compares the text of a sense, not its key.
+**Several senses can be accepted, and answers can be marked unsure.** Trained native
+annotators agree on about three WordNet labels in four. That is the sense list's
+fault, not the labeller's: `1,3` accepts both, `?1` records a doubt, and the score is
+reported with and without the doubtful lines.
 
-## Result
+**`n` and `x` differ.** `n` means the line is fine and no sense fits — `club` in `club
+soda` carries none of its own meanings, which is what phase 15 learns from. `x` means
+the line is garbled and was never a fair question, so it leaves the set.
 
-All 201 lines are labelled. One was dropped as garbled, 51 are sealed until phase 17,
-and the working set is the remaining 149.
+**51 lines are sealed** and opened once, in phase 17. Which lines is decided from the
+full file before any labelling, so the sealed set cannot shift as more labels arrive.
 
-| band     | lines | senses | guessing | first sense |
-| -------- | ----: | -----: | -------: | ----------: |
-| everyday |    50 |   11.5 |       9% |       36.0% |
-| common   |    50 |    6.9 |      14% |       60.0% |
-| uncommon |    49 |    6.4 |      16% |       40.8% |
-| **all**  |   149 |    8.3 |      12% |   **45.6%** |
+## Choosing the sense inventory
 
-The extension today is wrong more often than it is right. It is still four times
-better than guessing, and nowhere near good enough.
-
-The everyday band is the worst at 36%, which is the opposite of what you would guess.
-A word stays common by taking on more meanings — those lines carry 11.5 senses each
-against 6.4 in the uncommon band — so the words a beginner is most likely to click are
-the ones the dictionary handles worst.
-
-Published all-words results put this baseline at 65.5 F1. Ours is lower because the
-set was built to be hard: every line has a word with at least three senses, where
-published evaluations include the single-sense words that are right for free.
-
-At 100 lines this number read 51.2%, with an error bar of about eight points either
-way. The full set brought it to 45.6%. Small samples wobble by roughly that much, and
-the reason for finishing the labelling before comparing anything against it is right
-there.
-
-## Phase 11 — which sense inventory
-
-Measured over 7,198 distinct words taken from 10,000 subtitle lines. Coverage is
-counted twice: by distinct word, and weighted by how often the word occurs, because
-missing `gonna` costs more than missing `zeugma`. "Trimmed" drops the senses marked
-obsolete, archaic, rare, historical, dated, or as spelling variants — material a
-person watching a film never needs and we would not ship.
+Measured over 7,198 distinct words from 10,000 subtitle lines. "Trimmed" drops senses
+marked obsolete, archaic, rare, historical, dated, or as spelling variants.
 
 |                     | by word | by use | senses | 10 or more |
 | ------------------- | ------: | -----: | -----: | ---------: |
@@ -131,76 +120,57 @@ person watching a film never needs and we would not ship.
 | Wiktionary          |   89.3% |  96.4% |    7.8 |       1463 |
 | Wiktionary, trimmed |   87.3% |  95.4% |    7.0 |       1135 |
 
-The plan expected Wiktionary to win on both counts. It does not.
-
-Coverage is a tie where it matters: 95.2% against 95.4% of actual use. The words only
-Wiktionary carries are not slang but function words and interjections — `something`,
-`anything`, `else`, `sir`, `yeah` — which WordNet omits by design.
-
-On granularity Wiktionary is worse, not better: 7.0 senses a word against 4.7, and
-three times as many words split ten ways or more. Word by word: `club` is 7 senses in
-WordNet and 13 in Wiktionary; `night` 8 against 9; `feel` 13 against 12.
+The plan expected Wiktionary to win on both counts. It does not. Coverage is a tie
+where it matters — 95.2% against 95.4% of actual use — and the words only Wiktionary
+carries are function words and interjections, not slang. On granularity it is worse:
+`club` is 7 senses in WordNet and 13 in Wiktionary.
 
 So WordNet is the inventory, with Wiktionary filling the words it lacks. That keeps
-SemCor's 187,000 human labels and the published numbers to compare against, and the
-labels already made stay valid.
+SemCor's 187,000 human labels and the published numbers to compare against.
 
-It does not solve the granularity problem — annotators agree on fine WordNet
-distinctions around 70% of the time, and that is still the ceiling. With the escape
-route closed, the remaining move is to cluster WordNet's own senses: merge the ones
-nobody can tell apart. The multiple answers accepted during phase 10 labelling are
-hand-made examples of exactly that.
+Granularity is still the ceiling — annotators agree on fine WordNet distinctions about
+70% of the time. Merging the senses nobody can tell apart would raise it, and OntoNotes
+shows it works: they merged until agreement hit 90%, and disambiguation against the
+merged inventory reaches 87–89% where fine-grained WordNet reaches 79.
 
-### Clustering senses: what did not work
+Finding those merges automatically failed. The pairs a labeller accepted together were
+compared against the pairs they rejected over five signals — subject file, two
+hierarchy distances, synonym overlap, definition overlap — and nothing separated them
+(0.17 against 0.16 on the best one). WordNet's structure does not carry the judgement.
+Parked until a gloss encoder can be asked the same question.
 
-If the senses nobody can tell apart were merged, the ceiling would rise. The cheap
-version of that is to let WordNet find them itself, so the pairs a labeller accepted
-together were compared against the pairs they rejected, over five signals: the
-subject file a sense is filed under, two measures of distance through the is-a
-hierarchy, how much two senses share their synonyms, and how much their definitions
-share words.
+## vocab.db
 
-| nouns and verbs      | lexname | path |  wup | synonym | gloss | pairs |
-| -------------------- | ------: | ---: | ---: | ------: | ----: | ----: |
-| accepted together    |    0.50 | 0.17 | 0.39 |    0.49 |  0.06 |    16 |
-| accepted vs rejected |    0.39 | 0.16 | 0.36 |    0.48 |  0.04 |   138 |
+27 MB of SQLite: 117,659 senses stored once, 157,300 entries pointing at them, 5,859
+irregular forms so `ran` finds `run`. Senses are shared — `run` and `go` have one in
+common — so storing them once rather than per word took the file from 40 MB to 27 MB.
 
-Nothing separates them. WordNet does not know which of its own senses a person cannot
-tell apart, and neither the synonyms nor the definitions give it away.
+Two bugs found while building it. Senses were stored in WordNet's file order rather
+than per word, which put the contraceptive sense of `safe` above the strongbox and
+would have made the first-sense baseline meaningless. And `Confederacy` was
+overwriting `confederacy`, dropping senses.
 
-Two caveats. Sixteen pairs is thin. And the signal is muddied, because two senses get
-accepted together for two different reasons: sometimes they read the same, and
-sometimes they are genuinely different and the line supports both — `only` as
-`merely` and as `exclusively`. Only the first kind is a candidate for merging, and
-the tool does not ask which is which.
+### Phrases
 
-The idea itself is sound. OntoNotes merged WordNet senses until annotators agreed 90%
-of the time instead of 70%, and automatic disambiguation against that inventory
-reaches 87–89% where fine-grained WordNet reaches 79. But those merges were made by
-people deciding what they could not distinguish, not derived from the graph.
+A third of WordNet's lemmas are phrases — 64,334 of them, including `club soda`,
+`check out` and `pull together`. The idioms that showed up in phase 12's failures were
+never missing data. We were asking what `club` means in `club soda`.
 
-So: no clustering for now. Revisit it in phase 12, when a gloss encoder exists and
-can be asked the same question — it may see a likeness that word overlap cannot.
+Matching them needs more than string equality: `check it out` is `check out` with a
+pronoun inside, `ran into` is `run into` inflected. So each position is tried in its
+dictionary form and one object pronoun is allowed inside a two-word phrase. WordNet
+files a few slang idioms under `the something` — `the boot` for dismissal — which
+collide with the plain noun on nearly every line, so those are skipped.
 
-## Phase 12 — embeddings, with no training
+25 of the 201 test lines turned out to be phrases. Their labels answered the wrong
+question and were made again, against 2.0 senses on average instead of 8.3. The
+first-sense baseline went from 45.6% to 55.0% — nine and a half points from a
+dictionary, with no model involved.
 
-An embedding model turns text into a list of numbers arranged so that close meanings
-land close together. Nothing here is trained on sense picking. The model has only seen
-English; we ask whether that alone beats showing the first sense in the dictionary.
+## Embeddings
 
-Best run: `all-mpnet-base-v2`, each sense represented by its definition and its example
-sentences, the target word written in front of the line.
-
-| band     | lines | first | first 3 | first 5 |
-| -------- | ----: | ----: | ------: | ------: |
-| everyday |    50 | 36.0% |   70.0% |   82.0% |
-| common   |    50 | 56.0% |   92.0% |   96.0% |
-| uncommon |    49 | 61.2% |   81.6% |   91.8% |
-| **all**  |   149 | 51.0% |   81.2% |   89.9% |
-
-51.0% against a baseline of 45.6%, without a single training step.
-
-### What moved the number
+An embedding model turns text into numbers arranged so that close meanings land close
+together. Untrained, it has never seen this task.
 
 | change                                           | effect      |
 | ------------------------------------------------ | ----------- |
@@ -208,119 +178,68 @@ sentences, the target word written in front of the line.
 | write the target word in front of the line       | 45.0 → 45.6 |
 | a 110M model instead of a 22M one                | 45.6 → 51.0 |
 
-Examples beat definitions by seven points, which is what the labelling turned up too:
-WordNet's definitions are dry and abstract — "the dark part of the diurnal cycle" —
-while its examples are how people speak, and the question we ask is a line somebody
-spoke.
+Examples beat definitions by seven points. WordNet's definitions are abstract — "the
+dark part of the diurnal cycle" — while its examples are how people speak, and the
+question is a line somebody spoke.
 
-### The number that matters for the card
-
-The right sense is first 51% of the time, in the top three 81%, in the top five 90%.
-Show three senses and four readers in five see the right meaning on screen. That
-settles how many the card lists, and it is a far larger gain than the top-one figure
-suggests.
-
-### The problem it leaves
-
-The model that scores 51% has 110M parameters and is too heavy for a browser. The 22M
-one reached 45.6%, level with the baseline and no better. Closing that gap is what
-phase 14 is for: train the small model until it answers like the large one.
+Those numbers predate phrase matching. Against the 55.0% baseline the untrained 110M
+model is worth 0.7 points, and on phrase lines it is worse than showing the first
+sense: a phrase carries two senses on average and the first is right nine times in ten.
+So most of what the untrained model appeared to be worth was it compensating for a
+badly asked question.
 
 ### Where it goes wrong
 
-73 of 149 lines get the wrong sense first. 45 of those, 62%, still have a right sense
-in the top three, so the card recovers most of them.
+73 of 149 lines get the wrong sense first; 45 of those still have a right sense in the
+top three. How badly wrong the rest are is not measured — WordNet's verbs are three
+levels deep against nine for nouns, so `buy` as trade scores further from `buy` as
+purchase than `hand` the body part does from `hand` the card game.
 
-How badly wrong the rest are is not measured, because there is no honest way to do it
-with what we have. WordNet's hierarchy will not serve: its verbs are three levels deep
-against nine for nouns, so `buy` as trade against `buy` as purchase scores further
-apart than `hand` as a body part against `hand` as a card game. That is the second
-time WordNet's structure has failed to carry a judgement people make; the first was
-the clustering attempt.
+Read by hand, the misses are five kinds:
 
-Read by hand, the misses fall into five kinds.
+- **Idioms** — `pull yourself together`. Fixed by phrase matching.
+- **Everyday words with many senses** — `hand` has 14, `check` has 25. Fixed by training.
+- **Distinctions too fine to make** — `man` as "adult male with a manly character"
+  against "adult person who is male". Would need clustering.
+- **World knowledge** — "Yvonne's gone over to the enemy" is a wartime scene and the
+  line does not say so. Cannot be fixed.
+- **Garbled lines** that should have been dropped with `x`.
 
-**Idioms.** `pull yourself together`, `check it out`. The word carries no meaning of
-its own there, and looking it up alone cannot work. This is `club soda` again, and
-phase 11's compound handling is the fix — a dictionary problem, not a model problem.
+## Training
 
-**Everyday words with many senses.** `hand` has 14, `check` has 25. This is why the
-everyday band sits at 36%, and it is where training should help most: choosing among
-many candidates is a learnable skill.
+Runs on Colab, not here. Five minutes on a free T4; 42 seconds a step on an M-series
+Mac, about a hundred times slower, and it locks the machine up. There is no local
+training script, because a path that does not work invites someone to try it.
 
-**Distinctions too fine to make.** `man` as "an adult male with a manly character"
-against "an adult person who is male". `dear` as "earnest" against "dearly loved".
-Clustering would answer these, and clustering is parked.
+`colab/run.py` does everything in one run: builds the SemCor examples, trains, scores
+against the hand-labelled lines, saves the model. One script rather than notebook
+cells, because a Colab runtime that recycles between cells takes the trained model with
+it.
 
-**World knowledge.** "So Yvonne's gone over to the enemy" is a wartime scene, and the
-line does not say so. Neither we nor Claude can read that off the sentence. Already
-written down as a real limit.
+```
+upload colab/run.py and data/working.jsonl to a Colab notebook with a T4 runtime
+!pip -q install sentence-transformers
+!python run.py
+```
 
-**Broken lines** that should have been dropped with `x` during labelling rather than
-answered.
+Then unzip `model/` into `data/model` and run `make evaluate` here. It uses the same
+code that scored the untrained models, so the comparison is like for like.
 
-The first two are fixable and account for most of the misses. The third is deferred,
-the fourth cannot be fixed, and the fifth is our own housekeeping.
+### The run
 
-## Phase 11 — the dictionary
+`all-MiniLM-L6-v2`, 50,000 SemCor examples, one epoch, batch of 64. Wrong answers are
+drawn from the other senses of the same word — telling `safe` the strongbox from `safe`
+the contraceptive is the job, telling it from "the weather is nice" is not.
 
-`vocab.db` is 27 MB of SQLite: 117,659 senses stored once, 157,300 entries pointing at
-them, and 5,859 irregular forms so `ran` finds `run`. A sense belongs to more than one
-word — `run` and `go` share one — so storing it under each copies the same text twice.
-Storing senses once and pointing at them took the file from 40 MB to 27 MB.
+The data is split by word, not by row, so a word in training never appears in
+validation. On those held-out words the triplet score went from 0.674 to 0.766.
 
-Two bugs were worth the build on their own. Senses were being stored in WordNet's file
-order rather than per word, which put the contraceptive sense of `safe` above the
-strongbox; the first-sense baseline would have been measuring nonsense. And
-`Confederacy` was overwriting `confederacy`, quietly dropping senses.
+Against the baseline the trained model is +4.1, which on 149 lines is inside the error
+bar. The convincing number is elsewhere: same model, same lines, same evaluation code,
++11.4 points from training alone.
 
-### Phrases
+### Left on the table
 
-A third of WordNet's lemmas are phrases — 64,334 of them. `club soda`, `check out`,
-`pull together` are all there, so the idioms that phase 12's failures turned up were
-never a missing-data problem. They were a question problem: we were asking what `club`
-means in `club soda`.
-
-Matching them needs more than string equality. `check it out` is `check out` with a
-pronoun in the middle, and `ran into` is `run into` inflected, so each position is
-tried in its dictionary form and one object pronoun is allowed inside a two-word
-phrase. WordNet also files a few slang idioms under `the something` — `the boot` for
-dismissal — which collide with the plain noun on nearly every line, so those are not
-matched.
-
-25 of the 201 test lines turned out to be phrases. Their labels answered the wrong
-question and were made again, against an average of 2.0 senses instead of 8.3.
-
-### What it did to the numbers
-
-| first sense | before | after |
-| ----------- | -----: | ----: |
-| everyday    |  36.0% | 52.0% |
-| common      |  60.0% | 70.0% |
-| uncommon    |  40.8% | 42.9% |
-| **all**     |  45.6% | 55.0% |
-
-Nine and a half points from a dictionary, with no model involved.
-
-### And what it did to the model
-
-|              | lines | senses | baseline | model | top 3 |
-| ------------ | ----: | -----: | -------: | ----: | ----: |
-| phrases      |    18 |    2.0 |    88.9% | 83.3% | 94.4% |
-| single words |   131 |    7.7 |    50.4% | 51.9% | 83.2% |
-| all          |   149 |    7.0 |    55.0% | 55.7% | 84.6% |
-
-The untrained embeddings beat the old baseline by 5.4 points and beat this one by 0.7.
-On phrases they are worse than showing the first sense, which makes sense: a phrase
-carries two senses on average, the first is right nine times in ten, and the model
-sometimes picks the other one.
-
-So most of what the model appeared to be worth was it compensating for a badly asked
-question. That is worth knowing before phase 14 rather than after: the case for
-training now rests on training, and on nothing else. Published bi-encoders turn a 65.5
-baseline into 79.0, and whether that carries over here is the whole of phase 14.
-
-What does survive is the ranking. The right sense is in the top three 84.6% of the
-time and the top five 91.9%, untrained and offline. Even if nothing improves from
-here, a card listing three senses puts the right meaning in front of five readers in
-six, against 45.6% today.
+One epoch, and 50,000 of 177,665 examples. SemCor is books and journalism while the
+test set is speech. And 68.5% of training examples are the commonest sense of their
+word, which is the opposite of when a reader reaches for a dictionary.
