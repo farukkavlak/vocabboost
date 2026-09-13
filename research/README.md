@@ -112,3 +112,37 @@ The everyday band is the worst of the three at 45.5%, which is the opposite of w
 you would guess. A word stays common by taking on more meanings — those lines carry
 10.8 senses each against 5.6 in the uncommon band — so the words a beginner is most
 likely to click are the ones the dictionary handles worst.
+
+## Phase 11 — which sense inventory
+
+Measured over 7,198 distinct words taken from 10,000 subtitle lines. Coverage is
+counted twice: by distinct word, and weighted by how often the word occurs, because
+missing `gonna` costs more than missing `zeugma`. "Trimmed" drops the senses marked
+obsolete, archaic, rare, historical, dated, or as spelling variants — material a
+person watching a film never needs and we would not ship.
+
+|                     | by word | by use | senses | 10 or more |
+| ------------------- | ------: | -----: | -----: | ---------: |
+| WordNet             |   85.2% |  95.2% |    4.7 |        390 |
+| Wiktionary          |   89.3% |  96.4% |    7.8 |       1463 |
+| Wiktionary, trimmed |   87.3% |  95.4% |    7.0 |       1135 |
+
+The plan expected Wiktionary to win on both counts. It does not.
+
+Coverage is a tie where it matters: 95.2% against 95.4% of actual use. The words only
+Wiktionary carries are not slang but function words and interjections — `something`,
+`anything`, `else`, `sir`, `yeah` — which WordNet omits by design.
+
+On granularity Wiktionary is worse, not better: 7.0 senses a word against 4.7, and
+three times as many words split ten ways or more. Word by word: `club` is 7 senses in
+WordNet and 13 in Wiktionary; `night` 8 against 9; `feel` 13 against 12.
+
+So WordNet is the inventory, with Wiktionary filling the words it lacks. That keeps
+SemCor's 187,000 human labels and the published numbers to compare against, and the
+labels already made stay valid.
+
+It does not solve the granularity problem — annotators agree on fine WordNet
+distinctions around 70% of the time, and that is still the ceiling. With the escape
+route closed, the remaining move is to cluster WordNet's own senses: merge the ones
+nobody can tell apart. The multiple answers accepted during phase 10 labelling are
+hand-made examples of exactly that.
