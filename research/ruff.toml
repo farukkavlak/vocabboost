@@ -1,0 +1,30 @@
+# Linting only. `ruff format` is not used: it breaks single-line prints across three
+# lines and undoes the alignment the tables in these scripts depend on.
+
+# 88 is black's default and arbitrary. These lines print aligned tables, and
+# breaking a format string to save four characters reads worse than the line does.
+line-length = 96
+
+[lint]
+select = [
+  "E",      # pycodestyle
+  "F",      # pyflakes: undefined names, unused imports
+  "I",      # import order
+  "UP",     # outdated syntax
+  "B",      # likely bugs
+  "SIM",    # needless complexity
+  "RUF",
+]
+ignore = [
+  # These are one-shot scripts that read a file once and exit. Wrapping every read in
+  # a context manager would add a level of indentation and buy nothing.
+  "SIM115",
+  # `build_semcor` catches anything from SemCor's malformed entries on purpose.
+  "BLE001",
+  "S112",
+]
+
+[lint.per-file-ignores]
+# `run.py` downloads the NLTK data before importing from `nltk.corpus`, so its imports
+# cannot all sit at the top.
+"colab/run.py" = ["E402"]

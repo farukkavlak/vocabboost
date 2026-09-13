@@ -75,6 +75,9 @@ phrase-impact:
 
 # --- housekeeping ------------------------------------------------------------
 
+lint:
+	$(PY) -m ruff check scripts colab
+
 clean:
 	rm -rf .venv __pycache__ scripts/__pycache__
 	rm -rf data/raw data/vocab.db data/semcor.jsonl data/model
@@ -82,4 +85,4 @@ clean:
 
 .PHONY: setup pool wiktionary vocab semcor candidates phrases label split recheck \
         baseline evaluate compare lookup failures lexicons phrase-split sense-distance \
-        phrase-impact clean
+        phrase-impact lint clean

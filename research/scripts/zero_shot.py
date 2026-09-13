@@ -54,7 +54,7 @@ def rank(model, rows, style, focus):
     lines = model.encode([line_text(r, focus) for r in rows], convert_to_tensor=True,
                          normalize_embeddings=True)
     ordered = []
-    for row, line in zip(rows, lines):
+    for row, line in zip(rows, lines, strict=True):
         texts = [sense_text(s, style) for s in row["senses"]]
         senses = model.encode(texts, convert_to_tensor=True,
                               normalize_embeddings=True)
@@ -65,7 +65,7 @@ def rank(model, rows, style, focus):
 
 
 def hits(rows, ordered, depth):
-    return sum(1 for row, keys in zip(rows, ordered)
+    return sum(1 for row, keys in zip(rows, ordered, strict=True)
                if set(keys[:depth]) & set(row["label"]))
 
 
@@ -80,12 +80,12 @@ def main():
     parser.add_argument("--baseline", type=float, default=55.0)
     args = parser.parse_args()
 
-    rows = [json.loads(l) for l in open(args.file, encoding="utf-8")]
+    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
     model = SentenceTransformer(args.model)
     ordered = rank(model, rows, args.style, args.focus)
 
     by_band = collections.defaultdict(list)
-    for row, keys in zip(rows, ordered):
+    for row, keys in zip(rows, ordered, strict=True):
         by_band[row["band"]].append((row, keys))
 
     print(f"\n{args.model}  ·  sense as {args.style}  ·  line {args.focus}\n")
@@ -94,7 +94,7 @@ def main():
         part = by_band[band]
         if not part:
             continue
-        rs, ks = zip(*part)
+        rs, ks = zip(*part, strict=True)
         print(f"{band:<12}{len(rs):>7}" + "".join(
             f"{100 * hits(rs, ks, d) / len(rs):>8.1f}%" for d in (1, 3, 5)))
 

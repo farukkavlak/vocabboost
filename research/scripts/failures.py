@@ -17,7 +17,6 @@ import argparse
 import json
 
 from sentence_transformers import SentenceTransformer
-
 from zero_shot import rank
 
 BOLD, DIM, OFF = "\033[1m", "\033[2m", "\033[0m"
@@ -31,10 +30,10 @@ def main():
     parser.add_argument("--band", default="")
     args = parser.parse_args()
 
-    rows = [json.loads(l) for l in open(args.file, encoding="utf-8")]
+    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
     ordered = rank(SentenceTransformer(args.model), rows, "examples", "prefixed")
 
-    misses = [(r, k) for r, k in zip(rows, ordered)
+    misses = [(r, k) for r, k in zip(rows, ordered, strict=True)
               if k[0] not in r["label"] and (not args.band or r["band"] == args.band)]
     gloss = {s["key"]: s["gloss"] for r in rows for s in r["senses"]}
     recovered = sum(1 for r, k in misses if set(k[:3]) & set(r["label"]))

@@ -16,10 +16,9 @@ import json
 import random
 
 import nltk
+from fetch_corpus import usable
 from nltk.corpus import wordnet as wn
 from nltk.stem import WordNetLemmatizer
-
-from fetch_corpus import usable
 
 # WordNet groups senses by part of speech, so we need the tag to ask the right question.
 TAGS = {"NN": wn.NOUN, "NNS": wn.NOUN, "VB": wn.VERB, "VBD": wn.VERB, "VBG": wn.VERB,
@@ -72,7 +71,7 @@ def sense_list(senses):
     # The synonyms are the fastest way to recognise a sense. "strongbox" says more
     # in one word than the gloss does in a line.
     return [{"key": s.name(),
-             "synonyms": [l.name().replace("_", " ") for l in s.lemmas()],
+             "synonyms": [lemma.name().replace("_", " ") for lemma in s.lemmas()],
              "gloss": s.definition(),
              "examples": s.examples()[:2]}
             for s in senses]

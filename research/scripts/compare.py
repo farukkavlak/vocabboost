@@ -8,7 +8,6 @@ import argparse
 import json
 
 from sentence_transformers import SentenceTransformer
-
 from zero_shot import hits, rank
 
 RUNS = [
@@ -23,7 +22,7 @@ def main():
     parser.add_argument("--file", default="data/working.jsonl")
     args = parser.parse_args()
 
-    rows = [json.loads(l) for l in open(args.file, encoding="utf-8")]
+    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
     base = sum(1 for r in rows if r["senses"][0]["key"] in r["label"])
 
     print(f"\n{len(rows)} hand-labelled lines\n")

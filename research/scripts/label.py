@@ -84,7 +84,7 @@ def read_answer(row, order):
         if picks and all(p.isdigit() and 1 <= int(p) <= len(order) for p in picks):
             keys = [row["senses"][order[int(p) - 1]]["key"] for p in picks]
             return sorted(set(keys)), unsure
-        print(f"  not an option — press h for help")
+        print("  not an option — press h for help")
 
 
 def main():

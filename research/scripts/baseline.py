@@ -41,11 +41,13 @@ def main():
         if not by_band[band]:
             continue
         right, total, percent, senses = score(by_band[band])
-        print(f"{band:<12}{total:>7}{senses:>9.1f}{100 / senses:>9.0f}%{percent:>13.1f}%")
+        print(f"{band:<12}{total:>7}{senses:>9.1f}"
+              f"{100 / senses:>9.0f}%{percent:>13.1f}%")
 
     right, total, percent, senses = score(rows)
     print(f"{DIM}{'-' * 52}{OFF}")
-    print(f"{BOLD}{'overall':<12}{total:>7}{senses:>9.1f}{100 / senses:>9.0f}%{percent:>13.1f}%{OFF}")
+    print(f"{BOLD}{'overall':<12}{total:>7}{senses:>9.1f}"
+          f"{100 / senses:>9.0f}%{percent:>13.1f}%{OFF}")
 
     sure = [row for row in rows if not row.get("unsure")]
     if len(sure) < len(rows):

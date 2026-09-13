@@ -28,13 +28,20 @@ import random
 
 import nltk
 
+# The data has to be on disk before nltk.corpus is imported, which is why the imports
+# below are not at the top of the file.
 for package in ["wordnet", "omw-1.4", "semcor"]:
     nltk.download(package, quiet=True)
 
 from nltk.corpus import semcor
 from nltk.corpus import wordnet as wn
-from sentence_transformers import (InputExample, SentenceTransformer, evaluation,
-                                   losses, util)
+from sentence_transformers import (
+    InputExample,
+    SentenceTransformer,
+    evaluation,
+    losses,
+    util,
+)
 from torch.utils.data import DataLoader
 
 MODEL = "sentence-transformers/all-MiniLM-L6-v2"   # 22M, the one that fits a browser
@@ -61,7 +68,7 @@ def semcor_examples():
         if len(words) < MIN_WORDS:
             continue
         text = " ".join(words)
-        for start, length, label in tagged:
+        for _start, _length, label in tagged:
             try:
                 synset, lemma = label.synset(), label.name()
             except Exception:
@@ -69,7 +76,7 @@ def semcor_examples():
             if not lemma or synset.pos() not in "nvar":
                 continue
             candidates = [s for s in wn.synsets(lemma, synset.pos())
-                          if any(l.name() == lemma for l in s.lemmas())]
+                          if any(one.name() == lemma for one in s.lemmas())]
             if len(candidates) < MIN_SENSES or synset not in candidates:
                 continue
             yield {"text": text, "lemma": lemma.replace("_", " ").lower(),
@@ -85,7 +92,7 @@ def sense_text(key):
     are how people speak, and the question is a line somebody spoke.
     """
     s = wn.synset(key)
-    return " ".join([", ".join(l.name().replace("_", " ") for l in s.lemmas()) + ":",
+    return " ".join([", ".join(lemma.name().replace("_", " ") for lemma in s.lemmas()) + ":",
                      s.definition(), *s.examples()[:2]])
 
 
@@ -114,7 +121,7 @@ def score(encoder, test):
     lines = encoder.encode([line_text(r) for r in test], convert_to_tensor=True,
                            normalize_embeddings=True, show_progress_bar=False)
     at = collections.Counter()
-    for row, line in zip(test, lines):
+    for row, line in zip(test, lines, strict=True):
         texts = [sense_text(s["key"]) for s in row["senses"]]
         senses = encoder.encode(texts, convert_to_tensor=True,
                                 normalize_embeddings=True, show_progress_bar=False)
@@ -165,7 +172,7 @@ def main():
               output_path=args.out, show_progress_bar=True)
     print("after training:", checker(model))
 
-    test = [json.loads(l) for l in open(args.test, encoding="utf-8")]
+    test = [json.loads(line) for line in open(args.test, encoding="utf-8")]
     base = sum(1 for r in test if r["senses"][0]["key"] in r["label"])
     print(f"\n{len(test)} hand-labelled subtitle lines the model has never seen\n")
     print(f"first sense in the dictionary   {100 * base / len(test):.1f}%")

@@ -42,7 +42,8 @@ def pairs(row):
     return same, apart
 
 
-STOP = set("a an the of or and to in for with that is as by on be not".split())
+STOP = {"a", "an", "the", "of", "or", "and", "to", "in",
+        "for", "with", "that", "is", "as", "by", "on", "be", "not"}
 
 
 def overlap(left, right):
@@ -61,8 +62,8 @@ def signals(a, b):
     return {"lexname": float(x.lexname() == y.lexname()),
             "path": x.path_similarity(y),
             "wup": x.wup_similarity(y),
-            "synonym": overlap({l.name() for l in x.lemmas()},
-                               {l.name() for l in y.lemmas()}),
+            "synonym": overlap({lemma.name() for lemma in x.lemmas()},
+                               {lemma.name() for lemma in y.lemmas()}),
             "gloss": overlap(words(x.definition()), words(y.definition()))}
 
 
@@ -79,7 +80,7 @@ def main():
     parser.add_argument("--file", default="data/candidates.jsonl")
     args = parser.parse_args()
 
-    rows = [json.loads(l) for l in open(args.file, encoding="utf-8")]
+    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
     rows = [r for r in rows if r.get("label") and len(r["label"]) > 1]
 
     groups = collections.defaultdict(lambda: ([], []))
@@ -90,7 +91,8 @@ def main():
         groups[family][1].extend(signals(a, b) for a, b in apart)
 
     print(f"{len(rows)} lines where more than one sense was accepted\n")
-    print(f"  {'':<26}{'lexname':>9}{'path':>9}{'wup':>9}{'synonym':>9}{'gloss':>9}{'pairs':>8}")
+    print(f"  {'':<26}{'lexname':>9}{'path':>9}{'wup':>9}"
+          f"{'synonym':>9}{'gloss':>9}{'pairs':>8}")
     for family, (same, apart) in sorted(groups.items()):
         print(f"\n{family}")
         summarise("accepted together", same)

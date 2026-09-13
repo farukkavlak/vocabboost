@@ -19,10 +19,9 @@ import json
 import random
 
 import nltk
+from fetch_corpus import usable
 from nltk.corpus import wordnet as wn
 from nltk.stem import WordNetLemmatizer
-
-from fetch_corpus import usable
 from pick_candidates import TAGS
 
 # Wiktionary names parts of speech in words; WordNet uses letters.
@@ -71,7 +70,7 @@ def report(name, senses, occurrences):
     tokens = sum(occurrences[k] for k in senses)
     all_types = len(occurrences)
     all_tokens = sum(occurrences.values())
-    ambiguous = [n for n in senses.values() if n > 1]
+    ambiguous = [count for count in senses.values() if count > 1]
     average = sum(ambiguous) / len(ambiguous) if ambiguous else 0
     print(f"{name:<22}{100 * types / all_types:>8.1f}%{100 * tokens / all_tokens:>8.1f}%"
           f"{average:>11.1f}{sum(1 for n in senses.values() if n >= 10):>11}")
@@ -85,7 +84,7 @@ def main():
     parser.add_argument("--seed", type=int, default=17)
     args = parser.parse_args()
 
-    pool = [json.loads(l)["text"] for l in open(args.pool, encoding="utf-8")]
+    pool = [json.loads(line)["text"] for line in open(args.pool, encoding="utf-8")]
     pool = [t for t in pool if usable(t)]
     random.Random(args.seed).shuffle(pool)
     occurrences = targets(pool[: args.lines])

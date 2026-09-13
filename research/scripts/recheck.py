@@ -31,7 +31,7 @@ def main():
     answers = {}
     for done, row in enumerate(sample):
         order = labeller.show(row, done, len(sample))
-        answer, unsure = labeller.read_answer(row, order)
+        answer, _unsure = labeller.read_answer(row, order)
         if answer == "q":
             break
         if answer == "s":

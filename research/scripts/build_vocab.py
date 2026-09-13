@@ -63,7 +63,7 @@ def write_senses(connection):
             "INSERT INTO sense (key, gloss, examples, synonyms) VALUES (?, ?, ?, ?)",
             (synset.name(), synset.definition(),
              json.dumps(synset.examples()[:2]),
-             json.dumps([l.name().replace("_", " ") for l in synset.lemmas()])))
+             json.dumps([lemma.name().replace("_", " ") for lemma in synset.lemmas()])))
         ids[synset.name()] = cursor.lastrowid
     return ids
 
@@ -82,7 +82,7 @@ def write_entries(connection, ids):
     grouped = {}
     for raw, pos in sorted(names, key=lambda n: (n[0].lower(), n[0], n[1])):
         keys = [s.name() for s in wn.synsets(raw, pos)
-                if any(l.name() == raw for l in s.lemmas())]
+                if any(lemma.name() == raw for lemma in s.lemmas())]
         if not keys:
             continue
         entry = grouped.setdefault((raw.replace("_", " ").lower(), pos), [])

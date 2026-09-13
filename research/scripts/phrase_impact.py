@@ -27,10 +27,16 @@ def main():
     args = parser.parse_args()
 
     vocab = Vocab(args.db)
-    rows = [json.loads(l) for l in open(args.file, encoding="utf-8")]
+    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
 
     fired, rescued, examples = 0, 0, []
     for row in rows:
+        # Lines already switched to their phrase count too, or the figure would drop
+        # to zero the moment `apply_phrases` had run.
+        if row.get("phrase"):
+            fired += 1
+            examples.append((row, row["lemma"]))
+            continue
         words = [w.lower() for w in WORD.findall(row["text"])]
         index = index_of(words, row["word"])
         if index is None:

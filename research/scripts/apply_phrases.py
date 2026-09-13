@@ -24,7 +24,7 @@ def main():
     args = parser.parse_args()
 
     vocab = Vocab(args.db)
-    rows = [json.loads(l) for l in open(args.file, encoding="utf-8")]
+    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
 
     changed = 0
     for row in rows:

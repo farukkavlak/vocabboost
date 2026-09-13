@@ -135,9 +135,10 @@ merged inventory reaches 87–89% where fine-grained WordNet reaches 79.
 
 Finding those merges automatically failed. The pairs a labeller accepted together were
 compared against the pairs they rejected over five signals — subject file, two
-hierarchy distances, synonym overlap, definition overlap — and nothing separated them
-(0.17 against 0.16 on the best one). WordNet's structure does not carry the judgement.
-Parked until a gloss encoder can be asked the same question.
+hierarchy distances, synonym overlap, definition overlap. Over 31 accepted pairs and
+249 rejected ones, nothing separates them: 0.18 against 0.16 on hierarchy distance,
+0.46 against 0.47 on synonym overlap. WordNet's structure does not carry the
+judgement. Parked until a gloss encoder can be asked the same question.
 
 ## vocab.db
 
@@ -162,10 +163,10 @@ dictionary form and one object pronoun is allowed inside a two-word phrase. Word
 files a few slang idioms under `the something` — `the boot` for dismissal — which
 collide with the plain noun on nearly every line, so those are skipped.
 
-25 of the 201 test lines turned out to be phrases. Their labels answered the wrong
-question and were made again, against 2.0 senses on average instead of 8.3. The
-first-sense baseline went from 45.6% to 55.0% — nine and a half points from a
-dictionary, with no model involved.
+25 of the 201 test lines turned out to be phrases, 18 of them in the working set.
+Their labels answered the wrong question and were made again, against 2.0 senses on
+average instead of 8.3. The first-sense baseline went from 45.6% to 55.0% — nine and a
+half points from a dictionary, with no model involved.
 
 ## Embeddings
 
@@ -183,10 +184,25 @@ dark part of the diurnal cycle" — while its examples are how people speak, and
 question is a line somebody spoke.
 
 Those numbers predate phrase matching. Against the 55.0% baseline the untrained 110M
-model is worth 0.7 points, and on phrase lines it is worse than showing the first
-sense: a phrase carries two senses on average and the first is right nine times in ten.
-So most of what the untrained model appeared to be worth was it compensating for a
-badly asked question.
+model is worth 0.7 points, so most of what it appeared to be worth was it compensating
+for a badly asked question.
+
+Split by whether the line is a phrase, both models measured the same way:
+
+|              | lines | senses | baseline | untrained 110M | trained 22M |
+| ------------ | ----: | -----: | -------: | -------------: | ----------: |
+| phrases      |    18 |    2.0 |    88.9% |          83.3% |       83.3% |
+| single words |   131 |    7.7 |    50.4% |          51.9% |       55.7% |
+| all          |   149 |    7.0 |    55.0% |          55.7% |       59.1% |
+
+On single words the trained model is 5.3 points ahead of the baseline where the
+untrained one managed 1.5. On phrases both are behind it: a phrase carries two senses
+on average and the first is right nine times in ten, so there is nothing to win and a
+coin-flip to lose.
+
+That suggests a rule worth measuring in phase 15 — below three senses, show the first
+and skip the model. On these lines it would be worth about half a point, and it also
+saves the work.
 
 ### Where it goes wrong
 

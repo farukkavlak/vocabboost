@@ -48,7 +48,7 @@ def examples():
             if not lemma or synset.pos() not in "nvar":
                 continue
             candidates = [s for s in wn.synsets(lemma, synset.pos())
-                          if any(l.name() == lemma for l in s.lemmas())]
+                          if any(one.name() == lemma for one in s.lemmas())]
             if len(candidates) < MIN_SENSES or synset not in candidates:
                 continue
             yield {

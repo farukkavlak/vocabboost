@@ -76,7 +76,7 @@ class Vocab:
         for ending, replacement in RULES.get(pos, []):
             if surface.endswith(ending):
                 found.append(surface[: len(surface) - len(ending)] + replacement)
-        return [surface] + found
+        return [surface, *found]
 
     def candidate_phrases(self, words, index):
         """Every phrase the click could belong to, longest first."""
@@ -97,7 +97,7 @@ class Vocab:
         """The longest phrase entry covering the clicked word, if there is one."""
         for span in self.candidate_phrases(words, index):
             # The first word carries the inflection: "ran into" is `run into`.
-            for head in self.lemmas_of(span[0], "v") + [span[0]]:
+            for head in [*self.lemmas_of(span[0], "v"), span[0]]:
                 row = self.entry(" ".join([head, *span[1:]]))
                 if row:
                     return row
