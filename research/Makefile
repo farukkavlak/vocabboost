@@ -9,6 +9,11 @@ pool:
 	$(PY) scripts/fetch_corpus.py
 	$(PY) scripts/word_frequency.py
 
+wiktionary:
+	curl -C - --retry 5 -o data/raw/wiktionary-raw.jsonl \
+	  https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl
+	$(PY) scripts/fetch_wiktionary.py
+
 candidates:
 	$(PY) scripts/pick_candidates.py
 
@@ -27,4 +32,4 @@ recheck:
 clean:
 	rm -rf .venv data/raw __pycache__ scripts/__pycache__
 
-.PHONY: setup pool candidates label split baseline recheck clean
+.PHONY: setup pool wiktionary candidates label split baseline recheck clean
