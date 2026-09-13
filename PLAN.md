@@ -381,7 +381,12 @@ Expect to land below 79.0. The number to beat is 65.5.
 - [ ] Run `all-MiniLM-L6-v2` locally through `sentence-transformers`
 - [ ] Embed the line, embed every sense, take the nearest
 - [ ] Measure against phase 10, on the 150, never the 50
-- [ ] Look at 20 failures by hand and write down what kind they are
+- [ ] Measure whether the right sense is first, in the top three, and in the top five.
+      The card shows more than one, so a near miss still reaches the reader, and how
+      many it should show is a question these numbers answer rather than we do.
+- [ ] Look at 20 failures by hand and write down what kind they are. A wrong sense
+      next door to the right one is not the same mistake as a wrong sense from another
+      part of the language, and the two should not be counted together.
 
 **Exit:** accuracy with no training at all. This is usually well above the baseline, which
 is worth seeing before spending a week on training.
@@ -462,11 +467,23 @@ say so.
 
 - [ ] Pick a threshold on the validation set, never the test set
 - [ ] Plot accuracy against how often the model answers, and choose the point deliberately
-- [ ] Below the threshold the card says the answer is uncertain and offers a model lookup
-      to whoever has a key
+- [ ] Below the threshold the card stops claiming. It shows the senses that fit, side
+      by side and unranked, and says plainly that the line does not settle it.
+- [ ] Above the threshold the card leads with one sense and folds the rest away behind
+      a count. The other meanings stay one click from the reader either way, because
+      ranking second is not the same as being absent.
+- [ ] How many senses sit above the fold comes from the phase 12 numbers, not from
+      taste. Showing every sense is what the extension does today, and a wall of
+      thirteen definitions is the problem, not the fix. The ranking is what we add.
 
 **Exit:** a threshold with the accuracy and the answer rate that come with it. The easy
 majority is handled offline for free, and the hard remainder is handed over honestly.
+
+A reader is never shown a confident wrong answer, which matters more than the headline
+number. Being wrong quietly is what teaches someone the wrong word.
+
+The card does not offer to call a model. Whoever wants one has already chosen it in
+settings, and for everyone else it is an advert in the middle of an answer.
 
 ### 16 — `feat/local-provider`
 
