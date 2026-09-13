@@ -43,7 +43,7 @@ def show(row, done, total):
     random.Random(row["id"]).shuffle(order)
 
     text = row["text"].replace(row["word"], f"{BOLD}{row['word']}{OFF}", 1)
-    print(f"\n{DIM}{done}/{total} labelled  ·  {row['band']}{OFF}")
+    print(f"\n{DIM}{done}/{total} labelled  ·  {row['band']}  ·  id {row['id']}{OFF}")
     print(f"\n  {text}\n")
     print(f"  {BOLD}{row['lemma']}{OFF} ({row['pos']})\n")
 
