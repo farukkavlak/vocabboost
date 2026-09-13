@@ -343,22 +343,36 @@ automatically is the open question, and the cheap attempt at it failed.
 
 - [x] Pull the Wiktionary dump and measure both sources over 10,000 subtitle lines,
       before building anything on either
-- [ ] Build `vocab.db` (SQLite): WordNet senses where it has the word, Wiktionary for
-      the rest, with word, part of speech, senses and examples
+- [x] Build `vocab.db` (SQLite) from WordNet: 117,659 senses stored once, 157,300
+      entries pointing at them, 27 MB
+- [ ] Fill the words WordNet lacks from Wiktionary. Two of the 25 phrase lines needed
+      it: WordNet knows `at a loss` only as "below cost" and `go back` only as "date
+      back", and Wiktionary has the everyday reading of both.
 - [x] Try to find the senses nobody can tell apart from WordNet's own structure, its
       synonyms and its definitions. None of the five signals separate the pairs a
       labeller merged from the pairs they kept apart, so this is parked until phase 12
       can ask a gloss encoder the same question.
-- [ ] Add a lemmatizer so `ran` finds `run`. This alone fixes the misses that made
-      `dictionaryapi.dev` answer nothing for common past tenses.
+- [x] Add a lemmatizer so `ran` finds `run`. WordNet's irregular list plus a handful
+      of suffix rules.
 - [ ] Add CMUdict for pronunciation and a CEFR word list for level
-- [ ] Fold in a phrasal verb list, so `run into` is not looked up as `run`
+- [x] Match phrases, so `run into` is not looked up as `run`. A third of WordNet's
+      lemmas are already phrases, so this was never missing data. Matching needs the
+      first word lemmatised and one object pronoun allowed inside — `check it out` is
+      `check out`, `ran into` is `run into`.
+- [x] Measure what it was worth: the first-sense baseline goes from 45.6% to 55.0%,
+      and 25 of the 201 test lines were answering the wrong question and were labelled
+      again.
 - [x] Measure coverage over 10,000 subtitle lines, by distinct word and weighted by
       how often each word occurs, with senses per word alongside it
 - [ ] Measure coverage again once Wiktionary is filling WordNet's gaps
 
 **Exit:** two coverage numbers, a count of how finely each source splits meanings, and a
 database file with a known size.
+
+It changed what phase 12 means. Against the old baseline the untrained embeddings were
+worth 5.4 points; against this one they are worth 0.7, and on phrase lines they are worse
+than showing the first sense. Most of what the model appeared to be worth was it
+compensating for a question asked badly. The case for training now rests on training.
 
 At the end of this phase the extension could already ship offline, at baseline quality.
 Everything after it is about picking a better sense.

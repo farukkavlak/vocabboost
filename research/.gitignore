@@ -1,6 +1,8 @@
 .venv/
 __pycache__/
+.env
 data/raw/
+data/vocab.db
 data/working.jsonl
 data/sealed.jsonl
 data/recheck.jsonl

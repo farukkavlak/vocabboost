@@ -14,6 +14,12 @@ wiktionary:
 	  https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl
 	$(PY) scripts/fetch_wiktionary.py
 
+vocab:
+	$(PY) scripts/build_vocab.py
+
+phrases:
+	$(PY) scripts/apply_phrases.py
+
 candidates:
 	$(PY) scripts/pick_candidates.py
 
@@ -32,4 +38,4 @@ recheck:
 clean:
 	rm -rf .venv data/raw __pycache__ scripts/__pycache__
 
-.PHONY: setup pool wiktionary candidates label split baseline recheck clean
+.PHONY: setup pool wiktionary vocab phrases candidates label split baseline recheck clean
