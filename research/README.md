@@ -64,6 +64,13 @@ with and without the doubtful lines.
 run time. If the line does not settle which meaning it is, neither of you can know,
 and `n` is the honest answer rather than a guess.
 
+**`n` and `x` are different answers.** `n` says the line is sound and no sense fits
+it — `club` in `club soda` carries none of its own meanings, and that is real evidence
+of the kind phase 15 learns from. `x` says the line is garbled and was never a fair
+question, so it leaves the set rather than teaching anything. Subtitle files carry
+their share of mangled text, and filing it under `n` would teach the model to
+recognise nonsense instead of ambiguity.
+
 **`make recheck` measures the ceiling.** Relabel thirty lines blind, days later, and
 see how often you agree with your earlier self. No model judged on these labels can
 honestly claim to beat that number, and a model score quoted without it means less
