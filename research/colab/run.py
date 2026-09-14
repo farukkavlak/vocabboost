@@ -17,8 +17,8 @@ learn and, past a point, more chances to memorise.
 
 The **loss** is how wrong the model currently is. Training is making it go down.
 Watching it on the training data alone tells you nothing: a memorising model shows a
-falling training loss and a rising validation score that stalls, and that gap is the
-thing to watch.
+falling training loss and a test score that stops moving, and that gap is the thing to
+watch. So the subtitle lines are scored after every epoch, not only at the end.
 """
 
 import argparse
@@ -133,11 +133,22 @@ def score(encoder, test):
     return {d: round(100 * at[d] / len(test), 1) for d in (1, 3, 5)}
 
 
+def semcor_score(checker, model):
+    """TripletEvaluator returns a dict of metrics; we want the accuracy out of it."""
+    result = checker(model)
+    if isinstance(result, dict):
+        for name, value in result.items():
+            if "accuracy" in name:
+                return value
+        return next(iter(result.values()))
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", default="working.jsonl")
     parser.add_argument("--out", default="model")
-    parser.add_argument("--examples", type=int, default=50_000)
+    parser.add_argument("--examples", type=int, default=0, help="0 means all of them")
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--seed", type=int, default=17)
@@ -155,29 +166,33 @@ def main():
     words = sorted({r["lemma"] for r in rows})
     rng.shuffle(words)
     held = set(words[: len(words) // 10])
-    train = [r for r in rows if r["lemma"] not in held][: args.examples]
+    train = [r for r in rows if r["lemma"] not in held]
+    if args.examples:
+        train = train[: args.examples]
     valid = [r for r in rows if r["lemma"] in held][:2_000]
     print(f"train {len(train):,} examples, {len({r['lemma'] for r in train}):,} words")
     print(f"valid {len(valid):,} examples, {len({r['lemma'] for r in valid}):,} words\n")
 
+    test = [json.loads(line) for line in open(args.test, encoding="utf-8")]
+    base = sum(1 for r in test if r["senses"][0]["key"] in r["label"])
+    print(f"{len(test)} hand-labelled subtitle lines, never seen in training")
+    print(f"first sense in the dictionary   {100 * base / len(test):.1f}%\n")
+
     model = SentenceTransformer(MODEL)
     checker = evaluation.TripletEvaluator.from_input_examples(pairs(valid, rng),
                                                              name="held-out words")
-    print("before training:", checker(model))
-    model.fit(train_objectives=[(DataLoader(pairs(train, rng), shuffle=True,
-                                            batch_size=args.batch),
-                                 losses.MultipleNegativesRankingLoss(model))],
-              evaluator=checker, epochs=args.epochs,
-              warmup_steps=int(0.1 * len(train) / args.batch),
-              output_path=args.out, show_progress_bar=True)
-    print("after training:", checker(model))
+    print(f"epoch 0  semcor {semcor_score(checker, model):.3f}  "
+          f"subtitles {score(model, test)}")
 
-    test = [json.loads(line) for line in open(args.test, encoding="utf-8")]
-    base = sum(1 for r in test if r["senses"][0]["key"] in r["label"])
-    print(f"\n{len(test)} hand-labelled subtitle lines the model has never seen\n")
-    print(f"first sense in the dictionary   {100 * base / len(test):.1f}%")
-    print(f"untrained 22M                   {score(SentenceTransformer(MODEL), test)}")
-    print(f"trained   22M                   {score(model, test)}")
+    loader = DataLoader(pairs(train, rng), shuffle=True, batch_size=args.batch)
+    loss = losses.MultipleNegativesRankingLoss(model)
+    for epoch in range(1, args.epochs + 1):
+        model.fit(train_objectives=[(loader, loss)], epochs=1,
+                  warmup_steps=int(0.1 * len(train) / args.batch) if epoch == 1 else 0,
+                  output_path=args.out, show_progress_bar=True)
+        print(f"epoch {epoch}  semcor {semcor_score(checker, model):.3f}  "
+              f"subtitles {score(model, test)}")
+
     print(f"\nsaved to {args.out}/")
 
 

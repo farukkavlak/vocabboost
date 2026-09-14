@@ -259,3 +259,58 @@ bar. The convincing number is elsewhere: same model, same lines, same evaluation
 One epoch, and 50,000 of 177,665 examples. SemCor is books and journalism while the
 test set is speech. And 68.5% of training examples are the commonest sense of their
 word, which is the opposite of when a reader reaches for a dictionary.
+
+## Labelling with a panel of models
+
+The student can never be better than its labels, and one model is wrong more often
+than it sounds. So before spending anything on ten thousand lines, three models were
+run over the 200 the labeller had already marked — the only way to score a teacher is
+against an answer key.
+
+Each model answers alone, with the senses shuffled in its own order. Models anchor on
+the first option the way people do, and WordNet lists senses commonest first.
+
+|                  | matches the person |
+| ---------------- | -----------------: |
+| claude-haiku-4.5 |              73.5% |
+| gemini-2.5-flash |              74.5% |
+| gpt-4o-mini      |              70.0% |
+
+Each on its own lands where published evaluations put single models on this task,
+between 56% and 77%. Agreement is what changes that:
+
+|              | lines | matches the person |
+| ------------ | ----: | -----------------: |
+| 3 of 3 agree |   132 |              86.4% |
+| 2 of 3 agree |    58 |              53.4% |
+| 1 of 3 agree |    10 |              40.0% |
+
+So keeping only unanimous answers gives labels for two thirds of the data at 86.4%.
+For comparison, two trained human annotators agree on fine WordNet distinctions about
+70–78% of the time — though the unanimous lines are the easy ones, where people would
+agree more too, so it is not a like-for-like comparison.
+
+The lines the panel splits on are not waste. They are the genuinely ambiguous ones, and
+they are what phase 15 needs to teach the model when to say nothing.
+
+Cost: $0.000429 a line for three models, so ten thousand lines is about $4.30.
+
+### Not spending it yet
+
+The free data is not exhausted. SemCor was used at 50,000 of its 177,665 examples for
+one epoch, and OMSTI (911,000 annotations), MASC (which includes transcribed speech)
+and the WordNet Gloss Corpus have not been touched at all. UFSAC bundles all of them in
+one format with WordNet 3.0 keys.
+
+Paying for labels before running the free experiments would be the same mistake as
+building `vocab.db` on Wiktionary before measuring it.
+
+### If a panel is used
+
+Ten model families answer on fal's OpenRouter endpoint: Anthropic, Google, OpenAI,
+Meta, Mistral, Alibaba, DeepSeek, xAI, Cohere, Amazon. Five different families is
+easily reachable and more diverse than three.
+
+Three of them failed the format, though. Asked for a number alone, Mistral replied
+`Sure: "okay"`, Cohere `Okay.`, and Phi a paragraph. A judge has to answer in the shape
+asked for, so the panel is picked from the ones that do.

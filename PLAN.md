@@ -298,9 +298,10 @@ measured, and why the model must never see the test set while it is being traine
       45.6% overall, and 36.0% on the everyday words a beginner is likeliest to click.
 - [ ] Relabel 30 of them blind, days later, and measure how often you agree with
       yourself. No model can be judged past that number.
-- [ ] Run the phase 13 panel of models over the same 200 lines and compare it to the
-      hand labels. How often a unanimous panel matches a person is what says whether
-      phase 13 may label ten thousand lines without us reading them.
+- [x] Run the phase 13 panel of models over the same 200 lines and compare it to the
+      hand labels. A unanimous panel of three matches the person 86.4% of the time and
+      covers two thirds of the lines; each model alone manages 70-74%. So the panel may
+      label at scale, but only where it agrees.
 
 **Exit:** one number, and it is 45.6%. Phase 11 raised it to 55.0% by asking about
 phrases rather than the words inside them, and 55.0% is what later phases are measured
@@ -444,7 +445,14 @@ one evaluation puts GPT-4 between 56% and 77% on this task depending on the setu
 
 - [x] Train on SemCor first and measure. It was most of the distance: 59.1% against a
       baseline of 55.0%, and +11.4 points over the same model untrained.
-- [ ] Pull 10,000 subtitle lines and put each one to several models independently
+- [ ] Exhaust the free data first. SemCor was used at 50,000 of 177,665 examples for one
+      epoch, and OMSTI (911,000 annotations), MASC (which includes transcribed speech) and
+      the WordNet Gloss Corpus are untouched. UFSAC bundles them all with WordNet 3.0
+      keys. Paying for labels before measuring these would repeat the Wiktionary mistake.
+- [ ] Pull 10,000 subtitle lines and put each one to several models independently.
+      Ten families answer on fal's OpenRouter endpoint, so five is easily reachable —
+      but only models that answer in the shape asked for; Mistral, Cohere and Phi did
+      not. About $0.000429 a line for three, so $4.30 for ten thousand.
 - [ ] Where they agree, take the label. Where they split, keep the line and the split.
 - [ ] Check 100 of the labels by hand and report how often the teacher is wrong. A teacher
       that is wrong 10% of the time sets a ceiling on the student.
