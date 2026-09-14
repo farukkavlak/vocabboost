@@ -18,7 +18,7 @@ which is what the card shows.
 | + phrase matching             |      0 |     55.0% |         - |         - |
 | untrained 22M encoder         |  23 MB |     47.7% |     75.2% |     88.6% |
 | untrained 110M encoder        | 110 MB |     55.7% |     80.5% |     89.3% |
-| **trained 22M encoder**       |  23 MB | **59.1%** | **82.6%** | **91.3%** |
+| **trained 22M encoder**       |  23 MB | **64.4%** | **85.2%** | **90.6%** |
 
 The extension today shows the first sense the dictionary lists and is wrong more often
 than right. The trained model is the only one small enough to ship and the best of the
@@ -28,18 +28,16 @@ By frequency band, both measured after phrase matching:
 
 | band     | senses a word | baseline | trained |
 | -------- | ------------: | -------: | ------: |
-| everyday |           9.3 |    52.0% |   52.0% |
-| common   |           5.8 |    70.0% |   64.0% |
-| uncommon |           6.0 |    42.9% |   61.2% |
+| everyday |           9.3 |    52.0% |   56.0% |
+| common   |           5.8 |    70.0% |   72.0% |
+| uncommon |           6.0 |    42.9% |   65.3% |
 
-All of the model's gain is on uncommon words, where it is 18 points ahead. On everyday
-words it draws, and on common words it is 6 points behind — there the dictionary's own
-ordering is hard to beat, because a common word's commonest sense usually is the right
-one.
+The model is ahead in every band now, but the gain is lopsided: 22 points on uncommon
+words against 4 and 2 on the other two. A common word's commonest sense usually is the
+right one, so the dictionary's own ordering is hard to beat there.
 
 That split matters for shipping. A reader who clicks `vaudeville` is much better served
-than one who clicks `play`, and the phrase layer rather than the model is what carries
-the everyday words.
+than one who clicks `play`.
 
 ## Running it
 
@@ -191,22 +189,19 @@ Split by whether the line is a phrase, both models measured the same way:
 
 |              | lines | senses | baseline | untrained 110M | trained 22M |
 | ------------ | ----: | -----: | -------: | -------------: | ----------: |
-| phrases      |    18 |    2.0 |    88.9% |          83.3% |       83.3% |
-| single words |   131 |    7.7 |    50.4% |          51.9% |       55.7% |
-| all          |   149 |    7.0 |    55.0% |          55.7% |       59.1% |
+| phrases      |    18 |    2.0 |    88.9% |          83.3% |       94.4% |
+| single words |   131 |    7.7 |    50.4% |          51.9% |       60.3% |
+| all          |   149 |    7.0 |    55.0% |          55.7% |       64.4% |
 
-On single words the trained model is 5.3 points ahead of the baseline where the
-untrained one managed 1.5. On phrases both are behind it: a phrase carries two senses
-on average and the first is right nine times in ten, so there is nothing to win and a
-coin-flip to lose.
-
-That suggests a rule worth measuring in phase 15 — below three senses, show the first
-and skip the model. On these lines it would be worth about half a point, and it also
-saves the work.
+On single words the trained model is 9.9 points ahead of the baseline where the
+untrained one managed 1.5. On phrases it is ahead too, by 5.6 — the earlier run was
+behind the baseline there, which is what suggested skipping the model below three
+senses. That rule is off the table: on 18 lines one either way is noise, but the model
+is no longer the risk.
 
 ### Where it goes wrong
 
-73 of 149 lines get the wrong sense first; 45 of those still have a right sense in the
+53 of 149 lines get the wrong sense first; 31 of those still have a right sense in the
 top three. How badly wrong the rest are is not measured — WordNet's verbs are three
 levels deep against nine for nouns, so `buy` as trade scores further from `buy` as
 purchase than `hand` the body part does from `hand` the card game.
@@ -223,7 +218,7 @@ Read by hand, the misses are five kinds:
 
 ## Training
 
-Runs on Colab, not here. Five minutes on a free T4; 42 seconds a step on an M-series
+Runs on Colab, not here. Eighteen minutes on a free T4; 42 seconds a step on an M-series
 Mac, about a hundred times slower, and it locks the machine up. There is no local
 training script, because a path that does not work invites someone to try it.
 
@@ -243,22 +238,35 @@ code that scored the untrained models, so the comparison is like for like.
 
 ### The run
 
-`all-MiniLM-L6-v2`, 50,000 SemCor examples, one epoch, batch of 64. Wrong answers are
-drawn from the other senses of the same word — telling `safe` the strongbox from `safe`
-the contraceptive is the job, telling it from "the weather is nice" is not.
+`all-MiniLM-L6-v2`, all 177,665 SemCor examples, one epoch, batch of 64. Wrong answers
+are drawn from the other senses of the same word — telling `safe` the strongbox from
+`safe` the contraceptive is the job, telling it from "the weather is nice" is not.
 
 The data is split by word, not by row, so a word in training never appears in
-validation. On those held-out words the triplet score went from 0.674 to 0.766.
+validation. On those held-out words the triplet score went from 0.674 to 0.793.
 
-Against the baseline the trained model is +4.1, which on 149 lines is inside the error
-bar. The convincing number is elsewhere: same model, same lines, same evaluation code,
-+11.4 points from training alone.
+Against the baseline the trained model is +9.4. The cleaner number is the same model,
+same lines, same evaluation code, before and after training: +16.7 points.
+
+### More data was worth it
+
+The first run used 50,000 of the 177,665 examples. Same model, same epoch count, same
+evaluation — the only change was the amount of data:
+
+| examples | held-out triplets | first | first 3 |
+| -------: | ----------------: | ----: | ------: |
+|   50,000 |             0.766 | 59.1% |   82.6% |
+|  177,665 |             0.793 | 64.4% |   85.2% |
+
+Three and a half times the data bought 5.3 points, and both scores moved together, so
+the model is learning the task rather than memorising SemCor. It has not flattened out,
+which is the argument for feeding it OMSTI next.
 
 ### Left on the table
 
-One epoch, and 50,000 of 177,665 examples. SemCor is books and journalism while the
-test set is speech. And 68.5% of training examples are the commonest sense of their
-word, which is the opposite of when a reader reaches for a dictionary.
+One epoch. SemCor is books and journalism while the test set is speech. And 68.5% of
+training examples are the commonest sense of their word, which is the opposite of when
+a reader reaches for a dictionary.
 
 ## Labelling with a panel of models
 
@@ -297,10 +305,10 @@ Cost: $0.000429 a line for three models, so ten thousand lines is about $4.30.
 
 ### Not spending it yet
 
-The free data is not exhausted. SemCor was used at 50,000 of its 177,665 examples for
-one epoch, and OMSTI (911,000 annotations), MASC (which includes transcribed speech)
-and the WordNet Gloss Corpus have not been touched at all. UFSAC bundles all of them in
-one format with WordNet 3.0 keys.
+The free data is not exhausted. SemCor is now used in full, but it was worth 5.3 points
+going from a third of it to all of it, and OMSTI (911,000 annotations), MASC (which
+includes transcribed speech) and the WordNet Gloss Corpus have not been touched at all.
+UFSAC bundles all of them in one format with WordNet 3.0 keys.
 
 Paying for labels before running the free experiments would be the same mistake as
 building `vocab.db` on Wiktionary before measuring it.

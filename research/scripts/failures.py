@@ -25,13 +25,13 @@ BOLD, DIM, OFF = "\033[1m", "\033[2m", "\033[0m"
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", default="data/working.jsonl")
-    parser.add_argument("--model", default="sentence-transformers/all-mpnet-base-v2")
+    parser.add_argument("--model", default="data/model")
     parser.add_argument("--show", type=int, default=20)
     parser.add_argument("--band", default="")
     args = parser.parse_args()
 
     rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
-    ordered = rank(SentenceTransformer(args.model), rows, "examples", "prefixed")
+    ordered = rank(SentenceTransformer(args.model), rows, "all", "prefixed")
 
     misses = [(r, k) for r, k in zip(rows, ordered, strict=True)
               if k[0] not in r["label"] and (not args.band or r["band"] == args.band)]

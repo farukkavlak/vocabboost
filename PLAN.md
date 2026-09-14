@@ -443,12 +443,13 @@ than alone, each seeing the senses in its own shuffled order, because the studen
 never be better than its labels and a single model is wrong more often than it sounds —
 one evaluation puts GPT-4 between 56% and 77% on this task depending on the setup.
 
-- [x] Train on SemCor first and measure. It was most of the distance: 59.1% against a
-      baseline of 55.0%, and +11.4 points over the same model untrained.
-- [ ] Exhaust the free data first. SemCor was used at 50,000 of 177,665 examples for one
-      epoch, and OMSTI (911,000 annotations), MASC (which includes transcribed speech) and
-      the WordNet Gloss Corpus are untouched. UFSAC bundles them all with WordNet 3.0
-      keys. Paying for labels before measuring these would repeat the Wiktionary mistake.
+- [x] Train on SemCor first and measure. It was most of the distance: 64.4% against a
+      baseline of 55.0%, and +16.7 points over the same model untrained.
+- [ ] Exhaust the free data first. All 177,665 SemCor examples are now used, and going
+      from 50,000 to all of them was worth 5.3 points, so the curve has not flattened.
+      OMSTI (911,000 annotations), MASC (which includes transcribed speech) and the
+      WordNet Gloss Corpus are untouched. UFSAC bundles them all with WordNet 3.0 keys.
+      Paying for labels before measuring these would repeat the Wiktionary mistake.
 - [ ] Pull 10,000 subtitle lines and put each one to several models independently.
       Ten families answer on fal's OpenRouter endpoint, so five is easily reachable —
       but only models that answer in the shape asked for; Mistral, Cohere and Phi did
@@ -479,8 +480,8 @@ is a few dollars of API calls.
 curve looks like when a model is memorizing instead of learning.
 
 - [x] Fine-tune the encoder so a line lands near its right sense and away from the
-      wrong ones. Five minutes on a free Colab T4; 42 seconds a step on a laptop, which
-      is why there is no local training script.
+      wrong ones. Eighteen minutes on a free Colab T4; 42 seconds a step on a laptop,
+      which is why there is no local training script.
 - [ ] Watch training loss and validation loss together. Training loss falling while
       validation loss rises is overfitting, and it is the single most useful thing to learn
       to recognize.
@@ -489,20 +490,22 @@ curve looks like when a model is memorizing instead of learning.
       commonest senses and 53 on the rest averages to something respectable and is still
       wrong exactly when it is asked.
 - [x] Report it split by frequency band, against the baseline as it stands after phrase
-      matching: 52.0% against 52.0% on everyday words, 64.0% against 70.0% on common,
-      61.2% against 42.9% on uncommon. All of the gain is on uncommon words; on common
-      ones the dictionary's own ordering still wins.
+      matching: 56.0% against 52.0% on everyday words, 72.0% against 70.0% on common,
+      65.3% against 42.9% on uncommon. It is ahead everywhere now, but the gain is
+      lopsided — 22 points on uncommon words against 4 and 2 on the rest, because a
+      common word's commonest sense usually is the right one.
 - [x] Try one smaller and one larger model and record accuracy, size and speed for
-      each. The trained 22M beats the untrained 110M by 3.4 points at a fifth of the
+      each. The trained 22M beats the untrained 110M by 8.7 points at a fifth of the
       size, which is the only comparison that matters — the 110M was never going in a
       browser.
 
-**Exit:** a trained model that beats phase 12, and it does: 59.1% against 55.7% for the
-untrained 110M and 55.0% for the baseline. Five minutes on a free Colab GPU.
+**Exit:** a trained model that beats phase 12, and it does: 64.4% against 55.7% for the
+untrained 110M and 55.0% for the baseline. Eighteen minutes on a free Colab GPU.
 
-On 149 lines, +4.1 over the baseline sits inside the error bar and settles nothing by
-itself. What settles it is the same model on the same lines gaining 11.4 points from
-training alone.
+Two runs, one changing only the amount of data: 50,000 examples gave 59.1%, all 177,665
+gave 64.4%, and the held-out triplet score moved with it (0.766 to 0.793). So the gain
+is the task being learned, not SemCor being memorised, and more data is still buying
+points.
 
 The smaller and larger runs decide more than model choice. If the larger model is clearly
 better, the ceiling is size, and a model too big for a browser could be served from a
