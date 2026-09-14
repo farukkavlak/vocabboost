@@ -4,7 +4,7 @@ Builds the model. Nothing here ships — the extension only sees what phase 16 e
 
 Two files in `data/` are in git because remaking them costs hours or money:
 `candidates.jsonl`, the 201 subtitle lines marked by hand, and `panel.jsonl`, what
-three models answered on them. Everything else is built by a make target.
+the panel of models answered on them. Everything else is built by a make target.
 
 ## Results
 
@@ -65,6 +65,14 @@ make recheck     # days later: how often do you agree with yourself?
 
 `make label` saves after every answer. `make label REDO=4,9` reopens answered lines.
 
+Labelling a larger set with a panel of models:
+
+```sh
+make teacher      # draw lines the test set never saw                    (~2 min)
+make panel        # put each one to five models                          (~70 min, ~$4)
+make panel-check  # score the panel against the 200 marked by hand
+```
+
 Measuring:
 
 ```sh
@@ -92,7 +100,7 @@ comes from the pool itself, so it measures the language of film.
 
 **Three frequency bands, reported separately.** A beginner stops at `play`; someone
 further along only at `vaudeville`. The bands are not equally hard — everyday words
-average 11.5 senses against 6.4 — and one overall number hides that. Words above five
+average 11.5 senses against 6.4, before phrase matching — and one overall number hides that. Words above five
 thousand occurrences are dropped: `do` and `have` are tagged as verbs but carry no
 meaning to look up.
 
@@ -331,7 +339,7 @@ turns them into the same rows `build_semcor.py` produces.
 | masc   |   41,276 | 3,064 |    6.3 |           60.2% |              13 |
 
 SemCor was marked by people. OMSTI was aligned automatically from parallel text, so it
-is large and, as the runs below show, noisier; MASC is smaller but includes
+is large and, as the runs above show, noisier; MASC is smaller but includes
 transcribed speech and is untouched so far.
 
 OMSTI is deep rather than broad: nearly SemCor's vocabulary with five times the
@@ -341,7 +349,7 @@ Only 46.5% of its examples are the commonest sense against SemCor's 68.5% — cl
 how a reader uses a dictionary, since you look a word up when the obvious sense does not
 fit. That read two ways: either OMSTI holds the harder examples, or automatic alignment
 skews away from common senses and the labels are unreliable. Training on it settled it
-in favour of the second; see the runs below.
+in favour of the second.
 
 MASC needed a decision. 63,253 of its words carry two sense keys where the annotator
 would not choose — more than the 41,276 kept — and those are dropped rather than
@@ -360,32 +368,41 @@ The student can never beat its labels, and one model alone is wrong more often t
 sounds. So before spending anything on ten thousand lines, the panel was run over the
 200 already marked by hand — a teacher is only scorable against an answer key.
 
-Each model answers alone, with the senses shuffled in its own order. Models anchor on
-the first option the way people do, and WordNet lists senses commonest first.
+Each model answers alone, with the senses shuffled in an order seeded by the line and
+the model together. Models anchor on the first option the way people do, and WordNet
+lists senses commonest first.
 
 |                        | matches the person |
 | ---------------------- | -----------------: |
-| llama-3.3-70b (Meta)   |              75.5% |
-| gemini-2.5-flash       |              74.5% |
-| claude-haiku-4.5       |              73.5% |
-| qwen-2.5-72b (Alibaba) |              72.0% |
-| gpt-4o-mini            |              70.0% |
+| claude-haiku-4.5       |              74.0% |
+| llama-3.3-70b (Meta)   |              74.0% |
+| qwen-2.5-72b (Alibaba) |              74.0% |
+| gemini-2.5-flash       |              72.5% |
+| gpt-4o-mini            |              65.5% |
 
 Each on its own lands where published evaluations put single models on this task,
 between 56% and 77%. Agreement is what changes that:
 
-| panel            | lines | matches the person |
-| ---------------- | ----: | -----------------: |
-| 3 of 3 agree     |   132 |              86.4% |
-| **5 of 5 agree** |   105 |          **91.4%** |
-| 4 of 5 agree     |    44 |              72.7% |
+| agreed | lines | matches the person |
+| ------ | ----: | -----------------: |
+| 5 of 5 |    84 |          **92.9%** |
+| 4 of 5 |    57 |              78.9% |
+| 3 of 5 |    45 |              62.2% |
+| 2 of 5 |    13 |              38.5% |
 
-Two more families cost 14 points of coverage and buy 5 points of accuracy. The panel is
-five, because the OMSTI runs showed that more labels have stopped helping while cleaner
-ones have not been tried. 4 of 5 is not a middle ground — it is wider _and_ dirtier than
-3 of 3, so the threshold is unanimity or nothing.
+The seed has to carry the model as well as the line. The first version seeded by line
+alone, so all five models saw one shared order: unanimity looked like 105 lines at
+91.4%, and the 4 of 5 row came out at 72.7%, below a three-model panel's 86.4%. A fifth
+of the agreement was five models anchoring the same way rather than five models
+agreeing. With its own order per model the table above is monotonic instead.
 
-At 91.4% the panel is at the labeller's own ceiling of 28 in 30. The unanimous lines are
+How many agree is itself the confidence signal: every step down the table costs
+accuracy, with no exception. A three-model panel is unanimous on 109 lines at 89.9%, so
+two more families buy 3 points of accuracy for 12 points of coverage. The panel is five,
+because the OMSTI runs showed that more labels have stopped helping while cleaner ones
+have not been tried.
+
+At 92.9% the panel is at the labeller's own ceiling of 28 in 30. The unanimous lines are
 the easy ones, where people agree more too, so it is not a like-for-like comparison.
 
 The lines the panel splits on are not waste: they are the genuinely ambiguous ones, and
@@ -394,7 +411,7 @@ what phase 15 needs to teach the model when to say nothing.
 Four families answer in prose where a number was asked for and are not on the panel:
 Mistral, Cohere, Phi, and DeepSeek — the last on 57 of 200 lines.
 
-Cost: about $0.0007 a line for five models, so ten thousand lines is roughly $7.
+Cost: measured at $0.0004 a line for five models, so ten thousand lines is roughly $4.
 
 ### Now worth spending
 
@@ -405,13 +422,3 @@ worth closing.
 
 That is the argument the money needed. It was not available before the runs, which is
 why they came first.
-
-### If a panel is used
-
-Ten model families answer on fal's OpenRouter endpoint: Anthropic, Google, OpenAI,
-Meta, Mistral, Alibaba, DeepSeek, xAI, Cohere, Amazon. Five different families is
-easily reachable and more diverse than three.
-
-Three of them failed the format, though. Asked for a number alone, Mistral replied
-`Sure: "okay"`, Cohere `Okay.`, and Phi a paragraph. A judge has to answer in the shape
-asked for, so the panel is picked from the ones that do.

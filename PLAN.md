@@ -205,6 +205,9 @@ both grow the field.
 
 ### 9 — `feat/logbook`
 
+Not started. Part two came first, because a record of words you looked up is worth
+more once the lookup itself is good. This gets designed from scratch when it comes up.
+
 Where this is going. A lookup popup is a commodity; the record is not. The line, the
 video, the timestamp, and the fact that you did not know that word there.
 
@@ -265,8 +268,8 @@ That is classification, not writing, and small models are good at it. A 22M para
 sentence encoder is about 23MB once quantized and answers in milliseconds on the reader's
 own machine.
 
-Claude is still used, but at build time, not at run time. It labels our training data and
-fills gaps in the dictionary. The result ships as a data file. Nobody's browser ever calls
+Claude is still used, but at build time, not at run time. A panel of models labels our training
+data, and Claude fills gaps in the dictionary. The result ships as a data file. Nobody's browser ever calls
 it.
 
 ### How to work through this
@@ -468,14 +471,19 @@ one evaluation puts GPT-4 between 56% and 77% on this task depending on the setu
       better at film dialogue. That is the domain gap measured rather than assumed, and
       it is the argument for paying for subtitle labels.
 - [x] Pick the panel by measuring it, not by arguing. Five families — Anthropic, Google,
-      OpenAI, Meta, Alibaba — agree unanimously on 105 of 200 lines and match the person
-      on 91.4% of them, against 132 lines at 86.4% for three. Five points cleaner for
-      fourteen points of coverage, which is the right trade now that more labels have
+      OpenAI, Meta, Alibaba — agree unanimously on 84 of 200 lines and match the person
+      on 92.9% of them, against 109 lines at 89.9% for three. Three points cleaner for
+      twelve points of coverage, which is the right trade now that more labels have
       stopped helping. DeepSeek answers in prose on 57 of 200 and is out, like Mistral,
       Cohere and Phi.
+- [x] Seed the sense shuffle by line _and_ model. Seeding by line alone gave all five
+      models one shared order: unanimity looked like 105 lines at 91.4%, and a fifth of
+      it was five models anchoring the same way. Fixed, it is 84 lines at 92.9%, and how
+      many models agree became monotonic — 92.9, 78.9, 62.2, 38.5 — so the count is a
+      usable confidence signal for phase 15.
 - [ ] Pull 10,000 subtitle lines and put each one to the five models independently.
       Worth the money now: the free data is exhausted and the ceiling is 28/30, so there
-      is a gap of twenty points or more to close. About $0.0007 a line, so roughly $7.
+      is a gap of twenty points or more to close. About $0.0004 a line, so roughly $4.
 - [ ] Where they agree, take the label. Where they split, keep the line and the split.
 - [ ] Check 100 of the labels by hand and report how often the teacher is wrong. A teacher
       that is wrong 10% of the time sets a ceiling on the student.

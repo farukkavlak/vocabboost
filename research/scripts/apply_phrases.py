@@ -7,6 +7,10 @@ is the entry `check out`, and the old label answers a question we will not ask.
 This rewrites those lines to carry the phrase and its senses, and empties their labels
 so they can be marked again. Nothing else in the file is touched. Run it with
 `--write` once the listing looks right.
+
+`--min-senses 2` then drops the lines left with one sense and renumbers what remains.
+A choice of one is not a question, and for a set nobody will label by hand there is no
+reason to keep it. The hand-labelled set keeps them, so its ids never move.
 """
 
 import argparse
@@ -21,6 +25,7 @@ def main():
     parser.add_argument("--file", default="data/candidates.jsonl")
     parser.add_argument("--db", default="data/vocab.db")
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--min-senses", type=int, default=1)
     args = parser.parse_args()
 
     vocab = Vocab(args.db)
@@ -55,6 +60,14 @@ def main():
         row.pop("unsure", None)
 
     print(f"\n{changed} lines are phrases")
+
+    if args.write and args.min_senses > 1:
+        kept = [row for row in rows if len(row["senses"]) >= args.min_senses]
+        print(f"{len(rows) - len(kept)} lines dropped for having one sense")
+        for new_id, row in enumerate(kept, start=1):
+            row["id"] = new_id
+        rows = kept
+
     if args.write:
         with open(args.file, "w", encoding="utf-8") as handle:
             for row in rows:

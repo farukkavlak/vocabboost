@@ -5,9 +5,11 @@ than it sounds — published evaluations put GPT-4 between 56% and 77% on this t
 the teacher is a panel: each model answers alone, and where they agree the label is
 worth more than any one of them.
 
-Each model sees the senses in its own shuffled order. Models anchor on the first
-option the same way people do, and WordNet lists senses commonest first, so an
-unshuffled list would quietly hand them the answer we are trying to measure.
+Each model sees the senses in its own shuffled order — the seed is the line and the
+model together. Models anchor on the first option the same way people do, and WordNet
+lists senses commonest first, so an unshuffled list would quietly hand them the answer
+we are trying to measure. One shared order would leave five models anchoring the same
+way, which would make agreement easier than it should be.
 
 Answers are cached by line and model, so a rerun costs nothing and a crash loses
 nothing.
@@ -95,21 +97,22 @@ def main():
     if todo:
         with (path.open("a", encoding="utf-8") as out,
               concurrent.futures.ThreadPoolExecutor(args.workers) as pool):
-                futures = {
-                    pool.submit(ask, model, row, args.seed + row["id"]): (row, model)
-                    for row, model in todo}
-                for n, future in enumerate(concurrent.futures.as_completed(futures), 1):
-                    row, model = futures[future]
-                    try:
-                        answer = future.result()
-                    except Exception as error:
-                        print(f"  {model} on {row['id']}: {str(error)[:60]}")
-                        continue
-                    out.write(json.dumps({"id": row["id"], "model": model,
-                                          "answer": answer}) + "\n")
-                    out.flush()
-                    if n % 50 == 0:
-                        print(f"  {n}/{len(todo)}")
+            futures = {
+                pool.submit(ask, model, row, f'{args.seed}:{model}:{row["id"]}'):
+                    (row, model)
+                for row, model in todo}
+            for n, future in enumerate(concurrent.futures.as_completed(futures), 1):
+                row, model = futures[future]
+                try:
+                    answer = future.result()
+                except Exception as error:
+                    print(f"  {model} on {row['id']}: {str(error)[:60]}")
+                    continue
+                out.write(json.dumps({"id": row["id"], "model": model,
+                                      "answer": answer}) + "\n")
+                out.flush()
+                if n % 50 == 0:
+                    print(f"  {n}/{len(todo)}")
 
     print(f"answers in {args.out}")
 

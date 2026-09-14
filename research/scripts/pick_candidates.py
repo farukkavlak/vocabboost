@@ -84,9 +84,20 @@ def main():
     parser.add_argument("--count", type=int, default=201)
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--out", default="data/candidates.jsonl")
+    parser.add_argument("--per-word", type=int, default=MAX_PER_WORD)
+    parser.add_argument("--exclude", nargs="*", default=[],
+                        help="files whose lines must not be picked again")
     args = parser.parse_args()
 
+    # The test set was drawn from this same pool. A line in both would be a model
+    # trained on its own exam, and the whole comparison would mean nothing.
+    taken = {json.loads(line)["text"]
+             for path in args.exclude
+             for line in open(path, encoding="utf-8")}
     pool = [json.loads(line)["text"] for line in open(args.pool, encoding="utf-8")]
+    pool = [text for text in pool if text not in taken]
+    if taken:
+        print(f"{len(taken)} lines held out, {len(pool):,} left in the pool")
     frequency = json.load(open(args.frequency, encoding="utf-8"))
     random.Random(args.seed).shuffle(pool)
 
@@ -102,7 +113,7 @@ def main():
         for choice in wanted:
             if quota[choice["band"]] == 0:
                 continue
-            if used.get(choice["lemma"], 0) >= MAX_PER_WORD:
+            if used.get(choice["lemma"], 0) >= args.per_word:
                 continue
             quota[choice["band"]] -= 1
             used[choice["lemma"]] = used.get(choice["lemma"], 0) + 1

@@ -51,6 +51,26 @@ split:
 recheck:
 	$(PY) scripts/recheck.py
 
+# --- labelling with a panel of models -----------------------------------------
+
+# TEACHER is the pool of lines to label; PANEL is what each model answered on them.
+TEACHER ?= data/teacher.jsonl
+PANEL   ?= data/teacher-panel.jsonl
+
+# Draws lines the test set never saw, points the phrases at their phrase, and drops
+# the single-sense rows — one option is not a question.
+teacher:
+	$(PY) scripts/pick_candidates.py --count 10000 --per-word 10 \
+	  --exclude data/candidates.jsonl --out $(TEACHER) --seed 41
+	$(PY) scripts/apply_phrases.py --file $(TEACHER) --write --min-senses 2
+
+panel:
+	$(PY) scripts/panel.py --file $(TEACHER) --out $(PANEL) --workers 12
+
+# Scores the panel against the 200 lines marked by hand. Needs data/panel.jsonl.
+panel-check:
+	$(PY) scripts/panel_check.py
+
 # --- training ----------------------------------------------------------------
 
 # Stages the prepared data as a Kaggle dataset and pushes the script that trains on it.
@@ -103,7 +123,8 @@ clean:
 	rm -rf data/raw data/vocab.db data/semcor.jsonl data/omsti.jsonl \
 	  data/masc.jsonl data/model data/kaggle
 	rm -f data/working.jsonl data/sealed.jsonl data/model-full.zip
+	rm -f data/teacher.jsonl data/teacher-panel.jsonl
 
 .PHONY: setup pool wiktionary vocab semcor ufsac candidates phrases label split \
-        recheck kaggle baseline evaluate compare lookup failures lexicons \
+        recheck teacher panel panel-check kaggle baseline evaluate compare lookup failures lexicons \
         phrase-split sense-distance phrase-impact lint clean
