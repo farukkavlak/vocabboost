@@ -447,9 +447,17 @@ one evaluation puts GPT-4 between 56% and 77% on this task depending on the setu
       baseline of 55.0%, and +16.7 points over the same model untrained.
 - [ ] Exhaust the free data first. All 177,665 SemCor examples are now used, and going
       from 50,000 to all of them was worth 5.3 points, so the curve has not flattened.
-      OMSTI (911,000 annotations), MASC (which includes transcribed speech) and the
-      WordNet Gloss Corpus are untouched. UFSAC bundles them all with WordNet 3.0 keys.
-      Paying for labels before measuring these would repeat the Wiktionary mistake.
+      Paying for labels before measuring the free corpora would repeat the Wiktionary
+      mistake.
+- [x] Download UFSAC and build examples from it in the SemCor format. OMSTI gives
+      978,044, MASC 41,276. OMSTI is deep rather than broad — the same vocabulary as
+      SemCor with five times the examples a word — and only 46.5% of its examples are
+      the commonest sense against SemCor's 68.5%, which is closer to how a reader uses
+      a dictionary. Whether that means harder examples or skewed automatic labels is
+      what the training run has to settle.
+- [ ] Train on OMSTI at SemCor's size and on the two together, and compare both against
+      the 64.4% SemCor run. The size-matched one runs first: if the session dies, the
+      cheap answer is already in the log.
 - [ ] Pull 10,000 subtitle lines and put each one to several models independently.
       Ten families answer on fal's OpenRouter endpoint, so five is easily reachable —
       but only models that answer in the shape asked for; Mistral, Cohere and Phi did
@@ -480,8 +488,10 @@ is a few dollars of API calls.
 curve looks like when a model is memorizing instead of learning.
 
 - [x] Fine-tune the encoder so a line lands near its right sense and away from the
-      wrong ones. Eighteen minutes on a free Colab T4; 42 seconds a step on a laptop,
-      which is why there is no local training script.
+      wrong ones. Eighteen minutes on a free GPU; 42 seconds a step on a laptop, which
+      is why there is no local training script. Colab's free session ends around fifty
+      minutes and killed an overnight run, so training moved to Kaggle: twelve hours a
+      session, detached.
 - [ ] Watch training loss and validation loss together. Training loss falling while
       validation loss rises is overfitting, and it is the single most useful thing to learn
       to recognize.
@@ -500,7 +510,7 @@ curve looks like when a model is memorizing instead of learning.
       browser.
 
 **Exit:** a trained model that beats phase 12, and it does: 64.4% against 55.7% for the
-untrained 110M and 55.0% for the baseline. Eighteen minutes on a free Colab GPU.
+untrained 110M and 55.0% for the baseline. Eighteen minutes on a free GPU.
 
 Two runs, one changing only the amount of data: 50,000 examples gave 59.1%, all 177,665
 gave 64.4%, and the held-out triplet score moved with it (0.766 to 0.793). So the gain
