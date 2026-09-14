@@ -23,7 +23,13 @@ import re
 import fal_client
 from env import require
 
-MODELS = ["anthropic/claude-haiku-4.5", "google/gemini-2.5-flash", "openai/gpt-4o-mini"]
+# Five families. Mistral, Cohere, Phi and DeepSeek are missing because they answer with
+# prose where a number was asked for — DeepSeek on 57 of 200 lines.
+MODELS = ["anthropic/claude-haiku-4.5",
+          "google/gemini-2.5-flash",
+          "openai/gpt-4o-mini",
+          "meta-llama/llama-3.3-70b-instruct",
+          "qwen/qwen-2.5-72b-instruct"]
 
 PROMPT = """Which sense of "{word}" is used in this line?
 
@@ -65,6 +71,8 @@ def main():
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--seed", type=int, default=17)
+    parser.add_argument("--models", nargs="+", default=MODELS,
+                        help="try a candidate without editing the panel")
     args = parser.parse_args()
 
     require("FAL_KEY")
@@ -80,9 +88,9 @@ def main():
             entry = json.loads(line)
             cache[(entry["id"], entry["model"])] = entry
 
-    todo = [(row, model) for row in rows for model in MODELS
+    todo = [(row, model) for row in rows for model in args.models
             if (row["id"], model) not in cache]
-    print(f"{len(rows)} lines, {len(MODELS)} models, {len(todo)} calls to make")
+    print(f"{len(rows)} lines, {len(args.models)} models, {len(todo)} calls to make")
 
     if todo:
         with (path.open("a", encoding="utf-8") as out,

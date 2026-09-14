@@ -357,36 +357,44 @@ subtitle-register training data, not more of the same.
 ## Labelling with a panel of models
 
 The student can never beat its labels, and one model alone is wrong more often than it
-sounds. So before spending anything on ten thousand lines, three models were run over
-the 200 already marked by hand — a teacher is only scorable against an answer key.
+sounds. So before spending anything on ten thousand lines, the panel was run over the
+200 already marked by hand — a teacher is only scorable against an answer key.
 
 Each model answers alone, with the senses shuffled in its own order. Models anchor on
 the first option the way people do, and WordNet lists senses commonest first.
 
-|                  | matches the person |
-| ---------------- | -----------------: |
-| claude-haiku-4.5 |              73.5% |
-| gemini-2.5-flash |              74.5% |
-| gpt-4o-mini      |              70.0% |
+|                        | matches the person |
+| ---------------------- | -----------------: |
+| llama-3.3-70b (Meta)   |              75.5% |
+| gemini-2.5-flash       |              74.5% |
+| claude-haiku-4.5       |              73.5% |
+| qwen-2.5-72b (Alibaba) |              72.0% |
+| gpt-4o-mini            |              70.0% |
 
 Each on its own lands where published evaluations put single models on this task,
 between 56% and 77%. Agreement is what changes that:
 
-|              | lines | matches the person |
-| ------------ | ----: | -----------------: |
-| 3 of 3 agree |   132 |              86.4% |
-| 2 of 3 agree |    58 |              53.4% |
-| 1 of 3 agree |    10 |              40.0% |
+| panel            | lines | matches the person |
+| ---------------- | ----: | -----------------: |
+| 3 of 3 agree     |   132 |              86.4% |
+| **5 of 5 agree** |   105 |          **91.4%** |
+| 4 of 5 agree     |    44 |              72.7% |
 
-So keeping only unanimous answers gives labels for two thirds of the data at 86.4%.
-For comparison, two trained human annotators agree on fine WordNet distinctions about
-70–78% of the time — though the unanimous lines are the easy ones, where people would
-agree more too, so it is not a like-for-like comparison.
+Two more families cost 14 points of coverage and buy 5 points of accuracy. The panel is
+five, because the OMSTI runs showed that more labels have stopped helping while cleaner
+ones have not been tried. 4 of 5 is not a middle ground — it is wider _and_ dirtier than
+3 of 3, so the threshold is unanimity or nothing.
+
+At 91.4% the panel is at the labeller's own ceiling of 28 in 30. The unanimous lines are
+the easy ones, where people agree more too, so it is not a like-for-like comparison.
 
 The lines the panel splits on are not waste: they are the genuinely ambiguous ones, and
 what phase 15 needs to teach the model when to say nothing.
 
-Cost: $0.000429 a line for three models, so ten thousand lines is about $4.30.
+Four families answer in prose where a number was asked for and are not on the panel:
+Mistral, Cohere, Phi, and DeepSeek — the last on 57 of 200 lines.
+
+Cost: about $0.0007 a line for five models, so ten thousand lines is roughly $7.
 
 ### Now worth spending
 
@@ -395,7 +403,7 @@ million examples moved the held-out score without moving the subtitle score. Mor
 same register will not close the gap, and the ceiling is high enough that there is a gap
 worth closing.
 
-That is the argument the $4.30 needed. It was not available before the runs, which is
+That is the argument the money needed. It was not available before the runs, which is
 why they came first.
 
 ### If a panel is used
