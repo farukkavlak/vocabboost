@@ -17,6 +17,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", default="data/candidates.jsonl")
     parser.add_argument("--panel", default="data/panel.jsonl")
+    parser.add_argument("--models", nargs="+", default=[],
+                        help="score a subset of the answers on file")
     args = parser.parse_args()
 
     rows = {r["id"]: r for r in (json.loads(line)
@@ -26,7 +28,9 @@ def main():
         entry = json.loads(line)
         answers[entry["id"]][entry["model"]] = entry["answer"]
 
-    models = sorted({m for per in answers.values() for m in per})
+    models = args.models or sorted({m for per in answers.values() for m in per})
+    answers = {i: {m: a for m, a in per.items() if m in models}
+               for i, per in answers.items()}
     buckets = collections.defaultdict(lambda: [0, 0])
     alone = collections.Counter()
     seen = collections.Counter()

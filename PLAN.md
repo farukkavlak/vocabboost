@@ -467,12 +467,15 @@ one evaluation puts GPT-4 between 56% and 77% on this task depending on the setu
       does not move. The model got better at the task as these corpora pose it and no
       better at film dialogue. That is the domain gap measured rather than assumed, and
       it is the argument for paying for subtitle labels.
-- [ ] Pull 10,000 subtitle lines and put each one to several models independently. Worth
-      the money now: the free data is exhausted and the ceiling is 28/30, so there is a
-      gap of twenty points or more to close.
-      Ten families answer on fal's OpenRouter endpoint, so five is easily reachable —
-      but only models that answer in the shape asked for; Mistral, Cohere and Phi did
-      not. About $0.000429 a line for three, so $4.30 for ten thousand.
+- [x] Pick the panel by measuring it, not by arguing. Five families — Anthropic, Google,
+      OpenAI, Meta, Alibaba — agree unanimously on 105 of 200 lines and match the person
+      on 91.4% of them, against 132 lines at 86.4% for three. Five points cleaner for
+      fourteen points of coverage, which is the right trade now that more labels have
+      stopped helping. DeepSeek answers in prose on 57 of 200 and is out, like Mistral,
+      Cohere and Phi.
+- [ ] Pull 10,000 subtitle lines and put each one to the five models independently.
+      Worth the money now: the free data is exhausted and the ceiling is 28/30, so there
+      is a gap of twenty points or more to close. About $0.0007 a line, so roughly $7.
 - [ ] Where they agree, take the label. Where they split, keep the line and the split.
 - [ ] Check 100 of the labels by hand and report how often the teacher is wrong. A teacher
       that is wrong 10% of the time sets a ceiling on the student.
