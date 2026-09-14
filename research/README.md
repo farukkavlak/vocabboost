@@ -19,10 +19,15 @@ which is what the card shows.
 | untrained 22M encoder         |  23 MB |     47.7% |     75.2% |     88.6% |
 | untrained 110M encoder        | 110 MB |     55.7% |     80.5% |     89.3% |
 | **trained 22M encoder**       |  23 MB | **64.4%** | **85.2%** | **90.6%** |
+| the labeller, relabelling     |      — |     93.0% |         - |         - |
 
 The extension today shows the first sense the dictionary lists, and is wrong more often
 than right. The trained 22M model is both the best here and the only one small enough
 to ship.
+
+The last row is the ceiling: 30 lines relabelled blind days later, agreeing with the
+first answer 28 times. No model measured against these labels can honestly claim much
+past it — and the model is 29 points below, so the gap is real work, not noise.
 
 By frequency band, both measured after phrase matching:
 
@@ -215,6 +220,27 @@ Read by hand, the misses are five kinds:
   line does not say so. Cannot be fixed.
 - **Garbled lines** that should have been dropped with `x`.
 
+### How high the ceiling is
+
+`make recheck` shows 30 already-labelled lines again, days later, shuffled and without
+the earlier answer. Agreement with that answer was **28 of 30**.
+
+Two reasons the number flatters us. It is the same person twice, where the published
+70–78% is two different people, and intra-annotator agreement is always the higher of
+the two. And the test is lenient: `1,3` first and `3` second counts as agreement. On 30
+lines the interval is roughly ±9 points, so the honest reading is a ceiling somewhere
+above 84%.
+
+Even at 84% the model is twenty points short, which is what makes the next phase worth
+paying for. The two lines that disagreed are the expected kind:
+
+- _"At night he becomes the night-walker"_ — `become` as entering a state, or as
+  undergoing a change.
+- _"The captain's never forgotten about Mars"_ — `captain` as a leader, or as a rank.
+
+Neither line says which. They are WordNet distinctions too fine to make from one line,
+and the model will lose them too.
+
 ## Training
 
 Runs on Kaggle, not here. Eighteen minutes on a free GPU; 42 seconds a step on an
@@ -257,19 +283,40 @@ validation. On those held-out words the triplet score went from 0.674 to 0.793.
 Against the baseline the trained model is +9.4. The cleaner number is the same model,
 same lines, same evaluation code, before and after training: +16.7 points.
 
-### More data was worth it
+### More data stopped helping
 
-The first run used 50,000 of the 177,665 examples. Same model, same epoch count, same
-evaluation — the only change was the amount of data:
+Four runs, one epoch each, same model and same evaluation. Only the data changed.
 
-| examples | held-out triplets | first | first 3 |
-| -------: | ----------------: | ----: | ------: |
-|   50,000 |             0.766 | 59.1% |   82.6% |
-|  177,665 |             0.793 | 64.4% |   85.2% |
+| data         |  examples | held-out triplets | first | first 3 |
+| ------------ | --------: | ----------------: | ----: | ------: |
+| semcor       |    50,000 |             0.766 | 59.1% |   82.6% |
+| semcor       |   177,665 |             0.793 | 64.4% |   85.2% |
+| omsti        |   177,665 |             0.769 | 61.1% |   85.2% |
+| semcor+omsti | 1,033,556 |         **0.805** | 64.4% |   85.9% |
 
-Three and a half times the data bought 5.3 points, and both scores moved together, so
-the model is learning the task rather than memorising SemCor. The curve has not
-flattened, which is the argument for OMSTI next.
+Two answers in one table.
+
+**OMSTI's labels are worse than SemCor's.** Same size, 3.3 points behind, which is what
+automatic alignment against human annotation costs. Still 6 points over the baseline,
+so it is not junk.
+
+**More data has stopped buying anything.** 50k to 177k was worth 5.3 points; 177k to
+1.03M is worth zero. The curve flattened between those two runs.
+
+The held-out column is the interesting part. The combined run scores highest there —
+0.805, above either corpus alone — while its subtitle score does not move. The model
+did get better at the task as SemCor and OMSTI pose it. That improvement just does not
+reach film dialogue, which is the domain gap stated as a measurement rather than a
+worry.
+
+By band the tie hides a trade. Against the SemCor run, adding OMSTI is +8 on common
+words and −6 on everyday ones. Fifty lines a band, so treat the size with caution, but
+the direction is consistent with OMSTI being a different register rather than more of
+the same.
+
+One caveat on the comparison: Kaggle gave the OMSTI runs two T4s, so their effective
+batch was 128 against SemCor's 64 on one. Fewer, larger updates. Some of OMSTI's 3.3
+points could be that rather than its labels.
 
 ### The corpora
 
@@ -284,16 +331,17 @@ turns them into the same rows `build_semcor.py` produces.
 | masc   |   41,276 | 3,064 |    6.3 |           60.2% |              13 |
 
 SemCor was marked by people. OMSTI was aligned automatically from parallel text, so it
-is large and possibly noisy; MASC is smaller but includes transcribed speech.
+is large and, as the runs below show, noisier; MASC is smaller but includes
+transcribed speech and is untouched so far.
 
 OMSTI is deep rather than broad: nearly SemCor's vocabulary with five times the
 examples a word, so it teaches known words in more contexts rather than new words.
 
 Only 46.5% of its examples are the commonest sense against SemCor's 68.5% — closer to
 how a reader uses a dictionary, since you look a word up when the obvious sense does not
-fit. That reads two ways: either OMSTI holds the harder examples, or automatic alignment
-skews away from common senses and the labels are unreliable. Training on it is the only
-way to tell.
+fit. That read two ways: either OMSTI holds the harder examples, or automatic alignment
+skews away from common senses and the labels are unreliable. Training on it settled it
+in favour of the second; see the runs below.
 
 MASC needed a decision. 63,253 of its words carry two sense keys where the annotator
 would not choose — more than the 41,276 kept — and those are dropped rather than
@@ -302,9 +350,9 @@ not a UFSAC one.
 
 ### Left on the table
 
-One epoch. SemCor is books and journalism while the test set is speech. And 68.5% of
-training examples are the commonest sense of their word, which is the opposite of when
-a reader reaches for a dictionary.
+One epoch, and 22M parameters. But the measured bottleneck is neither: a million
+examples moved the held-out score and not the subtitle score, so what is missing is
+subtitle-register training data, not more of the same.
 
 ## Labelling with a panel of models
 
@@ -340,14 +388,15 @@ what phase 15 needs to teach the model when to say nothing.
 
 Cost: $0.000429 a line for three models, so ten thousand lines is about $4.30.
 
-### Not spending it yet
+### Now worth spending
 
-The free data is not exhausted. SemCor is used in full, and going from a third of it to
-all of it was worth 5.3 points, so the curve has not flattened. OMSTI and MASC are built
-and waiting on a training run, and the WordNet Gloss Corpus is untouched.
+The free data is spent. SemCor is used in full, OMSTI adds nothing on top of it, and a
+million examples moved the held-out score without moving the subtitle score. More of the
+same register will not close the gap, and the ceiling is high enough that there is a gap
+worth closing.
 
-Paying for labels before running the free experiments would be the same mistake as
-building `vocab.db` on Wiktionary before measuring it.
+That is the argument the $4.30 needed. It was not available before the runs, which is
+why they came first.
 
 ### If a panel is used
 

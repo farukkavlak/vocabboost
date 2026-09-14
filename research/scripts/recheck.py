@@ -37,9 +37,13 @@ def main():
             continue
         answers[row["id"]] = answer
 
+    # `n` is an empty list, so two of them intersect to nothing. Saying "no sense
+    # fits" twice is perfect agreement, not a disagreement.
+    def agrees(first, again):
+        return bool(set(first) & set(again)) or (not first and not again)
+
     agreed = sum(1 for row in sample
-                 if row["id"] in answers
-                 and set(answers[row["id"]]) & set(row["label"]))
+                 if row["id"] in answers and agrees(row["label"], answers[row["id"]]))
     done = len(answers)
     if not done:
         return

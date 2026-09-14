@@ -296,8 +296,13 @@ measured, and why the model must never see the test set while it is being traine
 - [x] Split them: 149 to work with, 51 sealed until phase 17
 - [x] Measure how often "just show the first sense" is right, per band and overall.
       45.6% overall, and 36.0% on the everyday words a beginner is likeliest to click.
-- [ ] Relabel 30 of them blind, days later, and measure how often you agree with
-      yourself. No model can be judged past that number.
+- [x] Relabel 30 of them blind, days later, and measure how often you agree with
+      yourself: 28 of 30. It flatters us — same person twice where the published 70-78%
+      is two people, and a lenient test where `1,3` then `3` counts as agreement — so
+      read it as a ceiling somewhere above 84%. The model is at 64.4%, twenty points
+      short, which is what makes phase 13's second half worth paying for. Both
+      disagreements were WordNet distinctions the line does not settle: `become` as
+      entering a state against undergoing a change, `captain` as a leader against a rank.
 - [x] Run the phase 13 panel of models over the same 200 lines and compare it to the
       hand labels. A unanimous panel of three matches the person 86.4% of the time and
       covers two thirds of the lines; each model alone manages 70-74%. So the panel may
@@ -445,20 +450,26 @@ one evaluation puts GPT-4 between 56% and 77% on this task depending on the setu
 
 - [x] Train on SemCor first and measure. It was most of the distance: 64.4% against a
       baseline of 55.0%, and +16.7 points over the same model untrained.
-- [ ] Exhaust the free data first. All 177,665 SemCor examples are now used, and going
-      from 50,000 to all of them was worth 5.3 points, so the curve has not flattened.
-      Paying for labels before measuring the free corpora would repeat the Wiktionary
-      mistake.
+- [x] Exhaust the free data first. Done, and it is spent: SemCor in full, OMSTI on top
+      of it, 1,033,556 examples. Paying for labels before measuring the free corpora
+      would have repeated the Wiktionary mistake.
 - [x] Download UFSAC and build examples from it in the SemCor format. OMSTI gives
       978,044, MASC 41,276. OMSTI is deep rather than broad — the same vocabulary as
       SemCor with five times the examples a word — and only 46.5% of its examples are
       the commonest sense against SemCor's 68.5%, which is closer to how a reader uses
       a dictionary. Whether that means harder examples or skewed automatic labels is
       what the training run has to settle.
-- [ ] Train on OMSTI at SemCor's size and on the two together, and compare both against
-      the 64.4% SemCor run. The size-matched one runs first: if the session dies, the
-      cheap answer is already in the log.
-- [ ] Pull 10,000 subtitle lines and put each one to several models independently.
+- [x] Train on OMSTI at SemCor's size and on the two together. OMSTI alone gives 61.1%
+      against SemCor's 64.4% — automatic labels cost 3.3 points. The two together give
+      64.4%, exactly the SemCor number, so six times the data bought nothing.
+- [x] Read the held-out column, not just the subtitle one. The combined run scores 0.805
+      there against 0.793 and 0.769 — the best of the three — while its subtitle score
+      does not move. The model got better at the task as these corpora pose it and no
+      better at film dialogue. That is the domain gap measured rather than assumed, and
+      it is the argument for paying for subtitle labels.
+- [ ] Pull 10,000 subtitle lines and put each one to several models independently. Worth
+      the money now: the free data is exhausted and the ceiling is 28/30, so there is a
+      gap of twenty points or more to close.
       Ten families answer on fal's OpenRouter endpoint, so five is easily reachable —
       but only models that answer in the shape asked for; Mistral, Cohere and Phi did
       not. About $0.000429 a line for three, so $4.30 for ten thousand.

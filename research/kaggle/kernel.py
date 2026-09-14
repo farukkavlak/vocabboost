@@ -9,6 +9,10 @@ minutes and took a training run with it, which is why this is here.
 
 The short job runs first, so a session that dies halfway still leaves the cheap answer
 in the log.
+
+Nothing is copied into `/kaggle/working`: everything there is kept as the run's output,
+and copying the corpora in once made it 680 MB. The dataset is read where it is mounted
+and only the trained models are written out.
 """
 
 import pathlib
@@ -17,12 +21,13 @@ import subprocess
 import sys
 
 INPUT = pathlib.Path("/kaggle/input")
+OUT = pathlib.Path("/kaggle/working")
 
 # SemCor is 177,665 examples. The slice matches it so the only difference between the
 # first job and the run we already have is which corpus the examples came from.
 JOBS = [
-    ("model-omsti", ["--data", "omsti.jsonl", "--examples", "177665"]),
-    ("model-both", ["--data", "semcor.jsonl", "omsti.jsonl"]),
+    ("model-omsti", ["omsti.jsonl"], ["--examples", "177665"]),
+    ("model-both", ["semcor.jsonl", "omsti.jsonl"], []),
 ]
 
 NEEDED = ["run.py", "working.jsonl", "semcor.jsonl", "omsti.jsonl"]
@@ -53,14 +58,16 @@ def main():
     print(f"data   {data}", flush=True)
     subprocess.run([sys.executable, "-m", "pip", "install", "-q",
                     "sentence-transformers"], check=True)
-    for name in NEEDED:
-        shutil.copy(data / name, name)
 
-    for name, options in JOBS:
+    for name, corpora, options in JOBS:
         print(f"\n{'=' * 70}\n{name}\n{'=' * 70}", flush=True)
-        subprocess.run([sys.executable, "run.py", "--out", name, *options], check=True)
-        shutil.make_archive(f"/kaggle/working/{name}", "zip", name)
-        shutil.rmtree(name)
+        built = OUT / name
+        subprocess.run([sys.executable, str(data / "run.py"),
+                        "--data", *[str(data / c) for c in corpora],
+                        "--test", str(data / "working.jsonl"),
+                        "--out", str(built), *options], check=True)
+        shutil.make_archive(str(built), "zip", built)
+        shutil.rmtree(built)
 
 
 if __name__ == "__main__":
