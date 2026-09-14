@@ -1,16 +1,14 @@
 """Look at what the model got wrong.
 
-An accuracy figure says how often, never how. The useful question is whether a miss
-still leaves the reader with the right idea, and there is no honest way to measure
-that automatically. WordNet's own hierarchy will not do it: its verbs are three levels
-deep against nine for nouns, so two near-synonyms like `buy` as trade and `buy` as
-purchase score further apart than `hand` as a body part and `hand` as a card game.
-That is the same lesson the clustering attempt gave — WordNet's structure does not
-carry the judgements people make.
+An accuracy figure says how often, never how. Whether a miss still leaves the reader
+with the right idea has no honest automatic measure. WordNet's hierarchy will not do
+it: its verbs are three levels deep against nine for nouns, so `buy` as trade and `buy`
+as purchase score further apart than `hand` the body part and `hand` the card game —
+the same lesson the clustering attempt gave.
 
-So this prints the misses and leaves the reading of them to a person. What it does
-count is the one thing that is well defined: how often the right sense was on screen
-anyway, because the card lists three.
+So this prints the misses and leaves reading them to a person. The one well-defined
+thing it counts is how often the right sense was on screen anyway, since the card lists
+three.
 """
 
 import argparse

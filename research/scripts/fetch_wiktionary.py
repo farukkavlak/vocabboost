@@ -1,17 +1,16 @@
 """Pull the English Wiktionary from kaikki.org, keeping only the fields we need.
 
-kaikki.org publishes Wiktionary already parsed, one JSON object per line, so there
-is nothing to scrape. The file is 3.2 GB because it carries etymologies,
-translations into every language, and a great deal else. We stream it and write back
-a much smaller file holding the word, its part of speech, its senses, its inflected
-forms and its pronunciation.
+kaikki.org publishes Wiktionary already parsed, one JSON object per line, so there is
+nothing to scrape. The file is 3.2 GB — etymologies, translations into every language,
+and much else. We stream it and write back the word, its part of speech, senses,
+inflected forms and pronunciation.
 
-Entries that are only a pointer to another word (`ran` -> `run`) are kept, because
-that pointer is half of a lemmatizer.
+Entries that are only a pointer to another word (`ran` -> `run`) are kept: that pointer
+is half of a lemmatizer.
 
 The raw file is downloaded to disk first rather than streamed through. Three gigabytes
-over a home connection gets interrupted, and a download on disk resumes where it left
-off. It also means changing which fields we keep costs a minute instead of an hour.
+over a home connection gets interrupted, and a download on disk resumes. It also makes
+changing which fields we keep a minute's work instead of an hour's.
 """
 
 import argparse

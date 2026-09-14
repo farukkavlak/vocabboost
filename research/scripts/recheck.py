@@ -1,9 +1,8 @@
 """Label a sample a second time, blind, and see how often you agree with yourself.
 
-This is the ceiling. If you and your own earlier answers agree eight times in ten,
-no model can be judged past eight in ten either, because the fourth line in every
-twenty has no answer everyone would accept. Reading a model's score without this
-number next to it is how people talk themselves into results that are not there.
+This is the ceiling. If you agree with your own earlier answers eight times in ten, no
+model can be judged past eight in ten either — the other two lines have no answer
+everyone would accept. A model's score means little without this number beside it.
 
 Wait a few days after labelling. The point is not to remember what you said.
 """
