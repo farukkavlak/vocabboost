@@ -27,4 +27,4 @@ ignore = [
 [lint.per-file-ignores]
 # `run.py` downloads the NLTK data before importing from `nltk.corpus`, so its imports
 # cannot all sit at the top.
-"colab/run.py" = ["E402"]
+"kaggle/run.py" = ["E402"]

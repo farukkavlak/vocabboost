@@ -1,23 +1,17 @@
 """Mark the right sense for each line by hand.
 
-Three things make this survivable. The senses are shuffled, because WordNet lists
-them commonest first and how often the first one is right is the thing being
-measured. Several senses can be accepted at once, because WordNet splits meanings
-more finely than anyone can reliably tell apart. And an answer can be marked
-uncertain, so we can later report accuracy with and without the shaky ones and see
-how much noise the labels carry.
+Senses are shuffled: WordNet lists them commonest first, and how often the first one
+is right is what we are measuring. Several can be accepted at once, because WordNet
+splits meanings more finely than anyone can tell apart. An answer can be marked
+uncertain, so accuracy is reportable with and without the shaky ones.
 
-The model will only ever see the same single line you see. If the line does not say
-which meaning it is, neither of you can know, and `n` is the honest answer.
+The model sees the same single line you do. If the line does not say which meaning it
+is, neither of you can know, and `n` is the honest answer.
 
-`n` and `x` are not the same. `n` means the line is fine and no sense fits it, which
-is real evidence and what phase 15 learns from — `club` in `club soda` carries none
-of its own meanings. `x` means the line is garbled and was never a fair question, so
-it leaves the set instead of teaching anything.
+`n` and `x` differ. `n` means no sense fits a fine line — `club` in `club soda` — and
+is what phase 15 learns from. `x` means the line is garbled and leaves the set.
 
-Progress is written after every answer, so quitting halfway loses nothing. Answers
-are not final either: `--redo 4,9` reopens those lines, because reading a few more
-examples teaches you things you would like to apply to what you have already done.
+Progress is written after every answer. `--redo 4,9` reopens those lines.
 """
 
 import argparse

@@ -1,9 +1,8 @@
 """Label a sample a second time, blind, and see how often you agree with yourself.
 
-This is the ceiling. If you and your own earlier answers agree eight times in ten,
-no model can be judged past eight in ten either, because the fourth line in every
-twenty has no answer everyone would accept. Reading a model's score without this
-number next to it is how people talk themselves into results that are not there.
+This is the ceiling. If you agree with your own earlier answers eight times in ten, no
+model can be judged past eight in ten either — the other two lines have no answer
+everyone would accept. A model's score means little without this number beside it.
 
 Wait a few days after labelling. The point is not to remember what you said.
 """
@@ -38,9 +37,13 @@ def main():
             continue
         answers[row["id"]] = answer
 
+    # `n` is an empty list, so two of them intersect to nothing. Saying "no sense
+    # fits" twice is perfect agreement, not a disagreement.
+    def agrees(first, again):
+        return bool(set(first) & set(again)) or (not first and not again)
+
     agreed = sum(1 for row in sample
-                 if row["id"] in answers
-                 and set(answers[row["id"]]) & set(row["label"]))
+                 if row["id"] in answers and agrees(row["label"], answers[row["id"]]))
     done = len(answers)
     if not done:
         return

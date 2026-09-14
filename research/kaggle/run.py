@@ -1,24 +1,22 @@
-"""Build the data, train the small encoder, and score it. One run, start to finish.
+"""Train the small encoder on prepared examples and score it. One run, start to finish.
 
-Written as one script rather than a row of notebook cells because a Colab runtime that
-recycles between cells takes the trained model with it. Here a restart costs one
-command, not eight.
+One script rather than notebook cells: a runtime that recycles between cells takes the
+trained model with it.
 
-Needs `working.jsonl` beside it — the hand-labelled subtitle lines. Everything else it
-fetches.
+Reads the `.jsonl` files `scripts/build_*.py` produce, so the data is prepared on a
+laptop where it can be looked at. More than one file trains on them together. Needs
+`working.jsonl` beside it — the hand-labelled subtitle lines.
 
-Three words worth knowing before reading it.
+    python run.py --data semcor.jsonl --out model-semcor
+    python run.py --data semcor.jsonl omsti.jsonl --out model-both
 
-A **batch** is how many examples the model sees before adjusting itself. Bigger is
-steadier and needs more memory.
+Three terms, since this is the first training code in the repo. A **batch** is how many
+examples the model sees before adjusting itself. An **epoch** is one pass over the
+training set. The **loss** is how wrong the model is now; training drives it down.
 
-An **epoch** is one pass over the training set. More epochs means more chances to
-learn and, past a point, more chances to memorise.
-
-The **loss** is how wrong the model currently is. Training is making it go down.
-Watching it on the training data alone tells you nothing: a memorising model shows a
-falling training loss and a test score that stops moving, and that gap is the thing to
-watch. So the subtitle lines are scored after every epoch, not only at the end.
+Loss on the training data alone tells you nothing — a memorising model shows a falling
+loss and a test score that stops moving. So the subtitle lines are scored after every
+epoch, not only at the end.
 """
 
 import argparse
@@ -30,10 +28,9 @@ import nltk
 
 # The data has to be on disk before nltk.corpus is imported, which is why the imports
 # below are not at the top of the file.
-for package in ["wordnet", "omw-1.4", "semcor"]:
+for package in ["wordnet", "omw-1.4"]:
     nltk.download(package, quiet=True)
 
-from nltk.corpus import semcor
 from nltk.corpus import wordnet as wn
 from sentence_transformers import (
     InputExample,
@@ -45,43 +42,18 @@ from sentence_transformers import (
 from torch.utils.data import DataLoader
 
 MODEL = "sentence-transformers/all-MiniLM-L6-v2"   # 22M, the one that fits a browser
-MIN_SENSES, MIN_WORDS = 2, 4
 
 
-def semcor_examples():
-    """SemCor, shaped like the question asked at run time.
-
-    37,000 sentences where a person marked which sense each content word carries. It
-    ships with NLTK and costs nothing. What it is not is film: it is books and
-    journalism, so it teaches the task but not the register.
-    """
-    for sentence in semcor.tagged_sents(tag="sem"):
-        words, tagged = [], []
-        for chunk in sentence:
-            leaves = chunk.leaves() if hasattr(chunk, "leaves") else list(chunk)
-            start = len(words)
-            words.extend(leaves)
-            label = getattr(chunk, "label", lambda: None)()
-            if label is not None and hasattr(label, "synset"):
-                tagged.append((start, len(leaves), label))
-
-        if len(words) < MIN_WORDS:
-            continue
-        text = " ".join(words)
-        for _start, _length, label in tagged:
-            try:
-                synset, lemma = label.synset(), label.name()
-            except Exception:
-                continue
-            if not lemma or synset.pos() not in "nvar":
-                continue
-            candidates = [s for s in wn.synsets(lemma, synset.pos())
-                          if any(one.name() == lemma for one in s.lemmas())]
-            if len(candidates) < MIN_SENSES or synset not in candidates:
-                continue
-            yield {"text": text, "lemma": lemma.replace("_", " ").lower(),
-                   "key": synset.name(),
-                   "candidates": [s.name() for s in candidates]}
+def load(paths):
+    rows = []
+    for path in paths:
+        part = [json.loads(line) for line in open(path, encoding="utf-8")]
+        first = sum(1 for r in part if r["candidates"][0] == r["key"])
+        print(f"{path:<16}{len(part):>10,} examples  "
+              f"{len({r['lemma'] for r in part}):>6,} words  "
+              f"{100 * first / len(part):>5.1f}% commonest sense")
+        rows.extend(part)
+    return rows
 
 
 def sense_text(key):
@@ -133,7 +105,7 @@ def score(encoder, test):
     return {d: round(100 * at[d] / len(test), 1) for d in (1, 3, 5)}
 
 
-def semcor_score(checker, model):
+def held_out_score(checker, model):
     """TripletEvaluator returns a dict of metrics; we want the accuracy out of it."""
     result = checker(model)
     if isinstance(result, dict):
@@ -146,6 +118,7 @@ def semcor_score(checker, model):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--data", nargs="+", default=["semcor.jsonl"])
     parser.add_argument("--test", default="working.jsonl")
     parser.add_argument("--out", default="model")
     parser.add_argument("--examples", type=int, default=0, help="0 means all of them")
@@ -155,11 +128,10 @@ def main():
     args = parser.parse_args()
 
     rng = random.Random(args.seed)
-    rows = list(semcor_examples())
+    print()
+    rows = load(args.data)
     rng.shuffle(rows)
-    first = sum(1 for r in rows if r["candidates"][0] == r["key"])
-    print(f"\nexamples {len(rows):,}, {len({r['lemma'] for r in rows}):,} words")
-    print(f"{100 * first / len(rows):.1f}% of them are the commonest sense\n")
+    print()
 
     # Split by word, not by row. The same word in both halves would let the model
     # recognise it rather than read the sentence.
@@ -181,8 +153,8 @@ def main():
     model = SentenceTransformer(MODEL)
     checker = evaluation.TripletEvaluator.from_input_examples(pairs(valid, rng),
                                                              name="held-out words")
-    print(f"epoch 0  semcor {semcor_score(checker, model):.3f}  "
-          f"subtitles {score(model, test)}")
+    print(f"epoch 0  held-out {held_out_score(checker, model):.3f}  "
+          f"subtitles {score(model, test)}", flush=True)
 
     loader = DataLoader(pairs(train, rng), shuffle=True, batch_size=args.batch)
     loss = losses.MultipleNegativesRankingLoss(model)
@@ -190,10 +162,10 @@ def main():
         model.fit(train_objectives=[(loader, loss)], epochs=1,
                   warmup_steps=int(0.1 * len(train) / args.batch) if epoch == 1 else 0,
                   output_path=args.out, show_progress_bar=True)
-        print(f"epoch {epoch}  semcor {semcor_score(checker, model):.3f}  "
-              f"subtitles {score(model, test)}")
+        print(f"epoch {epoch}  held-out {held_out_score(checker, model):.3f}  "
+              f"subtitles {score(model, test)}", flush=True)
 
-    print(f"\nsaved to {args.out}/")
+    print(f"\nsaved to {args.out}/", flush=True)
 
 
 if __name__ == "__main__":

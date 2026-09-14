@@ -6,10 +6,9 @@ Coverage: of the words someone might click, how many does the source even have a
 entry for? Counted twice — once per distinct word, and once weighted by how often the
 word occurs, because missing `gonna` costs more than missing `zeugma`.
 
-Granularity: how many senses does it offer for a word? This is the one that matters
-most and gets the least attention. Annotators agree with each other around 70% of the
-time on WordNet's fine distinctions and around 90% on coarser ones, so a source that
-splits `feel` thirteen ways has set a ceiling before any model is trained.
+Granularity: how many senses does it offer for a word? Annotators agree around 70% of
+the time on WordNet's fine distinctions and around 90% on coarser ones, so a source that
+splits `feel` thirteen ways sets a ceiling before any model is trained.
 """
 
 import argparse

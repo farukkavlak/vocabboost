@@ -7,5 +7,7 @@ data/working.jsonl
 data/sealed.jsonl
 data/recheck.jsonl
 data/semcor.jsonl
-data/model/
-data/model-full.zip
+data/omsti.jsonl
+data/masc.jsonl
+data/model*
+data/kaggle/

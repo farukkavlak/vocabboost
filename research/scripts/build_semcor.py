@@ -1,16 +1,16 @@
 """Turn SemCor into training examples shaped like the question we ask at run time.
 
-SemCor is 37,000 sentences where a person marked which sense each content word
-carries. It ships with NLTK, it is what the published bi-encoder was trained on, and
-it costs nothing. What it is not is film: it is books and journalism, so it teaches
-the task but not the register. Phase 13's second half covers that.
+SemCor is 37,000 sentences where a person marked which sense each content word carries.
+It ships with NLTK, it is what the published bi-encoder was trained on, and it costs
+nothing. What it is not is film: books and journalism teach the task but not the
+register, which is what phase 13's second half covers.
 
-Each example is the same shape as a line in the test set — a sentence, a target word,
-the senses it could carry, and which one is right — so training and evaluation ask the
-identical question.
+Each example has the same shape as a line in the test set — a sentence, a target word,
+its candidate senses, and which one is right — so training and evaluation ask the same
+question.
 
-Words with one sense are dropped. There is nothing to learn from a choice of one, and
-keeping them would flatter every number that follows.
+Words with one sense are dropped: nothing to learn from a choice of one, and keeping
+them would flatter every number that follows.
 """
 
 import argparse

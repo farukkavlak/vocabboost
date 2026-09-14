@@ -25,6 +25,15 @@ vocab:
 semcor:
 	$(PY) scripts/build_semcor.py
 
+ufsac:
+	$(PY) -m gdown 1kwBMIDBTf6heRno9bdLvF-DahSLHIZyV -O data/raw/ufsac.tar.xz
+	tar -xJf data/raw/ufsac.tar.xz -C data/raw \
+	  ufsac-public-2.1/omsti.xml ufsac-public-2.1/masc.xml
+	$(PY) scripts/build_ufsac.py --corpus data/raw/ufsac-public-2.1/omsti.xml \
+	  --out data/omsti.jsonl
+	$(PY) scripts/build_ufsac.py --corpus data/raw/ufsac-public-2.1/masc.xml \
+	  --out data/masc.jsonl
+
 # --- the test set ------------------------------------------------------------
 
 candidates:
@@ -41,6 +50,17 @@ split:
 
 recheck:
 	$(PY) scripts/recheck.py
+
+# --- training ----------------------------------------------------------------
+
+# Stages the prepared data as a Kaggle dataset and pushes the script that trains on it.
+# `kaggle datasets create` the first time; after that every push is a new version.
+kaggle:
+	rm -rf data/kaggle && mkdir -p data/kaggle
+	cp data/semcor.jsonl data/omsti.jsonl data/masc.jsonl data/working.jsonl \
+	  kaggle/run.py kaggle/dataset-metadata.json data/kaggle/
+	kaggle datasets version -p data/kaggle -t -m "$(M)"
+	kaggle kernels push -p kaggle
 
 # --- measuring ---------------------------------------------------------------
 
@@ -76,13 +96,14 @@ phrase-impact:
 # --- housekeeping ------------------------------------------------------------
 
 lint:
-	$(PY) -m ruff check scripts colab
+	$(PY) -m ruff check scripts kaggle
 
 clean:
 	rm -rf .venv __pycache__ scripts/__pycache__
-	rm -rf data/raw data/vocab.db data/semcor.jsonl data/model
-	rm -f data/working.jsonl data/sealed.jsonl
+	rm -rf data/raw data/vocab.db data/semcor.jsonl data/omsti.jsonl \
+	  data/masc.jsonl data/model data/kaggle
+	rm -f data/working.jsonl data/sealed.jsonl data/model-full.zip
 
-.PHONY: setup pool wiktionary vocab semcor candidates phrases label split recheck \
-        baseline evaluate compare lookup failures lexicons phrase-split sense-distance \
-        phrase-impact lint clean
+.PHONY: setup pool wiktionary vocab semcor ufsac candidates phrases label split \
+        recheck kaggle baseline evaluate compare lookup failures lexicons \
+        phrase-split sense-distance phrase-impact lint clean

@@ -2,21 +2,17 @@
 
 Two things stand between a click and an answer.
 
-A phrase. In "instead of club soda, make it champagne" the word `club` carries none of
-its own meanings, and a list of seven senses about golf and nightclubs is worse than
-no answer. So we look at the words around the click first and take the longest entry
-that covers it. `club soda`, `check out`, `pull together`.
+**Phrases.** In "instead of club soda, make it champagne" the word `club` carries none
+of its own meanings, and seven senses about golf and nightclubs are worse than no
+answer. So the words around the click are read first and the longest entry covering it
+wins.
 
-An inflection. `ran` is not in the dictionary, `run` is. WordNet lists the irregular
-forms and the regular ones fall to a handful of suffix rules.
+**Inflections.** `ran` is not in the dictionary, `run` is. WordNet lists the irregular
+forms; the regular ones fall to a handful of suffix rules.
 
-Phrases move. "check it out" is the entry `check out` with a pronoun dropped in the
-middle, and "I ran into him" is `run into` with the verb inflected. Both have to be
-recognised, so each position is tried in its dictionary form and one pronoun is
-allowed to sit inside a two-word phrase.
-
-Longest match wins, phrases before single words, because a phrase that exists is
-almost always the intended reading.
+Phrases also move: "check it out" is `check out` with a pronoun inside, "I ran into
+him" is `run into` inflected. So each position is tried in its dictionary form, and one
+pronoun is allowed inside a two-word phrase.
 """
 
 import re

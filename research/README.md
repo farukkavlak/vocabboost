@@ -2,9 +2,9 @@
 
 Builds the model. Nothing here ships — the extension only sees what phase 16 exports.
 
-Only `data/candidates.jsonl` is in git: 201 subtitle lines with their senses marked by
-hand. Everything else in `data/` is downloaded or built, and rebuilds from a make
-target.
+Two files in `data/` are in git because remaking them costs hours or money:
+`candidates.jsonl`, the 201 subtitle lines marked by hand, and `panel.jsonl`, what
+three models answered on them. Everything else is built by a make target.
 
 ## Results
 
@@ -19,10 +19,15 @@ which is what the card shows.
 | untrained 22M encoder         |  23 MB |     47.7% |     75.2% |     88.6% |
 | untrained 110M encoder        | 110 MB |     55.7% |     80.5% |     89.3% |
 | **trained 22M encoder**       |  23 MB | **64.4%** | **85.2%** | **90.6%** |
+| the labeller, relabelling     |      — |     93.0% |         - |         - |
 
-The extension today shows the first sense the dictionary lists and is wrong more often
-than right. The trained model is the only one small enough to ship and the best of the
-lot.
+The extension today shows the first sense the dictionary lists, and is wrong more often
+than right. The trained 22M model is both the best here and the only one small enough
+to ship.
+
+The last row is the ceiling: 30 lines relabelled blind days later, agreeing with the
+first answer 28 times. No model measured against these labels can honestly claim much
+past it — and the model is 29 points below, so the gap is real work, not noise.
 
 By frequency band, both measured after phrase matching:
 
@@ -32,12 +37,10 @@ By frequency band, both measured after phrase matching:
 | common   |           5.8 |    70.0% |   72.0% |
 | uncommon |           6.0 |    42.9% |   65.3% |
 
-The model is ahead in every band now, but the gain is lopsided: 22 points on uncommon
-words against 4 and 2 on the other two. A common word's commonest sense usually is the
-right one, so the dictionary's own ordering is hard to beat there.
-
-That split matters for shipping. A reader who clicks `vaudeville` is much better served
-than one who clicks `play`.
+The model is ahead in every band, but the gain is lopsided: 22 points on uncommon words
+against 4 and 2 on the others. A common word's commonest sense usually is the right one,
+so the dictionary's ordering is hard to beat there. A reader who clicks `vaudeville` is
+served much better than one who clicks `play`.
 
 ## Running it
 
@@ -47,6 +50,7 @@ make pool        # sample 200k subtitle lines, count word frequencies   (~7 min)
 make wiktionary  # download and trim the Wiktionary dump                (~30 min)
 make vocab       # build vocab.db from WordNet
 make semcor      # training examples from SemCor
+make ufsac       # training examples from OMSTI and MASC                (~10 min)
 ```
 
 Building the test set, in order:
@@ -74,7 +78,7 @@ make lookup      # check phrase matching on a few known cases
 The one-off measurements quoted below have targets too, so their numbers can be
 reproduced: `lexicons`, `phrase-impact`, `phrase-split`, `sense-distance`.
 
-Training runs on Colab — see below.
+Training runs on Kaggle — see below.
 
 ## Building the test set
 
@@ -216,24 +220,55 @@ Read by hand, the misses are five kinds:
   line does not say so. Cannot be fixed.
 - **Garbled lines** that should have been dropped with `x`.
 
+### How high the ceiling is
+
+`make recheck` shows 30 already-labelled lines again, days later, shuffled and without
+the earlier answer. Agreement with that answer was **28 of 30**.
+
+Two reasons the number flatters us. It is the same person twice, where the published
+70–78% is two different people, and intra-annotator agreement is always the higher of
+the two. And the test is lenient: `1,3` first and `3` second counts as agreement. On 30
+lines the interval is roughly ±9 points, so the honest reading is a ceiling somewhere
+above 84%.
+
+Even at 84% the model is twenty points short, which is what makes the next phase worth
+paying for. The two lines that disagreed are the expected kind:
+
+- _"At night he becomes the night-walker"_ — `become` as entering a state, or as
+  undergoing a change.
+- _"The captain's never forgotten about Mars"_ — `captain` as a leader, or as a rank.
+
+Neither line says which. They are WordNet distinctions too fine to make from one line,
+and the model will lose them too.
+
 ## Training
 
-Runs on Colab, not here. Eighteen minutes on a free T4; 42 seconds a step on an M-series
-Mac, about a hundred times slower, and it locks the machine up. There is no local
-training script, because a path that does not work invites someone to try it.
+Runs on Kaggle, not here. Eighteen minutes on a free GPU; 42 seconds a step on an
+M-series Mac, about a hundred times slower, and it locks the machine up. There is no
+local training script, because a path that does not work invites someone to try it.
 
-`colab/run.py` does everything in one run: builds the SemCor examples, trains, scores
-against the hand-labelled lines, saves the model. One script rather than notebook
-cells, because a Colab runtime that recycles between cells takes the trained model with
-it.
+It was on Colab until the free session limit — around fifty minutes — killed a run
+overnight and took its log with it. Kaggle gives twelve hours a session and runs
+detached, so the machine here can be closed.
 
+`kaggle/run.py` trains and scores; `kaggle/kernel.py` is what Kaggle executes, and it
+runs every job in one session so a single push answers every question. Both read the
+`.jsonl` files the builders produce, so the data is prepared on a laptop where it can
+be looked at, and the GPU only trains.
+
+Needs the Kaggle CLI and a token: `uv tool install kaggle`, then Settings → API on
+kaggle.com, and the token string into `~/.kaggle/access_token`. The account has to be
+phone-verified or Kaggle quietly hands out a CPU instead of a GPU, which is why
+`kernel.py` stops on the first line if there is no GPU.
+
+```sh
+make ufsac                      # once: download the corpora and build the examples
+make kaggle M="what changed"    # upload the data, push the script
+kaggle kernels status ofarukkavlak/vocabboost-wsd-train
+kaggle kernels output ofarukkavlak/vocabboost-wsd-train -p data/
 ```
-upload colab/run.py and data/working.jsonl to a Colab notebook with a T4 runtime
-!pip -q install sentence-transformers
-!python run.py
-```
 
-Then unzip `model/` into `data/model` and run `make evaluate` here. It uses the same
+Then unzip a model into `data/model` and run `make evaluate` here. It uses the same
 code that scored the untrained models, so the comparison is like for like.
 
 ### The run
@@ -248,32 +283,82 @@ validation. On those held-out words the triplet score went from 0.674 to 0.793.
 Against the baseline the trained model is +9.4. The cleaner number is the same model,
 same lines, same evaluation code, before and after training: +16.7 points.
 
-### More data was worth it
+### More data stopped helping
 
-The first run used 50,000 of the 177,665 examples. Same model, same epoch count, same
-evaluation — the only change was the amount of data:
+Four runs, one epoch each, same model and same evaluation. Only the data changed.
 
-| examples | held-out triplets | first | first 3 |
-| -------: | ----------------: | ----: | ------: |
-|   50,000 |             0.766 | 59.1% |   82.6% |
-|  177,665 |             0.793 | 64.4% |   85.2% |
+| data         |  examples | held-out triplets | first | first 3 |
+| ------------ | --------: | ----------------: | ----: | ------: |
+| semcor       |    50,000 |             0.766 | 59.1% |   82.6% |
+| semcor       |   177,665 |             0.793 | 64.4% |   85.2% |
+| omsti        |   177,665 |             0.769 | 61.1% |   85.2% |
+| semcor+omsti | 1,033,556 |         **0.805** | 64.4% |   85.9% |
 
-Three and a half times the data bought 5.3 points, and both scores moved together, so
-the model is learning the task rather than memorising SemCor. It has not flattened out,
-which is the argument for feeding it OMSTI next.
+Two answers in one table.
+
+**OMSTI's labels are worse than SemCor's.** Same size, 3.3 points behind, which is what
+automatic alignment against human annotation costs. Still 6 points over the baseline,
+so it is not junk.
+
+**More data has stopped buying anything.** 50k to 177k was worth 5.3 points; 177k to
+1.03M is worth zero. The curve flattened between those two runs.
+
+The held-out column is the interesting part. The combined run scores highest there —
+0.805, above either corpus alone — while its subtitle score does not move. The model
+did get better at the task as SemCor and OMSTI pose it. That improvement just does not
+reach film dialogue, which is the domain gap stated as a measurement rather than a
+worry.
+
+By band the tie hides a trade. Against the SemCor run, adding OMSTI is +8 on common
+words and −6 on everyday ones. Fifty lines a band, so treat the size with caution, but
+the direction is consistent with OMSTI being a different register rather than more of
+the same.
+
+One caveat on the comparison: Kaggle gave the OMSTI runs two T4s, so their effective
+batch was 128 against SemCor's 64 on one. Fewer, larger updates. Some of OMSTI's 3.3
+points could be that rather than its labels.
+
+### The corpora
+
+UFSAC bundles fifteen sense-annotated corpora in one XML format, all keyed to WordNet
+3.0, which is what `vocab.db` uses. Two are worth training on, and `build_ufsac.py`
+turns them into the same rows `build_semcor.py` produces.
+
+| corpus | examples | words | senses | commonest sense | examples a word |
+| ------ | -------: | ----: | -----: | --------------: | --------------: |
+| semcor |  177,665 | 9,008 |    8.1 |           68.5% |              20 |
+| omsti  |  978,044 | 8,633 |    9.0 |           46.5% |             113 |
+| masc   |   41,276 | 3,064 |    6.3 |           60.2% |              13 |
+
+SemCor was marked by people. OMSTI was aligned automatically from parallel text, so it
+is large and, as the runs below show, noisier; MASC is smaller but includes
+transcribed speech and is untouched so far.
+
+OMSTI is deep rather than broad: nearly SemCor's vocabulary with five times the
+examples a word, so it teaches known words in more contexts rather than new words.
+
+Only 46.5% of its examples are the commonest sense against SemCor's 68.5% — closer to
+how a reader uses a dictionary, since you look a word up when the obvious sense does not
+fit. That read two ways: either OMSTI holds the harder examples, or automatic alignment
+skews away from common senses and the labels are unreliable. Training on it settled it
+in favour of the second; see the runs below.
+
+MASC needed a decision. 63,253 of its words carry two sense keys where the annotator
+would not choose — more than the 41,276 kept — and those are dropped rather than
+resolved to the first. OMSTI has the same problem 2,690 times, so it is a MASC problem,
+not a UFSAC one.
 
 ### Left on the table
 
-One epoch. SemCor is books and journalism while the test set is speech. And 68.5% of
-training examples are the commonest sense of their word, which is the opposite of when
-a reader reaches for a dictionary.
+One epoch, and 22M parameters. But the measured bottleneck is neither: a million
+examples moved the held-out score and not the subtitle score, so what is missing is
+subtitle-register training data, not more of the same.
 
 ## Labelling with a panel of models
 
-The student can never be better than its labels, and one model is wrong more often
-than it sounds. So before spending anything on ten thousand lines, three models were
-run over the 200 the labeller had already marked — the only way to score a teacher is
-against an answer key.
+The student can never beat its labels, and one model alone is wrong more often than it
+sounds. So before spending anything on ten thousand lines, three models were run over
+the 200 already marked by hand — a teacher is only scorable against an answer key.
 
 Each model answers alone, with the senses shuffled in its own order. Models anchor on
 the first option the way people do, and WordNet lists senses commonest first.
@@ -298,20 +383,20 @@ For comparison, two trained human annotators agree on fine WordNet distinctions 
 70–78% of the time — though the unanimous lines are the easy ones, where people would
 agree more too, so it is not a like-for-like comparison.
 
-The lines the panel splits on are not waste. They are the genuinely ambiguous ones, and
-they are what phase 15 needs to teach the model when to say nothing.
+The lines the panel splits on are not waste: they are the genuinely ambiguous ones, and
+what phase 15 needs to teach the model when to say nothing.
 
 Cost: $0.000429 a line for three models, so ten thousand lines is about $4.30.
 
-### Not spending it yet
+### Now worth spending
 
-The free data is not exhausted. SemCor is now used in full, but it was worth 5.3 points
-going from a third of it to all of it, and OMSTI (911,000 annotations), MASC (which
-includes transcribed speech) and the WordNet Gloss Corpus have not been touched at all.
-UFSAC bundles all of them in one format with WordNet 3.0 keys.
+The free data is spent. SemCor is used in full, OMSTI adds nothing on top of it, and a
+million examples moved the held-out score without moving the subtitle score. More of the
+same register will not close the gap, and the ceiling is high enough that there is a gap
+worth closing.
 
-Paying for labels before running the free experiments would be the same mistake as
-building `vocab.db` on Wiktionary before measuring it.
+That is the argument the $4.30 needed. It was not available before the runs, which is
+why they came first.
 
 ### If a panel is used
 

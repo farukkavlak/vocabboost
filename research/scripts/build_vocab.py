@@ -9,14 +9,13 @@ of them copies the same definition twice, so senses are stored once and the word
 point at them. That alone is most of the file size.
 
 A third of WordNet's lemmas are phrases — `club soda`, `check out`, `pull together` —
-and they matter more than their share suggests, because a phrase is exactly where
-looking a word up alone fails.
+and a phrase is where looking the word up alone fails.
 
-Senses keep WordNet's order, which is by how common the sense is for that particular
-word — `safe` the strongbox before `safe` the contraceptive. The order differs per
-word and is not the order synsets are stored in, so it has to be asked for per lemma.
-It is the baseline every later phase is measured against, so getting it wrong would
-quietly invalidate every number.
+Senses keep WordNet's order, which is by how common the sense is for that word: `safe`
+the strongbox before `safe` the contraceptive. That order differs per word and is not
+the order synsets are stored in, so it has to be asked for per lemma. It is also the
+baseline every later phase is measured against, so getting it wrong invalidates every
+number that follows.
 """
 
 import argparse

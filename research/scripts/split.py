@@ -1,17 +1,15 @@
 """Split the labelled lines into a working set and a sealed set.
 
-The sealed lines are not opened until phase 17. Every number we quote before then
-comes from the working set. Anything tuned against a set of examples looks better on
-that set than it will in the wild, and the only defence is a set nothing was ever
-tuned against.
+The sealed lines are not opened until phase 17; every number quoted before then comes
+from the working set. Anything tuned against a set looks better on that set than in the
+wild, and the only defence is a set nothing was tuned against.
 
-Which lines are sealed is decided once, from the full file, before any of it is
-labelled. If it were decided from whatever happens to be labelled today, a line could
-sit in the working set this week and in the sealed set next week, after we had
-already read it. Then nothing would really be sealed.
+Which lines are sealed is decided once, from the full file, before any labelling. Decide
+it from whatever is labelled today and a line could sit in the working set this week and
+the sealed set next, after we had read it.
 
-The split keeps the three frequency bands even. A sealed set that happened to be all
-rare words would flatter us, since rare words carry fewer meanings.
+The split keeps the three frequency bands even, since rare words carry fewer meanings
+and an all-rare sealed set would flatter us.
 """
 
 import argparse

@@ -1,12 +1,11 @@
 """Does WordNet know which of its own senses a person cannot tell apart?
 
-The labelling allows more than one answer, so every line where two senses were
-accepted is a person saying "these read the same to me". If WordNet's own structure
-separates those pairs from the pairs that were rejected, senses can be merged
-automatically and the whole task gets easier. If it does not, merging has to be
-abandoned or done some other way, and it is better to learn that now.
+Labelling allows more than one answer, so a line where two senses were accepted is a
+person saying "these read the same to me". If WordNet's structure separates those pairs
+from the rejected ones, senses can be merged automatically. If it does not, merging
+needs another approach.
 
-Three signals, all free and offline:
+Five signals, all free and offline:
 
   lexname   the file WordNet files a sense under, like `noun.time` or `verb.motion`.
             A coarse subject area.
@@ -17,11 +16,11 @@ Three signals, all free and offline:
             `change, alter, vary` share two of three.
   gloss     how much their definitions overlap, word for word.
 
-The last two matter most, because they are what a person actually reads. Nobody
-labelling compares positions in an is-a hierarchy.
+The last two matter most: they are what a person reads. Nobody labelling compares
+positions in an is-a hierarchy.
 
-Nouns and verbs have that hierarchy. Adjectives and adverbs do not, so only the
-lexname signal applies to them, and they are reported separately.
+Only nouns and verbs have that hierarchy, so adjectives and adverbs get the lexname
+signal alone and are reported separately.
 """
 
 import argparse

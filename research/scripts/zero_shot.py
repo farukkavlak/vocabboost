@@ -1,16 +1,15 @@
 """Pick the sense whose gloss sits nearest the subtitle line, with no training at all.
 
-An embedding model turns a piece of text into a list of numbers, arranged so that text
-with close meanings lands close together. Nothing here is trained on sense picking:
-the model has never seen this task. It only knows how English sentences relate, and we
-ask whether that alone beats showing the first sense in the dictionary.
+An embedding model turns text into a list of numbers, arranged so that close meanings
+land close together. Nothing here is trained on sense picking — the model only knows how
+English sentences relate, and the question is whether that alone beats showing the first
+sense in the dictionary.
 
-Closeness is cosine similarity, which measures the angle between two of those lists
-and ignores their length. Two texts about the same thing point the same way.
+Closeness is cosine similarity: the angle between two of those lists, ignoring their
+length.
 
-The score is reported for the top answer and for the top three and five, because the
-card shows more than one sense and a right answer in second place still reaches the
-reader.
+Scores are reported at one, three and five, because the card shows more than one sense
+and a right answer in second place still reaches the reader.
 """
 
 import argparse
