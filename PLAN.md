@@ -481,14 +481,21 @@ one evaluation puts GPT-4 between 56% and 77% on this task depending on the setu
       it was five models anchoring the same way. Fixed, it is 84 lines at 92.9%, and how
       many models agree became monotonic — 92.9, 78.9, 62.2, 38.5 — so the count is a
       usable confidence signal for phase 15.
-- [ ] Pull 10,000 subtitle lines and put each one to the five models independently.
-      Worth the money now: the free data is exhausted and the ceiling is 28/30, so there
-      is a gap of twenty points or more to close. About $0.0004 a line, so roughly $4.
-- [ ] Where they agree, take the label. Where they split, keep the line and the split.
-- [ ] Check 100 of the labels by hand and report how often the teacher is wrong. A teacher
-      that is wrong 10% of the time sets a ceiling on the student.
-- [ ] The lines the panel could not agree on are the genuinely ambiguous ones, and they
-      are what phase 15 needs to learn when to say nothing
+- [x] Pull 10,000 subtitle lines and put each one to the five models independently.
+      8,440 after dropping the single-sense lines, 42,200 calls, about $3. The test set
+      was held out of the draw, so no line is in both.
+- [x] Where they agree, take the label. Where they split, keep the line and the split.
+      3,833 unanimous — 3,708 labels and 125 lines where no sense fits — against 4,598
+      split ones. Unanimity ran at 45.5% where the 200-line measurement predicted 42%.
+      `teacher-labels.jsonl` holds all 8,431 with the agreement count on each.
+- [x] Check 100 of the labels by hand and report how often the teacher is wrong. Blind,
+      buckets mixed: 5 of 5 is 58/60, 4 of 5 is 32/40. Unanimity beat its predicted
+      92.9% and both misses are WordNet granularity rather than wrong labels. 4 of 5
+      landed on its prediction, so adding it is half again as much data for six points
+      of label error — phase 14 trains both and reports both.
+- [x] Keep the lines the panel could not agree on. 4,598 of them, with the count of how
+      many agreed, which the 200-line measurement showed is itself a difficulty score —
+      92.9% right at five, 78.9% at four, 62.2% at three. Phase 15 calibrates on it.
 - [ ] Search the corpus for rare senses on purpose and add those lines. Left alone, the
       data is nearly all common senses, and the model learns to always guess the common
       one. That is the exact opposite of what a reader needs, because a reader looks a word

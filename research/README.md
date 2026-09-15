@@ -2,9 +2,10 @@
 
 Builds the model. Nothing here ships — the extension only sees what phase 16 exports.
 
-Two files in `data/` are in git because remaking them costs hours or money:
-`candidates.jsonl`, the 201 subtitle lines marked by hand, and `panel.jsonl`, what
-the panel of models answered on them. Everything else is built by a make target.
+Three files in `data/` are in git because remaking them costs hours or money:
+`candidates.jsonl`, the 201 subtitle lines marked by hand; `panel.jsonl`, what the panel
+of models answered on them; and `teacher-labels.jsonl`, the 8,431 lines the panel
+labelled. Everything else is built by a make target.
 
 ## Results
 
@@ -71,6 +72,8 @@ Labelling a larger set with a panel of models:
 make teacher      # draw lines the test set never saw                    (~2 min)
 make panel        # put each one to five models                          (~70 min, ~$4)
 make panel-check  # score the panel against the 200 marked by hand
+make labels       # join the lines and the answers into one file
+make check-teacher  # hand-label 100 of them blind, to measure the panel
 ```
 
 Measuring:
@@ -412,6 +415,74 @@ Four families answer in prose where a number was asked for and are not on the pa
 Mistral, Cohere, Phi, and DeepSeek — the last on 57 of 200 lines.
 
 Cost: measured at $0.0004 a line for five models, so ten thousand lines is roughly $4.
+
+### What the panel labelled
+
+8,440 lines, drawn from the same pool as the test set with the test set held out, the
+phrases pointed at their phrase, and the single-sense lines dropped. 42,200 calls, nine
+of which came back without a number.
+
+| agreed | lines |       |
+| ------ | ----: | ----: |
+| 5 of 5 | 3,833 | 45.5% |
+| 4 of 5 | 1,932 | 22.9% |
+| 3 of 5 | 1,976 | 23.4% |
+| 2 of 5 |   676 |  8.0% |
+| 1 of 5 |    14 |  0.2% |
+
+Unanimity ran at 45.5% against the 42% the 200-line measurement predicted, so the larger
+pool behaves like the small one. That leaves **3,708 usable labels** over 1,560 distinct
+words, plus **125 lines where all five agreed no sense fits** — the abstain examples
+phase 15 needs, and five models saying it together is worth more than one saying it.
+
+58.9% of the labels are the word's commonest sense, against SemCor's 68.5% and OMSTI's
+46.5%. Between the two is where it should be: a reader looks a word up when the obvious
+sense does not fit, so a set that was 68% obvious would be teaching the wrong habit.
+
+3,708 is small next to SemCor's 177,665, and deliberately so — the measured gap was
+register, not volume. Phase 14 is where that bet gets settled.
+
+`make labels` joins the lines and the answers into `teacher-labels.jsonl`, in the shape
+`build_semcor.py` produces, so training reads both the same way. Every line is kept, not
+just the unanimous ones: `agreed` is a difficulty score, and the split lines are what
+phase 15 learns to say nothing from.
+
+### How wrong the teacher is
+
+100 of the panel's own lines were labelled again by hand, blind: no panel answer shown,
+the buckets mixed together, and the senses shuffled as usual.
+
+| agreed | matches the person | predicted |
+| ------ | -----------------: | --------: |
+| 5 of 5 |        58/60 = 97% |     92.9% |
+| 4 of 5 |        32/40 = 80% |     78.9% |
+
+The 4 of 5 bucket landed where the 200-line measurement put it, which is the better news
+of the two: the prediction holds on a pool forty times the size.
+
+Unanimity came out cleaner than predicted. On 60 lines the interval is around ±5 points,
+so the honest reading is "above 92%" rather than 97 — but that is already the labeller's
+own 28-in-30, and no set of labels can be measured cleaner than the person measuring it.
+
+Both misses are the granularity problem, not a wrong label:
+
+- _"transfer all the women from this boat into that boat"_ — `transfer` as "move from
+  one place to another", or as "move around".
+- _"you got no reason to believe me"_ — `reason` as "a rational motive", or as "a fact
+  that logically justifies".
+
+The same kind as the two lines the labeller disagreed with themselves on. A model will
+lose these too, and nothing in the data can fix them.
+
+That leaves a choice worth measuring rather than arguing:
+
+|             | lines | label quality |
+| ----------- | ----: | ------------: |
+| 5 of 5 only | 3,708 |           97% |
+| plus 4 of 5 | 5,640 |          ~91% |
+
+Half again as much data for six points of label error. Phase 14 trains both and reports
+both, since Kaggle runs every job in one session and the second costs nothing.
 
 ### Now worth spending
 

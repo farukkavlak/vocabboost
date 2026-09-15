@@ -71,6 +71,14 @@ panel:
 panel-check:
 	$(PY) scripts/panel_check.py
 
+# Joins the lines and the answers into one file training can read.
+labels:
+	$(PY) scripts/take_labels.py
+
+# Hand-labels a sample of the panel's own lines, blind, to measure its error rate.
+check-teacher:
+	$(PY) scripts/check_teacher.py
+
 # --- training ----------------------------------------------------------------
 
 # Stages the prepared data as a Kaggle dataset and pushes the script that trains on it.
@@ -123,8 +131,8 @@ clean:
 	rm -rf data/raw data/vocab.db data/semcor.jsonl data/omsti.jsonl \
 	  data/masc.jsonl data/model data/kaggle
 	rm -f data/working.jsonl data/sealed.jsonl data/model-full.zip
-	rm -f data/teacher.jsonl data/teacher-panel.jsonl
+	rm -f data/teacher.jsonl
 
 .PHONY: setup pool wiktionary vocab semcor ufsac candidates phrases label split \
-        recheck teacher panel panel-check kaggle baseline evaluate compare lookup failures lexicons \
+        recheck teacher panel panel-check labels check-teacher kaggle baseline evaluate compare lookup failures lexicons \
         phrase-split sense-distance phrase-impact lint clean
