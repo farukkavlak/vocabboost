@@ -282,7 +282,26 @@ kaggle kernels output ofarukkavlak/vocabboost-wsd-train -p data/
 Then unzip a model into `data/model` and run `make evaluate` here. It uses the same
 code that scored the untrained models, so the comparison is like for like.
 
-### The run
+### The runs
+
+Four jobs in one session. SemCor alone is trained again rather than compared against the
+64.4% already on file, because that number came from a session with one T4 and Kaggle
+sometimes gives two, which doubles the effective batch. Rerunning it costs eighteen
+minutes and removes the doubt.
+
+| job              | data                       | examples | epochs |
+| ---------------- | -------------------------- | -------: | -----: |
+| model-semcor     | semcor                     |  177,665 |      1 |
+| model-mixed      | semcor + panel labels      |  181,373 |      1 |
+| model-tuned      | panel labels, from semcor  |    3,708 |      3 |
+| model-tuned-4of5 | panel labels 4 of 5, ditto |    5,563 |      3 |
+
+The last two are the point. Mixed into SemCor the subtitle labels are 2% of the data and
+one pass will not weight them; trained second, on top of the finished SemCor model, they
+are the whole of the second pass. That is what domain adaptation means, and `model-mixed`
+is there because mixing is the obvious thing to try and the contrast is worth having.
+
+### The first run
 
 `all-MiniLM-L6-v2`, all 177,665 SemCor examples, one epoch, batch of 64. Wrong answers
 are drawn from the other senses of the same word — telling `safe` the strongbox from

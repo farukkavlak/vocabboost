@@ -514,13 +514,31 @@ is a few dollars of API calls.
 ### 14 — `research/train`
 
 **Learn:** the training loop itself. Loss, epoch, batch, learning rate, and what a loss
-curve looks like when a model is memorizing instead of learning.
+curve looks like when a model is memorizing instead of learning. Then **domain
+adaptation**: how to teach a model a second register without retraining it from nothing.
+
+The two corpora are not interchangeable. SemCor is 177,665 examples of books and
+journalism; the panel labels are 3,708 examples of film dialogue. Mixed into one pile the
+subtitle lines are 2% of it, and one pass over 2% will not move the weights — the result
+would read as "subtitle data did not help" when what failed was the mixing.
+
+So it is done in two stages. SemCor first, where the model learns the task: given a line
+and a sense, tell whether they match. Then a second, short run from that finished model
+on the subtitle labels alone, where every batch is film dialogue rather than one in
+fifty. The model already knows the job and is only being shown what the job looks like in
+this register.
+
+`run.py --from <model>` is the whole of the code change. The concept is the reason for it.
 
 - [x] Fine-tune the encoder so a line lands near its right sense and away from the
       wrong ones. Eighteen minutes on a free GPU; 42 seconds a step on a laptop, which
       is why there is no local training script. Colab's free session ends around fifty
       minutes and killed an overnight run, so training moved to Kaggle: twelve hours a
       session, detached.
+- [ ] Train in two stages and compare against mixing. Four jobs in one session:
+      SemCor alone as the control, SemCor with the labels mixed in, and two runs that
+      continue from the control on the labels alone — one at 5 of 5, one including
+      4 of 5. Three epochs on the short runs, since 3,708 examples is 58 steps.
 - [ ] Watch training loss and validation loss together. Training loss falling while
       validation loss rises is overfitting, and it is the single most useful thing to learn
       to recognize.

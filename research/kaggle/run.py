@@ -8,7 +8,11 @@ laptop where it can be looked at. More than one file trains on them together. Ne
 `working.jsonl` beside it — the hand-labelled subtitle lines.
 
     python run.py --data semcor.jsonl --out model-semcor
-    python run.py --data semcor.jsonl omsti.jsonl --out model-both
+    python run.py --data teacher-labels.jsonl --from model-semcor --out model-tuned
+
+`--from` continues from a model already trained rather than starting fresh. Mixing
+3,708 subtitle lines into 177,665 SemCor ones makes them 2% of the data and one pass
+will not weight them; training on them second is what domain adaptation means.
 
 Three terms, since this is the first training code in the repo. A **batch** is how many
 examples the model sees before adjusting itself. An **epoch** is one pass over the
@@ -44,10 +48,24 @@ from torch.utils.data import DataLoader
 MODEL = "sentence-transformers/all-MiniLM-L6-v2"   # 22M, the one that fits a browser
 
 
-def load(paths):
+def load(paths, agreed=0):
+    """Read the prepared examples, keeping only the ones worth training on.
+
+    The panel-labelled file carries every line it was asked, with `agreed` saying how
+    many of the five models gave the answer. `agreed` gates it: the labels are 97% right
+    at five and 80% at four. Lines the panel answered with "no sense fits" carry no key
+    and are dropped here — phase 15 is what they are for.
+
+    SemCor rows have no `agreed` and are always kept: a person marked them.
+    """
     rows = []
     for path in paths:
         part = [json.loads(line) for line in open(path, encoding="utf-8")]
+        kept = [r for r in part if "key" in r and r.get("agreed", 5) >= agreed]
+        if len(kept) < len(part):
+            print(f"{path:<16}{len(part) - len(kept):>10,} dropped, "
+                  f"below {agreed} of 5 or no sense fits")
+        part = kept
         first = sum(1 for r in part if r["candidates"][0] == r["key"])
         print(f"{path:<16}{len(part):>10,} examples  "
               f"{len({r['lemma'] for r in part}):>6,} words  "
@@ -121,7 +139,11 @@ def main():
     parser.add_argument("--data", nargs="+", default=["semcor.jsonl"])
     parser.add_argument("--test", default="working.jsonl")
     parser.add_argument("--out", default="model")
+    parser.add_argument("--from", dest="start", default=MODEL,
+                        help="a trained model to continue from, instead of the base one")
     parser.add_argument("--examples", type=int, default=0, help="0 means all of them")
+    parser.add_argument("--agreed", type=int, default=5,
+                        help="how many of the five models a panel label needs")
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--seed", type=int, default=17)
@@ -129,7 +151,7 @@ def main():
 
     rng = random.Random(args.seed)
     print()
-    rows = load(args.data)
+    rows = load(args.data, args.agreed)
     rng.shuffle(rows)
     print()
 
@@ -150,7 +172,8 @@ def main():
     print(f"{len(test)} hand-labelled subtitle lines, never seen in training")
     print(f"first sense in the dictionary   {100 * base / len(test):.1f}%\n")
 
-    model = SentenceTransformer(MODEL)
+    print(f"starting from {args.start}\n")
+    model = SentenceTransformer(args.start)
     checker = evaluation.TripletEvaluator.from_input_examples(pairs(valid, rng),
                                                              name="held-out words")
     print(f"epoch 0  held-out {held_out_score(checker, model):.3f}  "

@@ -83,9 +83,15 @@ check-teacher:
 
 # Stages the prepared data as a Kaggle dataset and pushes the script that trains on it.
 # `kaggle datasets create` the first time; after that every push is a new version.
+#
+# CORPORA is what gets uploaded. OMSTI and MASC are left out by default — half a
+# gigabyte for corpora no current job reads, and `make ufsac` rebuilds them in ten
+# minutes. Add them back with `make kaggle CORPORA="... data/omsti.jsonl"`.
+CORPORA ?= data/semcor.jsonl data/teacher-labels.jsonl
+
 kaggle:
 	rm -rf data/kaggle && mkdir -p data/kaggle
-	cp data/semcor.jsonl data/omsti.jsonl data/masc.jsonl data/working.jsonl \
+	cp $(CORPORA) data/working.jsonl \
 	  kaggle/run.py kaggle/dataset-metadata.json data/kaggle/
 	kaggle datasets version -p data/kaggle -t -m "$(M)"
 	kaggle kernels push -p kaggle
