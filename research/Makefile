@@ -89,12 +89,16 @@ check-teacher:
 # minutes. Add them back with `make kaggle CORPORA="... data/omsti.jsonl"`.
 CORPORA ?= data/semcor.jsonl data/teacher-labels.jsonl
 
+# `uv tool install kaggle` puts 2.x in ~/.local/bin. An older pip-installed 1.6 may sit
+# earlier on PATH and fail on the new token format, so the path is spelled out.
+KAGGLE ?= $(HOME)/.local/bin/kaggle
+
 kaggle:
 	rm -rf data/kaggle && mkdir -p data/kaggle
 	cp $(CORPORA) data/working.jsonl \
 	  kaggle/run.py kaggle/dataset-metadata.json data/kaggle/
-	kaggle datasets version -p data/kaggle -t -m "$(M)"
-	kaggle kernels push -p kaggle
+	$(KAGGLE) datasets version -p data/kaggle -t -m "$(M)"
+	$(KAGGLE) kernels push -p kaggle
 
 # --- measuring ---------------------------------------------------------------
 

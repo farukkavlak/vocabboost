@@ -268,7 +268,9 @@ runs every job in one session so a single push answers every question. Both read
 be looked at, and the GPU only trains.
 
 Needs the Kaggle CLI and a token: `uv tool install kaggle`, then Settings → API on
-kaggle.com, and the token string into `~/.kaggle/access_token`. The account has to be
+kaggle.com, and the token string into `~/.kaggle/access_token`. An older pip-installed
+CLI on PATH will fail on that token format, so the Makefile calls `~/.local/bin/kaggle`
+directly; override with `make kaggle KAGGLE=...`. The account has to be
 phone-verified or Kaggle quietly hands out a CPU instead of a GPU, which is why
 `kernel.py` stops on the first line if there is no GPU.
 

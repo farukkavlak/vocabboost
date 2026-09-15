@@ -657,15 +657,21 @@ English, and if so this phase never happens.
 
 ### Data sources
 
-All free and open:
-
 - **OpenSubtitles** — our own domain, billions of words of subtitles
+- **WordNet 3.0** — the sense inventory, and what SemCor's keys point at
 - **Wiktionary via kaikki.org** — current, covers slang, machine readable
-- **SemCor and SemEval WSD** — sense-labelled gold data, for comparison
+- **SemCor and UFSAC** — sense-labelled gold data, for training and comparison
 - **WiC** — a benchmark asking whether two lines use a word the same way
 - **CMUdict** — pronunciation
 - **CEFR-J, EFLLex** — level lists
 - **spaCy** — lemmatizer and part of speech tagger
+- **A panel of five model families, via fal.ai** — the subtitle labels, phase 13
+
+All free and open except the last, which is paid and whose output is not ours to
+relicense. The shipped model is weights trained on it, not the labels themselves, but
+`teacher-labels.jsonl` is in the repository and the distinction matters: the code is
+MIT, the data it was built from is not all ours to give away. The Kaggle dataset says
+"other" rather than CC0 for the same reason.
 
 ### What this will not do
 
