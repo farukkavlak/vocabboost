@@ -665,9 +665,12 @@ worker cannot hold a model.
       sentence splitting — NLTK's Punkt is a model of its own — and the simple rule used
       instead changes the looked-up word's tag on one line in 8,580. Weights rounded to
       three decimals: 5.1 MB.
-- [ ] Port the lemmatizer and phrase matching to TypeScript, and check they find the
+- [x] Port the lemmatizer and phrase matching to TypeScript, and check they find the
       same entries as the Python ones on the test lines. `ran` finds `run` through
       WordNet's irregular list, `boxes` through suffix rules, `ran into` through both.
+      Single words resolve NLTK's way — its lemmatizer, then `wn.synsets` — and get the
+      senses the panel chose from on 8,160 of 8,163 lines. Phrases match on every line.
+      The port agrees with `lookup.py` on all 1,880 fixture lines.
 - [ ] If it is still too heavy, look at distilling the encoder to static embeddings
       (Model2Vec and the like). Far smaller and far faster, at a cost in accuracy that,
       again, gets measured.

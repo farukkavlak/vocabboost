@@ -10,6 +10,12 @@ wins.
 **Inflections.** `ran` is not in the dictionary, `run` is. WordNet lists the irregular
 forms; the regular ones fall to a handful of suffix rules.
 
+A single word is resolved the way NLTK resolved every labelled line — its lemmatizer, then
+`wn.synsets` on the lemma — so the extension offers the model the senses it was measured
+on. `senses_of` does that from this database; over the 8,163 single-word panel lines it
+gives the same senses on all but three, where NLTK's own index and this one disagree on a
+capitalised lemma (`gas` finds `Ga`, gallium).
+
 Phrases also move: "check it out" is `check out` with a pronoun inside, "I ran into
 him" is `run into` inflected. So each position is tried in its dictionary form, and one
 pronoun is allowed inside a two-word phrase.
@@ -28,6 +34,17 @@ RULES = {
           ("ed", ""), ("ed", "e"), ("es", ""), ("s", "")],
     "a": [("iest", "y"), ("est", ""), ("est", "e"), ("ier", "y"), ("er", ""),
           ("er", "e")],
+    "r": [],
+}
+
+# NLTK's `_morphy` rules, which differ from the ones above: those only serve phrases,
+# and phrases were matched with them.
+MORPHY = {
+    "n": [("s", ""), ("ses", "s"), ("ves", "f"), ("xes", "x"), ("zes", "z"), ("ches", "ch"),
+          ("shes", "sh"), ("men", "man"), ("ies", "y")],
+    "v": [("s", ""), ("ies", "y"), ("es", "e"), ("es", ""), ("ed", "e"), ("ed", ""),
+          ("ing", "e"), ("ing", "")],
+    "a": [("er", ""), ("est", ""), ("er", "e"), ("est", "e")],
     "r": [],
 }
 
@@ -73,6 +90,38 @@ class Vocab:
             if surface.endswith(ending):
                 found.append(surface[: len(surface) - len(ending)] + replacement)
         return [surface, *found]
+
+    def exists(self, lemma, pos):
+        # WordNet files some adjectives as satellites, `s`; NLTK counts them as `a`.
+        return self.db.execute(
+            "SELECT 1 FROM entry WHERE lemma = ? AND pos IN (?, ?)",
+            (lemma, pos, "s" if pos == "a" else pos)).fetchone() is not None
+
+    def morphy(self, form, pos):
+        """NLTK's `_morphy`: the irregular list or the rules, once, kept if WordNet has it."""
+        forms = [r["lemma"] for r in self.db.execute(
+            "SELECT lemma FROM form WHERE surface = ? AND pos = ?", (form, pos))]
+        if not forms:
+            forms = [form[: len(form) - len(old)] + new
+                     for old, new in MORPHY[pos] if form.endswith(old)]
+        found = []
+        for candidate in [form, *forms]:
+            if candidate not in found and self.exists(candidate, pos):
+                found.append(candidate)
+        return found
+
+    def senses_of(self, word, pos):
+        """The lemma and sense keys NLTK gives a single word of this part of speech."""
+        forms = self.morphy(word.lower(), pos)
+        lemma = min(forms, key=len) if forms else word.lower()
+        keys = []
+        for form in self.morphy(lemma, pos):
+            for part in (pos, "s") if pos == "a" else (pos,):
+                row = self.entry(form, part)
+                for sense in self.senses(row["id"]) if row else []:
+                    if sense["key"] not in keys:
+                        keys.append(sense["key"])
+        return lemma, keys
 
     def candidate_phrases(self, words, index):
         """Every phrase the click could belong to, longest first."""
