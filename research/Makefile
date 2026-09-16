@@ -96,13 +96,25 @@ CORPORA ?= data/semcor.jsonl data/teacher-labels.jsonl
 # `uv tool install kaggle` puts 2.x in ~/.local/bin. An older pip-installed 1.6 may sit
 # earlier on PATH and fail on the new token format, so the path is spelled out.
 KAGGLE ?= $(HOME)/.local/bin/kaggle
+DATASET ?= ofarukkavlak/vocabboost-wsd
 
 kaggle:
 	rm -rf data/kaggle && mkdir -p data/kaggle
 	cp $(CORPORA) data/working.jsonl data/label-split.json \
 	  kaggle/run.py kaggle/dataset-metadata.json data/kaggle/
 	$(KAGGLE) datasets version -p data/kaggle -t -m "$(M)"
+	$(MAKE) wait-dataset
 	$(KAGGLE) kernels push -p kaggle
+
+# A new dataset version takes a minute or two to process, and a kernel pushed before it
+# is ready mounts the *previous* version instead — silently, with the old files. One run
+# died two minutes in for a file that was uploaded and not yet visible.
+wait-dataset:
+	@for i in $$(seq 60); do \
+	  $(KAGGLE) datasets status $(DATASET) | grep -q ready && \
+	  $(KAGGLE) datasets files $(DATASET) | grep -q label-split.json && exit 0; \
+	  sleep 10; \
+	done; echo "the dataset version is still not ready"; exit 1
 
 # --- measuring ---------------------------------------------------------------
 

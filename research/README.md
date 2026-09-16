@@ -280,7 +280,9 @@ kaggle.com, and the token string into `~/.kaggle/access_token`. An older pip-ins
 CLI on PATH will fail on that token format, so the Makefile calls `~/.local/bin/kaggle`
 directly; override with `make kaggle KAGGLE=...`. The account has to be
 phone-verified or Kaggle quietly hands out a CPU instead of a GPU, which is why
-`kernel.py` stops on the first line if there is no GPU.
+`kernel.py` stops on the first line if there is no GPU. A dataset version also takes a
+minute or two to process, and a kernel pushed before it is ready mounts the previous
+version silently, so `make kaggle` waits for it.
 
 ```sh
 make ufsac                      # once: download the corpora and build the examples
