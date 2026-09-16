@@ -67,10 +67,18 @@ the part-of-speech tagger 5.
 ## research/
 
 How the local model was built and measured: a 23 MB encoder, fine-tuned to pick which
-sense of a word a subtitle line is using. On 149 hand-labelled lines it picks the right
-sense first 66% of the time and has it in its top three 87%, against 55% for showing the
-dictionary's first sense. `research/README.md` has
-the numbers.
+sense of a word a subtitle line is using. On 51 held-out lines, opened once at the end:
+
+|                           | right first | per lookup | cost per lookup |
+| ------------------------- | ----------: | ---------: | --------------: |
+| first sense in dictionary |       56.9% |      <1 ms |              $0 |
+| **our model, offline**    |       64.7% |     134 ms |              $0 |
+| GPT-4o mini               |       74.5% |      1.3 s |        $0.00003 |
+| Claude Haiku 4.5          |       80.4% |      1.1 s |        $0.00022 |
+
+Ours is behind the hosted models, which is why a key still unlocks them. When it is sure
+enough to show one sense it was right on all 14 such lines. `research/README.md` has the
+full table and where it loses.
 
 ---
 

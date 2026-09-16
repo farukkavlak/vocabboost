@@ -162,15 +162,17 @@ The research lives in `research/`, in Python. Only phase 16 touches the extensio
       simpler sentence split
 - [ ] If the model is still too heavy, try static embeddings (Model2Vec)
 
-### 17 — comparison
+### 17 — comparison ✅
 
-- [ ] Open the 51 sealed lines once and score every option on them
-- [ ] One table: accuracy, speed, cost per lookup and size for first sense, the untrained
+Ours 64.7%, GPT-4o mini 74.5%, Claude Haiku 80.4% on the sealed lines.
+
+- [x] Open the 51 sealed lines once and score every option on them
+- [x] One table: accuracy, speed, cost per lookup and size for first sense, the untrained
       encoder, our model, Claude and OpenAI
-- [ ] Put the published numbers (first sense 65.5, bi-encoder 79.0) next to ours
-- [ ] Put the self-agreement ceiling next to them
-- [ ] Write down where ours loses
-- [ ] Add the table to the README
+- [x] Put the published numbers (first sense 65.5, bi-encoder 79.0) next to ours
+- [x] Put the self-agreement ceiling next to them
+- [x] Write down where ours loses
+- [x] Add the table to the README
 
 ### 18 — writing explanations (only if phase 17 calls for it)
 

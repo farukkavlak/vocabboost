@@ -124,6 +124,16 @@ Short notes on what we learned, in the order we learned it. Current numbers are 
 - NLTK splits sentences with a trained model (Punkt). A simple rule was close enough:
   1 word's tag changed in 8,580 lines.
 
+## Final comparison
+
+- The sealed 51 lines were opened once, after the method was committed.
+- Ours: 64.7%. GPT-4o mini: 74.5%. Claude Haiku: 80.4%. First sense: 56.9%.
+- On the working set ours matched GPT-4o mini (65.1% each). The sealed set was harder
+  for us and easier for the hosted models. With 51 lines, the ranges are wide.
+- When ours was sure (14 lines), it was right every time.
+- It loses most on slang, idioms, lines where no sense fits, and common words.
+- The hosted models are 8–10× slower and cost money; ours is free and offline.
+
 ## General lessons
 
 - Measure before building. The part-of-speech gap would have broken the extension

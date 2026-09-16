@@ -12,6 +12,35 @@ picks the one the line uses. It is a 22M-parameter sentence encoder
 (`all-MiniLM-L6-v2`) that encodes the line and each sense, and ranks the senses by
 cosine similarity.
 
+## Final comparison
+
+On the 51 sealed hand-labelled lines, opened once after everything else was fixed
+(`make comparison SET=sealed`). `first` is how often the right sense comes first.
+
+|                       | first | 95% range | top 3 | per lookup | cost per lookup | download |
+| --------------------- | ----: | --------: | ----: | ---------: | --------------: | -------: |
+| first sense           | 56.9% |    43–69% |     - |      <1 ms |              $0 |    19 MB |
+| untrained encoder     | 41.2% |    29–55% |   71% |          - |               - |        - |
+| **our model, Chrome** | 64.7% |    51–76% |   84% |     134 ms |              $0 |    62 MB |
+| Claude Haiku 4.5      | 80.4% |    68–89% |     - |      1.1 s |        $0.00022 |        - |
+| GPT-4o mini           | 74.5% |    61–84% |     - |      1.3 s |        $0.00003 |        - |
+
+For reference: the labeller agreed with themselves on 28 of 30 lines (93%), and on a
+different, standard benchmark Blevins and Zettlemoyer (2020) report 65.5 F1 for the first
+sense and 79.0 for a trained bi-encoder.
+
+- Our model beats the first sense by 8 points and runs offline, free, about eight times
+  faster. It trails Claude by 16 points and GPT-4o mini by 10.
+- When it leads with one sense it was right every time (14 of 14). When it is unsure, the
+  right sense is in the three it shows on half of its misses (9 of 18).
+- Where it loses: the 3 lines where no sense fits (it cannot say so), slang and idiom
+  (`kicking that shit`, `one last big score`), and fine WordNet distinctions (`night`,
+  `date`). The gap is widest on common words (10 of 17 against Claude's 15).
+- 51 lines is few. Our range overlaps both hosted models', so the true gap may be
+  smaller (or larger) than it looks.
+- Claude Haiku 4.5 and GPT-4o mini were two of the five models whose labels trained ours.
+  Provider times include the fal.ai round trip.
+
 ## Results
 
 On the 149 hand-labelled lines. `first` is how often the right sense is ranked first;
