@@ -7,6 +7,7 @@
  * 4. the answer is confident when the first is far enough ahead of the second
  */
 
+import type { Target } from "../../meaning";
 import { tag, type TaggerData } from "./tagger";
 import { tokenize } from "./tokenize";
 import {
@@ -61,16 +62,25 @@ export interface Resources {
   embed: Embed;
 }
 
+/** The position of the `occurrence`-th item equal to `word`, ignoring case, or -1. */
+function nthIndex(items: string[], word: string, occurrence: number): number {
+  const lower = word.toLowerCase();
+  let seen = 0;
+  for (const [index, item] of items.entries()) {
+    if (item.toLowerCase() === lower && seen++ === occurrence) {
+      return index;
+    }
+  }
+  return -1;
+}
+
 /** The word's part of speech in the line, if it is one WordNet covers. */
 export function partOfSpeech(
   tagger: TaggerData,
-  line: string,
-  word: string,
+  { word, sentence, occurrence }: Target,
 ): Pos | undefined {
-  const tokens = tokenize(line);
-  const index = tokens.findIndex(
-    (token) => token.toLowerCase() === word.toLowerCase(),
-  );
+  const tokens = tokenize(sentence);
+  const index = nthIndex(tokens, word, occurrence);
   return index < 0 ? undefined : PENN_TO_WORDNET[tag(tagger, tokens)[index]!];
 }
 
@@ -78,21 +88,20 @@ export function partOfSpeech(
 export function entryFor(
   vocab: VocabData,
   tagger: TaggerData,
-  line: string,
-  word: string,
+  target: Target,
 ): (Entry & { pos?: Pos }) | null {
-  const words = (line.match(WORD) ?? []).map((w) => w.toLowerCase());
-  const index = words.indexOf(word.toLowerCase());
+  const words = (target.sentence.match(WORD) ?? []).map((w) => w.toLowerCase());
+  const index = nthIndex(words, target.word, target.occurrence);
   const phrase = index < 0 ? null : phraseAt(vocab, words, index);
   if (phrase) {
     return phrase;
   }
 
-  const pos = partOfSpeech(tagger, line, word);
+  const pos = partOfSpeech(tagger, target);
   if (!pos) {
     return null;
   }
-  const entry = sensesOf(vocab, word, pos);
+  const entry = sensesOf(vocab, target.word, pos);
   return entry.synsets.length ? { ...entry, pos } : null;
 }
 
@@ -108,16 +117,15 @@ function dot(a: number[], b: number[]): number {
 
 export async function choose(
   { vocab, tagger, embed }: Resources,
-  line: string,
-  word: string,
+  target: Target,
 ): Promise<Choice | null> {
-  const entry = entryFor(vocab, tagger, line, word);
+  const entry = entryFor(vocab, tagger, target);
   if (!entry) {
     return null;
   }
 
   const [lineVector, ...senseVectors] = await embed([
-    lineText(entry.lemma, line),
+    lineText(entry.lemma, target.sentence),
     ...entry.synsets.map(senseText),
   ]);
   const ranked = entry.synsets

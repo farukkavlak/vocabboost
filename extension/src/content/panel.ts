@@ -56,6 +56,7 @@ function buildLine(
 ): HTMLElement {
   const line = document.createElement("div");
   line.className = "line";
+  const seen = new Map<string, number>();
 
   for (const token of text.split(/(\s+)/)) {
     const word = strip(token);
@@ -67,6 +68,11 @@ function buildLine(
       continue;
     }
 
+    // Which "run" of a line with two: they can be different parts of speech.
+    const key = word.toLowerCase();
+    const occurrence = seen.get(key) ?? 0;
+    seen.set(key, occurrence + 1);
+
     const button = document.createElement("button");
     button.className = "word";
     button.type = "button";
@@ -74,7 +80,7 @@ function buildLine(
     button.textContent = token;
     button.setAttribute("aria-expanded", "false");
     button.addEventListener("click", () =>
-      openCard(root, panel, button, word, text),
+      openCard(root, panel, button, { word, sentence: text, occurrence }),
     );
     button.addEventListener("keydown", (event) => {
       if (event.key === "ArrowRight" || event.key === "ArrowLeft") {

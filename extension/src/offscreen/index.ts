@@ -56,14 +56,14 @@ function restartIdleTimer(): void {
 chrome.runtime.onMessage.addListener(
   (message: ChooseSense, _sender, respond: (result: ChooseResult) => void) => {
     // Every extension page hears every message; answer only our own.
-    if (message.target !== "offscreen" || message.type !== "CHOOSE_SENSE") {
+    if (message.to !== "offscreen" || message.type !== "CHOOSE_SENSE") {
       return false;
     }
 
     clearTimeout(idleTimer);
     resources ??= load();
     void resources
-      .then((loaded) => choose(loaded, message.sentence, message.word))
+      .then((loaded) => choose(loaded, message))
       .then(
         (choice) => respond({ ok: true, choice }),
         (error: unknown) => respond({ ok: false, error: String(error) }),

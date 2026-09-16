@@ -1,21 +1,17 @@
 import type { Choice } from "./lookup/local/choose";
-import type { Meaning } from "./meaning";
+import type { Meaning, Target } from "./meaning";
 
 export interface LookupSubtitle {
   type: "LOOKUP_SUBTITLE";
 }
 
-export interface LookupWord {
+export interface LookupWord extends Target {
   type: "LOOKUP_WORD";
-  word: string;
-  sentence: string;
 }
 
 /** The same word, asked of the reader's provider. */
-export interface ExplainWord {
+export interface ExplainWord extends Target {
   type: "EXPLAIN_WORD";
-  word: string;
-  sentence: string;
 }
 
 /** Whether a provider key has been entered, so the card can offer the second step. */
@@ -31,12 +27,10 @@ export interface OffscreenIdle {
 export type Message =
   LookupSubtitle | LookupWord | ExplainWord | ModelReady | OffscreenIdle;
 
-/** From the worker to the offscreen page, which is the only listener with this target. */
-export interface ChooseSense {
+/** From the worker to the offscreen page; `to` tells the other listeners to ignore it. */
+export interface ChooseSense extends Target {
   type: "CHOOSE_SENSE";
-  target: "offscreen";
-  word: string;
-  sentence: string;
+  to: "offscreen";
 }
 
 /** `error` is for the console. */

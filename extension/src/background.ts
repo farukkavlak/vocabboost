@@ -50,10 +50,10 @@ chrome.runtime.onMessage.addListener(
       return false;
     }
 
+    const { word, sentence, occurrence } = message;
+    const target = { word, sentence, occurrence };
     const answer =
-      message.type === "LOOKUP_WORD"
-        ? lookupWord(message.word, message.sentence)
-        : explainWord(message.word, message.sentence);
+      message.type === "LOOKUP_WORD" ? lookupWord(target) : explainWord(target);
 
     void answer
       .then((meaning) => respond({ ok: true, meaning }))

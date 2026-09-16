@@ -82,13 +82,12 @@ export const local: MeaningProvider = {
   id: "local",
   usesSentence: true,
 
-  async lookup(word, sentence) {
+  async lookup(target) {
     await openPage();
     const question: ChooseSense = {
       type: "CHOOSE_SENSE",
-      target: "offscreen",
-      word,
-      sentence,
+      to: "offscreen",
+      ...target,
     };
     const result: ChooseResult = await chrome.runtime.sendMessage(question);
     if (!result.ok) {
@@ -96,7 +95,7 @@ export const local: MeaningProvider = {
       throw new LookupError("The meaning could not be worked out. Try again.");
     }
     if (!result.choice) {
-      throw new LookupError(`"${word}" is not in the dictionary.`);
+      throw new LookupError(`"${target.word}" is not in the dictionary.`);
     }
     return toMeaning(result.choice);
   },

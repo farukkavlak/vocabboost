@@ -4,8 +4,10 @@ import argparse
 import json
 import sqlite3
 
-from common import load_split, read_jsonl
+from common import PENN_TO_WORDNET, load_split, read_jsonl
+from export_tagger import tokenize
 from lookup import WORD, Vocab
+from nltk.tag.perceptron import PerceptronTagger
 
 
 def export(db, path):
@@ -33,6 +35,17 @@ def export(db, path):
     return len(senses), len(entries)
 
 
+def occurrence(tagger, row):
+    """Which occurrence of the word was labelled: the first with the row's part of speech.
+
+    The labelled rows do not record the word's position, only its tag.
+    """
+    same = [(token, tag) for token, tag in tagger.tag(tokenize(row["text"]))
+            if token.lower() == row["word"].lower()]
+    return next((i for i, (_, tag) in enumerate(same)
+                 if PENN_TO_WORDNET.get(tag) == row["pos"]), 0)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", default="data/vocab.db")
@@ -48,6 +61,7 @@ def main():
 
     # Lines of the validation and test words, and every phrase line.
     where = load_split(args.split)
+    tagger = PerceptronTagger()
     lines = []
     for row in read_jsonl(args.labels):
         phrase = " " in row["lemma"]
@@ -61,11 +75,12 @@ def main():
         if phrase:
             # The clicked word is not recorded; use the first word the phrase covers.
             first = next(i for i, p in enumerate(found) if p and p["lemma"] == row["lemma"])
-            case.update(word=WORD.findall(row["text"])[first], lemma=row["lemma"],
-                         senses=row["candidates"])
+            case.update(word=WORD.findall(row["text"])[first], occurrence=0,
+                         lemma=row["lemma"], senses=row["candidates"])
         else:
             lemma, keys = vocab.senses_of(row["word"], row["pos"])
-            case.update(word=row["word"], pos=row["pos"], lemma=lemma, senses=keys)
+            case.update(word=row["word"], occurrence=occurrence(tagger, row), pos=row["pos"],
+                        lemma=lemma, senses=keys)
         lines.append(case)
     with open(args.fixture, "w", encoding="utf-8") as out:
         json.dump(lines, out, indent=0, ensure_ascii=False)

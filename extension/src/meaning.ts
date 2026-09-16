@@ -1,3 +1,10 @@
+/** A clicked word: the word, its line, and which of its occurrences in the line. */
+export interface Target {
+  word: string;
+  sentence: string;
+  occurrence: number;
+}
+
 export interface Sense {
   definition: string;
   example?: string;
@@ -27,7 +34,7 @@ export interface Cacheable {
 }
 
 export interface MeaningProvider extends Cacheable {
-  lookup(word: string, sentence: string): Promise<Meaning>;
+  lookup(target: Target): Promise<Meaning>;
 }
 
 /** An error whose message is meant for the reader. */

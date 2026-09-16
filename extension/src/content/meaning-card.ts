@@ -1,7 +1,7 @@
 import { clamp, EDGE } from "./layout";
 import { explainWord, lookupWord, modelReady } from "./lookup";
 import { LookupError } from "../meaning";
-import type { Meaning, Sense } from "../meaning";
+import type { Meaning, Sense, Target } from "../meaning";
 
 /** Between the card and the panel it belongs to. */
 const GAP = 8;
@@ -180,9 +180,9 @@ export function openCard(
   root: ShadowRoot,
   panel: HTMLElement,
   button: HTMLElement,
-  word: string,
-  sentence: string,
+  target: Target,
 ): void {
+  const { word } = target;
   closeCard(root);
   button.setAttribute("aria-expanded", "true");
 
@@ -213,7 +213,7 @@ export function openCard(
 
   // If the provider fails, the local answer stays with the reason under it.
   const explain = (local: Meaning | null) => (): void => {
-    void explainWord(word, sentence)
+    void explainWord(target)
       .then((meaning) => fill(meaning))
       .catch((error: unknown) =>
         local
@@ -225,7 +225,7 @@ export function openCard(
   // Asked in parallel with the lookup, which is slower when the model has to load.
   const ready = modelReady();
 
-  void lookupWord(word, sentence)
+  void lookupWord(target)
     .then(async (meaning) =>
       fill(meaning, (await ready) ? explain(meaning) : undefined),
     )

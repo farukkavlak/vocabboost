@@ -1,11 +1,11 @@
-import type { Cacheable, Meaning } from "../meaning";
+import type { Cacheable, Meaning, Target } from "../meaning";
 
 const PREFIX = "meaning";
 
-function key(provider: Cacheable, word: string, sentence: string): string {
-  const parts = [PREFIX, provider.id, word.toLowerCase()];
+function key(provider: Cacheable, target: Target): string {
+  const parts = [PREFIX, provider.id, target.word.toLowerCase()];
   if (provider.usesSentence) {
-    parts.push(sentence);
+    parts.push(String(target.occurrence), target.sentence);
   }
 
   return parts.join(" ");
@@ -16,10 +16,9 @@ function key(provider: Cacheable, word: string, sentence: string): string {
 
 export async function readCache(
   provider: Cacheable,
-  word: string,
-  sentence: string,
+  target: Target,
 ): Promise<Meaning | null> {
-  const id = key(provider, word, sentence);
+  const id = key(provider, target);
   try {
     const stored = await chrome.storage.local.get(id);
     return (stored[id] as Meaning | undefined) ?? null;
@@ -30,14 +29,11 @@ export async function readCache(
 
 export async function writeCache(
   provider: Cacheable,
-  word: string,
-  sentence: string,
+  target: Target,
   meaning: Meaning,
 ): Promise<void> {
   try {
-    await chrome.storage.local.set({
-      [key(provider, word, sentence)]: meaning,
-    });
+    await chrome.storage.local.set({ [key(provider, target)]: meaning });
   } catch {
     // Out of quota. The answer was still delivered.
   }

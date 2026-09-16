@@ -16,6 +16,7 @@ interface Line {
   part: string;
   label: string | null;
   word: string;
+  occurrence: number;
   pos?: Pos;
   lemma: string;
   senses: string[];
@@ -25,17 +26,22 @@ const lines = read<Line[]>("fixtures/lookups.json");
 const vocab = read<VocabData>("../extension/public/vocab.json");
 const tagger = read<TaggerData>("../extension/public/tagger.json");
 
-// The word appears twice with different tags, and only the word, not which occurrence
-// was clicked, reaches the lookup. The first occurrence is tagged.
-const TWICE = [
+// The research tagged these after splitting sentences with NLTK's Punkt; the port's
+// simpler split gives the word a different tag.
+const SPLIT_DIFFERS = [
   "reading in See if F.U.D.D.'s reading it too.",
   "got in He got on his horse and he rode over there... and he got off, and he walked as far as he could one way.",
-  "excuse in Excuse me, excuse me, excuse me, excuse me...",
 ];
+
+const target = ({ word, text, occurrence }: Line) => ({
+  word,
+  sentence: text,
+  occurrence,
+});
 
 test("puts the senses the research measured in front of the model", () => {
   const wrong = lines.filter((line) => {
-    const entry = entryFor(vocab, tagger, line.text, line.word);
+    const entry = entryFor(vocab, tagger, target(line));
     const keys = (entry?.synsets ?? []).map(({ key }) => key).sort();
     return (
       entry?.lemma !== line.lemma ||
@@ -43,7 +49,9 @@ test("puts the senses the research measured in front of the model", () => {
       keys.join(" ") !== [...line.senses].sort().join(" ")
     );
   });
-  expect(wrong.map((line) => `${line.word} in ${line.text}`)).toEqual(TWICE);
+  expect(wrong.map((line) => `${line.word} in ${line.text}`)).toEqual(
+    SPLIT_DIFFERS,
+  );
 });
 
 // The exported model is not in the repository; `make onnx` in research/ writes it.
@@ -70,7 +78,7 @@ test("scores the test lines as the research did", async () => {
   let led = 0;
   let ledRight = 0;
   for (const line of scored) {
-    const choice = await choose({ vocab, tagger, embed }, line.text, line.word);
+    const choice = await choose({ vocab, tagger, embed }, target(line));
     const hit = choice?.ranked[0]?.key === line.label;
     right += Number(hit);
     if (choice?.confident) {

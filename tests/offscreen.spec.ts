@@ -19,16 +19,18 @@ test("chooses a sense offline in the offscreen page", async ({
     const started = performance.now();
     const first: ChooseResult = await chrome.runtime.sendMessage({
       type: "CHOOSE_SENSE",
-      target: "offscreen",
+      to: "offscreen",
       word: "safes",
+      occurrence: 0,
       sentence: "Wall safes went out with vaudeville.",
     });
     const cold = performance.now() - started;
     const again = performance.now();
     const second: ChooseResult = await chrome.runtime.sendMessage({
       type: "CHOOSE_SENSE",
-      target: "offscreen",
+      to: "offscreen",
       word: "ran",
+      occurrence: 0,
       sentence: "I ran into him at the store.",
     });
     return { first, second, cold, warm: performance.now() - again };

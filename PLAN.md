@@ -65,7 +65,7 @@ The free dictionary built here was replaced by the local model in phase 16.
 ### 8 — README
 
 - [x] README rewritten; `npm run recording` regenerates `docs/flow.gif`
-- [ ] Re-record the GIF once the phase 15 card is done
+- [x] GIF re-recorded with the phase 15 card
 
 ### 9 — logbook
 
@@ -158,7 +158,8 @@ The research lives in `research/`, in Python. Only phase 16 touches the extensio
 - [x] The model runs offline in an offscreen page that closes after two idle minutes
 - [x] The local model is the default; the free dictionary is removed
 - [x] Memory is freed after the idle close: about +350 MB while open, back within ~30 s
-- [ ] Pass which occurrence of a word was clicked (3 test lines differ without it)
+- [x] Pass which occurrence of a word was clicked; 2 test lines still differ, from the
+      simpler sentence split
 - [ ] If the model is still too heavy, try static embeddings (Model2Vec)
 
 ### 17 — comparison
