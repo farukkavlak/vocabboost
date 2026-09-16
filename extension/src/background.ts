@@ -1,4 +1,5 @@
 import { explainWord, lookupWord } from "./lookup";
+import { closePage } from "./lookup/providers/local";
 import { configured } from "./lookup/settings";
 import { LookupError } from "./meaning";
 import type { LookupResult, Message } from "./messages";
@@ -36,6 +37,11 @@ chrome.runtime.onMessage.addListener(
     _sender,
     respond: (result: LookupResult | boolean) => void,
   ) => {
+    if (message.type === "OFFSCREEN_IDLE") {
+      void closePage();
+      return false;
+    }
+
     if (message.type === "MODEL_READY") {
       void configured().then((model) => respond(model !== null));
       return true;

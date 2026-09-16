@@ -701,17 +701,21 @@ worker cannot hold a model.
       (12 MB) plus a 0.7 MB SQLite build, about 120 MB of memory against 150, and both
       load in a tenth of a second and look a word up in well under a millisecond. JSON,
       with no library.
-- [ ] Run it with `transformers.js` inside a `chrome.offscreen` document. The worker is
+- [x] Run it with `transformers.js` inside a `chrome.offscreen` document. The worker is
       killed after about 30 seconds idle, so a model loaded there would reload constantly.
-      The offscreen document stays alive and the worker messages it.
+      The offscreen document stays alive and the worker messages it. Tested with the
+      network off: the first answer takes about half a second, the next a tenth. The
+      page runs onnxruntime's plain WebAssembly build, 14 MB against 28 for the WebGPU
+      one transformers.js asks for, and needs `wasm-unsafe-eval` in the manifest.
 - [ ] `providers/local.ts`, same interface as `anthropic.ts` and `openai.ts`, no key, no
       host permission, and the default choice
 - [ ] Remove the free dictionary. Every card then reads from WordNet, the senses the
       research measured, and the network is only for readers who add a key. Its
       pronunciation and audio go with it, for now.
 - [ ] A word WordNet does not have gets a card that says so, rather than a guess
-- [ ] Ship `vocab.db` and the weights as data. Manifest V3 bans remote code, but weights
-      are data. The runtime `.wasm` is code and has to be bundled.
+- [x] Ship `vocab.db` and the weights as data. Manifest V3 bans remote code, but weights
+      are data. The runtime `.wasm` is code and has to be bundled. About 62 MB unpacked:
+      the model 23, the vocabulary 19, the runtime 14, the tagger 5.
 
 **Exit:** the extension answers with the network off, and memory goes back to where it
 was once the model has been idle.

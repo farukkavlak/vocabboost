@@ -11,7 +11,12 @@ export default {
   // No longer "powered by AI": the default path is a free dictionary and no key at all.
   description:
     "Look up a word from the subtitles without leaving the video, and hear how it sounds.",
-  permissions: ["storage"],
+  // `offscreen` holds the model in a page of its own; the worker is stopped when idle.
+  permissions: ["storage", "offscreen"],
+  // The model runs as WebAssembly, which extension pages refuse without this.
+  content_security_policy: {
+    extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+  },
   host_permissions: [...matches, "https://api.dictionaryapi.dev/*"],
   // Asked for beside the key field: an install with no key never calls these.
   optional_host_permissions: llmProviders.map((provider) => provider.origin),

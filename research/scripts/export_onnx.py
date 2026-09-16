@@ -18,7 +18,8 @@ One scale for a whole matrix cost 4.2 points; one a row costs about one. A matri
 rows of very different sizes, and a single scale spends its 256 steps on the largest.
 
 The folder layout is the one `transformers.js` loads from: config and tokenizer at the
-top, the graphs under `onnx/`.
+top, the graphs under `onnx/`. The 8-bit copy and the files beside it are also written to
+`extension/public/models/vocabboost`, which is what the extension ships.
 """
 
 import argparse
@@ -51,6 +52,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="data/model")
     parser.add_argument("--out", default="data/onnx")
+    parser.add_argument("--ship", default="../extension/public/models/vocabboost")
     args = parser.parse_args()
 
     out = pathlib.Path(args.out)
@@ -78,6 +80,13 @@ def main():
 
     small = out / "onnx" / "model_quantized.onnx"
     quantize_dynamic(full, small, weight_type=QuantType.QInt8, per_channel=True)
+
+    ship = pathlib.Path(args.ship)
+    (ship / "onnx").mkdir(parents=True, exist_ok=True)
+    for name in KEPT:
+        if (out / name).exists():
+            shutil.copy(out / name, ship / name)
+    shutil.copy(small, ship / "onnx" / small.name)
 
     for path in (full, half, small):
         print(f"{path}  {path.stat().st_size / 1e6:.1f} MB")

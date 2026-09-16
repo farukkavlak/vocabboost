@@ -14,3 +14,4 @@ extension/public/tagger.json
 extension/public/vocab.json
 tests/fixtures/tags.json
 tests/fixtures/lookups.json
+extension/public/models/
