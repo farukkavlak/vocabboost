@@ -737,8 +737,8 @@ largest; a scale a row brings the loss down to one line.
 **8-bit ships.** The download was never the cost that mattered — a reader downloads once.
 Memory is paid every time the model is up, and the 16-bit copy saves none of it: the
 browser widens its weights back to 32 bits to compute with them. One line in 409 is not
-worth 250 MB. Memory is the operating system's resident size for the page, less an empty
-page's 100 MB, so read it as rough; the gap between the copies is not.
+worth 250 MB. Memory is the operating system's resident size for the page's renderer, less an
+empty page's 90 MB, so read it as rough; the gap between the copies is not.
 
 Even 450 MB is too much to hold while nobody is looking anything up. So the model runs in
 its own offscreen page, opened on the first lookup and closed after a couple of idle

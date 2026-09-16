@@ -687,9 +687,12 @@ worker cannot hold a model.
       which nobody waits on, and storing them is 117,659 senses of 384 numbers — 45 MB
       even at 8 bits, twice the model. Revisit only if the idle close makes the peak
       memory matter.
-- [ ] Read `vocab.db` in the browser. It is SQLite, which a browser cannot open on its
+- [x] Read `vocab.db` in the browser. It is SQLite, which a browser cannot open on its
       own: either ship a SQLite build or convert the file to something it can read.
-      Measure both on size and lookup time.
+      Measure both on size and lookup time. JSON: 19 MB (6 MB compressed) against 27 MB
+      (12 MB) plus a 0.7 MB SQLite build, about 120 MB of memory against 150, and both
+      load in a tenth of a second and look a word up in well under a millisecond. JSON,
+      with no library.
 - [ ] Run it with `transformers.js` inside a `chrome.offscreen` document. The worker is
       killed after about 30 seconds idle, so a model loaded there would reload constantly.
       The offscreen document stays alive and the worker messages it.
