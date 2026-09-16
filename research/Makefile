@@ -147,6 +147,12 @@ sense-split:
 confidence:
 	$(PY) scripts/confidence.py
 
+onnx:
+	$(PY) scripts/export_onnx.py
+
+check-onnx:
+	$(PY) scripts/check_onnx.py
+
 sense-distance:
 	$(PY) scripts/sense_distance.py
 
@@ -167,4 +173,4 @@ clean:
 
 .PHONY: setup pool wiktionary vocab semcor ufsac candidates phrases label split \
         recheck teacher panel panel-check labels check-teacher kaggle baseline evaluate compare lookup failures lexicons \
-        phrase-split sense-split confidence sense-distance phrase-impact lint clean
+        phrase-split sense-split confidence onnx check-onnx sense-distance phrase-impact lint clean

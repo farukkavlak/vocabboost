@@ -51,7 +51,7 @@ def read(model, rows):
         scores = util.cos_sim(line, senses)[0].sort(descending=True)
         keys = [row["senses"][i]["key"] for i in scores.indices.tolist()]
         gap = float(scores.values[0] - scores.values[1]) if len(keys) > 1 else 1.0
-        out.append({"gap": gap, "right": keys[0] in row["label"],
+        out.append({"gap": gap, "first": keys[0], "right": keys[0] in row["label"],
                     "top3": bool(set(keys[:3]) & set(row["label"])),
                     "senses": len(keys), "none": not row["label"]})
     return out
