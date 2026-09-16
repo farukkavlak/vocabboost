@@ -1,5 +1,8 @@
 {
-  "title": "vocabboost wsd",
   "id": "ofarukkavlak/vocabboost-wsd",
-  "licenses": [{ "name": "CC0-1.0" }]
+  "title": "VocabBoost word sense disambiguation",
+  "subtitle": "Sense-annotated sentences for training a small subtitle sense picker",
+  "description": "Training data for VocabBoost, a Chrome extension that picks which dictionary sense a subtitle line means, offline and with no API key.\n\nFiles:\n\n- semcor.jsonl - SemCor, the human sense annotations bundled with NLTK, converted to one row per annotated word.\n- teacher-labels.jsonl - 8,431 subtitle lines labelled by a panel of five model families, with the number that agreed on each. Hand-checking 100 of them put the unanimous labels at 58/60.\n- working.jsonl - 149 subtitle lines labelled by hand. The test set.\n\nEvery row has the line, the target word, its candidate senses as WordNet 3.0 keys, and which one is right.\n\nSources: sentences from OpenSubtitles, senses from WordNet 3.0, panel labels from commercial models via fal.ai. Not public domain - see the repository for what may be reused.\n\nCode and method: https://github.com/farukkavlak/vocabboost",
+  "licenses": [{ "name": "other" }],
+  "keywords": ["nlp", "text", "linguistics", "english"]
 }

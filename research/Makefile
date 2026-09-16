@@ -71,16 +71,34 @@ panel:
 panel-check:
 	$(PY) scripts/panel_check.py
 
+# Joins the lines and the answers into one file training can read.
+labels:
+	$(PY) scripts/take_labels.py
+
+# Hand-labels a sample of the panel's own lines, blind, to measure its error rate.
+check-teacher:
+	$(PY) scripts/check_teacher.py
+
 # --- training ----------------------------------------------------------------
 
 # Stages the prepared data as a Kaggle dataset and pushes the script that trains on it.
 # `kaggle datasets create` the first time; after that every push is a new version.
+#
+# CORPORA is what gets uploaded. OMSTI and MASC are left out by default — half a
+# gigabyte for corpora no current job reads, and `make ufsac` rebuilds them in ten
+# minutes. Add them back with `make kaggle CORPORA="... data/omsti.jsonl"`.
+CORPORA ?= data/semcor.jsonl data/teacher-labels.jsonl
+
+# `uv tool install kaggle` puts 2.x in ~/.local/bin. An older pip-installed 1.6 may sit
+# earlier on PATH and fail on the new token format, so the path is spelled out.
+KAGGLE ?= $(HOME)/.local/bin/kaggle
+
 kaggle:
 	rm -rf data/kaggle && mkdir -p data/kaggle
-	cp data/semcor.jsonl data/omsti.jsonl data/masc.jsonl data/working.jsonl \
+	cp $(CORPORA) data/working.jsonl \
 	  kaggle/run.py kaggle/dataset-metadata.json data/kaggle/
-	kaggle datasets version -p data/kaggle -t -m "$(M)"
-	kaggle kernels push -p kaggle
+	$(KAGGLE) datasets version -p data/kaggle -t -m "$(M)"
+	$(KAGGLE) kernels push -p kaggle
 
 # --- measuring ---------------------------------------------------------------
 
@@ -123,8 +141,8 @@ clean:
 	rm -rf data/raw data/vocab.db data/semcor.jsonl data/omsti.jsonl \
 	  data/masc.jsonl data/model data/kaggle
 	rm -f data/working.jsonl data/sealed.jsonl data/model-full.zip
-	rm -f data/teacher.jsonl data/teacher-panel.jsonl
+	rm -f data/teacher.jsonl
 
 .PHONY: setup pool wiktionary vocab semcor ufsac candidates phrases label split \
-        recheck teacher panel panel-check kaggle baseline evaluate compare lookup failures lexicons \
+        recheck teacher panel panel-check labels check-teacher kaggle baseline evaluate compare lookup failures lexicons \
         phrase-split sense-distance phrase-impact lint clean

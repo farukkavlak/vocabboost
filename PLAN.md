@@ -302,7 +302,7 @@ measured, and why the model must never see the test set while it is being traine
 - [x] Relabel 30 of them blind, days later, and measure how often you agree with
       yourself: 28 of 30. It flatters us — same person twice where the published 70-78%
       is two people, and a lenient test where `1,3` then `3` counts as agreement — so
-      read it as a ceiling somewhere above 84%. The model is at 64.4%, twenty points
+      read it as a ceiling somewhere above 84%. The model is at 65.8%, eighteen points
       short, which is what makes phase 13's second half worth paying for. Both
       disagreements were WordNet distinctions the line does not settle: `become` as
       entering a state against undergoing a change, `captain` as a leader against a rank.
@@ -481,14 +481,21 @@ one evaluation puts GPT-4 between 56% and 77% on this task depending on the setu
       it was five models anchoring the same way. Fixed, it is 84 lines at 92.9%, and how
       many models agree became monotonic — 92.9, 78.9, 62.2, 38.5 — so the count is a
       usable confidence signal for phase 15.
-- [ ] Pull 10,000 subtitle lines and put each one to the five models independently.
-      Worth the money now: the free data is exhausted and the ceiling is 28/30, so there
-      is a gap of twenty points or more to close. About $0.0004 a line, so roughly $4.
-- [ ] Where they agree, take the label. Where they split, keep the line and the split.
-- [ ] Check 100 of the labels by hand and report how often the teacher is wrong. A teacher
-      that is wrong 10% of the time sets a ceiling on the student.
-- [ ] The lines the panel could not agree on are the genuinely ambiguous ones, and they
-      are what phase 15 needs to learn when to say nothing
+- [x] Pull 10,000 subtitle lines and put each one to the five models independently.
+      8,440 after dropping the single-sense lines, 42,200 calls, about $3. The test set
+      was held out of the draw, so no line is in both.
+- [x] Where they agree, take the label. Where they split, keep the line and the split.
+      3,833 unanimous — 3,708 labels and 125 lines where no sense fits — against 4,598
+      split ones. Unanimity ran at 45.5% where the 200-line measurement predicted 42%.
+      `teacher-labels.jsonl` holds all 8,431 with the agreement count on each.
+- [x] Check 100 of the labels by hand and report how often the teacher is wrong. Blind,
+      buckets mixed: 5 of 5 is 58/60, 4 of 5 is 32/40. Unanimity beat its predicted
+      92.9% and both misses are WordNet granularity rather than wrong labels. 4 of 5
+      landed on its prediction, so adding it is half again as much data for six points
+      of label error — phase 14 trains both and reports both.
+- [x] Keep the lines the panel could not agree on. 4,598 of them, with the count of how
+      many agreed, which the 200-line measurement showed is itself a difficulty score —
+      92.9% right at five, 78.9% at four, 62.2% at three. Phase 15 calibrates on it.
 - [ ] Search the corpus for rare senses on purpose and add those lines. Left alone, the
       data is nearly all common senses, and the model learns to always guess the common
       one. That is the exact opposite of what a reader needs, because a reader looks a word
@@ -507,32 +514,65 @@ is a few dollars of API calls.
 ### 14 — `research/train`
 
 **Learn:** the training loop itself. Loss, epoch, batch, learning rate, and what a loss
-curve looks like when a model is memorizing instead of learning.
+curve looks like when a model is memorizing instead of learning. Then **domain
+adaptation**: how to teach a model a second register without retraining it from nothing.
+
+The two corpora are not interchangeable. SemCor is 177,665 examples of books and
+journalism; the panel labels are 3,708 examples of film dialogue. Mixed into one pile the
+subtitle lines are 2% of it, and one pass over 2% will not move the weights — the result
+would read as "subtitle data did not help" when what failed was the mixing.
+
+So it is done in two stages. SemCor first, where the model learns the task: given a line
+and a sense, tell whether they match. Then a second, short run from that finished model
+on the subtitle labels alone, where every batch is film dialogue rather than one in
+fifty. The model already knows the job and is only being shown what the job looks like in
+this register.
+
+`run.py --from <model>` is the whole of the code change. The concept is the reason for it.
 
 - [x] Fine-tune the encoder so a line lands near its right sense and away from the
       wrong ones. Eighteen minutes on a free GPU; 42 seconds a step on a laptop, which
       is why there is no local training script. Colab's free session ends around fifty
       minutes and killed an overnight run, so training moved to Kaggle: twelve hours a
       session, detached.
-- [ ] Watch training loss and validation loss together. Training loss falling while
-      validation loss rises is overfitting, and it is the single most useful thing to learn
-      to recognize.
+- [x] Train in two stages rather than mixing. Mixing gives 61.7% against the control's
+      64.4% — worse than not bothering, where the expectation was that nothing would
+      happen. 2% of a pile is enough to disturb and not enough to teach.
+- [x] Measure the run-to-run noise before believing any of it. The same control job
+      scored 64.4% twice and then 68.5%: `run.py` seeded Python's `random` and never
+      seeded torch, so batch order and dropout moved freely. Four points of movement,
+      wider than every difference being claimed. Torch is seeded now.
+- [x] Rerun both settings at three seeds and report the spread. With torch seeded the
+      control lands on 63.1% at all three, where it had drawn 64.4, 64.4 and 68.5. Paired
+      by seed, two stages are worth +2.7, +1.3 and +3.3 — small, and positive every time.
+      The top-three gap does not survive: +2.7, 0.0 and +0.7, where two unseeded runs had
+      both said +4.0.
+- [ ] Settle the 4-of-5 question. One unseeded run put it 1.3 points behind, which is
+      inside what the seed alone was moving, so it is not settled. Needs the same three
+      seeds.
+- [x] Watch training loss and validation loss together. Seen, on the tuned run: the
+      held-out triplet score climbs through every epoch (0.852, 0.855, 0.855, 0.865)
+      while the subtitle score turns at epoch 2 (64.4, 66.4, 67.1, 65.8). Still learning
+      the 3,322 examples, already losing everything else. `run.py` now keeps the best
+      epoch rather than the last, which it had been overwriting.
 - [ ] Measure on the phase 13 test split
 - [ ] Report it split by how common the sense is, not as one average. A model at 94 on
       commonest senses and 53 on the rest averages to something respectable and is still
       wrong exactly when it is asked.
 - [x] Report it split by frequency band, against the baseline as it stands after phrase
-      matching: 56.0% against 52.0% on everyday words, 72.0% against 70.0% on common,
-      65.3% against 42.9% on uncommon. It is ahead everywhere now, but the gain is
-      lopsided — 22 points on uncommon words against 4 and 2 on the rest, because a
-      common word's commonest sense usually is the right one.
+      matching: 56.0% against 52.0% on everyday words, 78.0% against 70.0% on common,
+      63.3% against 42.9% on uncommon. It is ahead everywhere now, but the gain is
+      lopsided — 20 points on uncommon words against 8 and 4 on the rest, because a
+      common word's commonest sense usually is the right one. Fifty lines a band and one
+      seed, so read it as a direction.
 - [x] Try one smaller and one larger model and record accuracy, size and speed for
       each. The trained 22M beats the untrained 110M by 8.7 points at a fifth of the
       size, which is the only comparison that matters — the 110M was never going in a
       browser.
 
-**Exit:** a trained model that beats phase 12, and it does: 64.4% against 55.7% for the
-untrained 110M and 55.0% for the baseline. Eighteen minutes on a free GPU.
+**Exit:** a trained model that beats phase 12, and it does: 65.8% against 55.7% for the
+untrained 110M and 55.0% for the baseline, and 85.9% in the top three against 80.5%.
+Eighteen minutes on a free GPU, plus five for the pass on the subtitle labels.
 
 Two runs, one changing only the amount of data: 50,000 examples gave 59.1%, all 177,665
 gave 64.4%, and the held-out triplet score moved with it (0.766 to 0.793). So the gain
@@ -632,15 +672,21 @@ English, and if so this phase never happens.
 
 ### Data sources
 
-All free and open:
-
 - **OpenSubtitles** — our own domain, billions of words of subtitles
+- **WordNet 3.0** — the sense inventory, and what SemCor's keys point at
 - **Wiktionary via kaikki.org** — current, covers slang, machine readable
-- **SemCor and SemEval WSD** — sense-labelled gold data, for comparison
+- **SemCor and UFSAC** — sense-labelled gold data, for training and comparison
 - **WiC** — a benchmark asking whether two lines use a word the same way
 - **CMUdict** — pronunciation
 - **CEFR-J, EFLLex** — level lists
 - **spaCy** — lemmatizer and part of speech tagger
+- **A panel of five model families, via fal.ai** — the subtitle labels, phase 13
+
+All free and open except the last, which is paid and whose output is not ours to
+relicense. The shipped model is weights trained on it, not the labels themselves, but
+`teacher-labels.jsonl` is in the repository and the distinction matters: the code is
+MIT, the data it was built from is not all ours to give away. The Kaggle dataset says
+"other" rather than CC0 for the same reason.
 
 ### What this will not do
 

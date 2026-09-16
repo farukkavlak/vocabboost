@@ -23,14 +23,30 @@ import sys
 INPUT = pathlib.Path("/kaggle/input")
 OUT = pathlib.Path("/kaggle/working")
 
-# SemCor is 177,665 examples. The slice matches it so the only difference between the
-# first job and the run we already have is which corpus the examples came from.
-JOBS = [
-    ("model-omsti", ["omsti.jsonl"], ["--examples", "177665"]),
-    ("model-both", ["semcor.jsonl", "omsti.jsonl"], []),
-]
+# Three seeds of each, because one score is not a result. The same control job scored
+# 64.4% and 68.5% on two runs of identical code — torch was never seeded, so batch order
+# and dropout moved freely. That is fixed, but a fixed seed only makes one run
+# repeatable; it says nothing about how much the setting matters. Running both settings
+# at three seeds gives a spread to read the difference against.
+#
+# The seed moves the held-out word split as well as the batch order, so a seed is a
+# whole different draw of the experiment. Control and tuned share the seed within each
+# pair, which is the point: the difference is read pair by pair, not across pairs.
+#
+# Six jobs, about ninety minutes. Two questions the last session settled — mixing the
+# corpora and the 4-of-5 labels — are not repeated.
+SEEDS = [17, 23, 41]
+JOBS = []
+for seed in SEEDS:
+    control = f"model-semcor-{seed}"
+    JOBS.append((control, ["semcor.jsonl"], ["--seed", str(seed)]))
+    # Three epochs: 3,708 examples is 58 steps at batch 64, and `run.py` keeps whichever
+    # epoch scored best rather than the last one.
+    JOBS.append((f"model-tuned-{seed}", ["teacher-labels.jsonl"],
+                 ["--agreed", "5", "--from", control, "--seed", str(seed),
+                  "--epochs", "3"]))
 
-NEEDED = ["run.py", "working.jsonl", "semcor.jsonl", "omsti.jsonl"]
+NEEDED = ["run.py", "working.jsonl", "semcor.jsonl", "teacher-labels.jsonl"]
 
 
 def find_data():
@@ -54,6 +70,7 @@ def main():
         # On CPU the long job takes days and the session is cut at twelve hours.
         raise SystemExit("no GPU: check the accelerator and that the account is verified")
 
+    built = set()
     data = find_data()
     print(f"data   {data}", flush=True)
     subprocess.run([sys.executable, "-m", "pip", "install", "-q",
@@ -61,13 +78,22 @@ def main():
 
     for name, corpora, options in JOBS:
         print(f"\n{'=' * 70}\n{name}\n{'=' * 70}", flush=True)
-        built = OUT / name
+        # `--from model-semcor` means the directory an earlier job wrote, so the
+        # archiving waits until every job has run.
+        options = [str(OUT / o) if o in built else o for o in options]
         subprocess.run([sys.executable, str(data / "run.py"),
                         "--data", *[str(data / c) for c in corpora],
                         "--test", str(data / "working.jsonl"),
-                        "--out", str(built), *options], check=True)
-        shutil.make_archive(str(built), "zip", built)
-        shutil.rmtree(built)
+                        "--out", str(OUT / name), *options], check=True)
+        built.add(name)
+
+    # Six models is half a gigabyte of output to download for numbers that are already
+    # in the log. Only the tuned ones are kept; the controls exist to be trained on top
+    # of, and one is already on the laptop.
+    for name in sorted(built):
+        if name.startswith("model-tuned"):
+            shutil.make_archive(str(OUT / name), "zip", OUT / name)
+        shutil.rmtree(OUT / name)
 
 
 if __name__ == "__main__":

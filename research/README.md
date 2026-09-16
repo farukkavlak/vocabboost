@@ -2,9 +2,10 @@
 
 Builds the model. Nothing here ships — the extension only sees what phase 16 exports.
 
-Two files in `data/` are in git because remaking them costs hours or money:
-`candidates.jsonl`, the 201 subtitle lines marked by hand, and `panel.jsonl`, what
-the panel of models answered on them. Everything else is built by a make target.
+Three files in `data/` are in git because remaking them costs hours or money:
+`candidates.jsonl`, the 201 subtitle lines marked by hand; `panel.jsonl`, what the panel
+of models answered on them; and `teacher-labels.jsonl`, the 8,431 lines the panel
+labelled. Everything else is built by a make target.
 
 ## Results
 
@@ -12,35 +13,41 @@ Each number is the share of 149 hand-labelled lines where the right sense came f
 `first 3` and `first 5` are the share where it was somewhere in the top three or five,
 which is what the card shows.
 
-|                               |   size |     first |   first 3 |   first 5 |
-| ----------------------------- | -----: | --------: | --------: | --------: |
-| first sense in the dictionary |      0 |     45.6% |         - |         - |
-| + phrase matching             |      0 |     55.0% |         - |         - |
-| untrained 22M encoder         |  23 MB |     47.7% |     75.2% |     88.6% |
-| untrained 110M encoder        | 110 MB |     55.7% |     80.5% |     89.3% |
-| **trained 22M encoder**       |  23 MB | **64.4%** | **85.2%** | **90.6%** |
-| the labeller, relabelling     |      — |     93.0% |         - |         - |
+|                                |   size |     first | first 3 | first 5 |
+| ------------------------------ | -----: | --------: | ------: | ------: |
+| first sense in the dictionary  |      0 |     45.6% |       - |       - |
+| + phrase matching              |      0 |     55.0% |       - |       - |
+| untrained 22M encoder          |  23 MB |     47.7% |   75.2% |   88.6% |
+| untrained 110M encoder         | 110 MB |     55.7% |   80.5% |   89.3% |
+| trained on SemCor              |  23 MB |     63.1% |   83.2% |   91.3% |
+| **+ tuned on subtitle labels** |  23 MB | **65.8%** |   85.9% |   91.3% |
+| the labeller, relabelling      |      — |     93.0% |       - |       - |
 
 The extension today shows the first sense the dictionary lists, and is wrong more often
-than right. The trained 22M model is both the best here and the only one small enough
-to ship.
+than right. The trained 22M model is the best here and the only one small enough to ship.
+
+The two trained rows are one seed, the one every other table here is measured on. Both
+settings were run at three seeds; the section on seeds gives the spread and the paired
+difference, which is the honest way to read the gap between them.
 
 The last row is the ceiling: 30 lines relabelled blind days later, agreeing with the
 first answer 28 times. No model measured against these labels can honestly claim much
-past it — and the model is 29 points below, so the gap is real work, not noise.
+past it — and the model is 27 points below, so the gap is real work, not noise.
 
 By frequency band, both measured after phrase matching:
 
 | band     | senses a word | baseline | trained |
 | -------- | ------------: | -------: | ------: |
 | everyday |           9.3 |    52.0% |   56.0% |
-| common   |           5.8 |    70.0% |   72.0% |
-| uncommon |           6.0 |    42.9% |   65.3% |
+| common   |           5.8 |    70.0% |   78.0% |
+| uncommon |           6.0 |    42.9% |   63.3% |
 
-The model is ahead in every band, but the gain is lopsided: 22 points on uncommon words
-against 4 and 2 on the others. A common word's commonest sense usually is the right one,
+The model is ahead in every band, but the gain is lopsided: 20 points on uncommon words
+against 8 and 4 on the others. A common word's commonest sense usually is the right one,
 so the dictionary's ordering is hard to beat there. A reader who clicks `vaudeville` is
-served much better than one who clicks `play`.
+served much better than one who clicks `play`. Fifty lines a band and one seed, and the
+uncommon figure was 71.4% on an earlier unseeded run, so the split is a direction, not a
+measurement.
 
 ## Running it
 
@@ -71,6 +78,8 @@ Labelling a larger set with a panel of models:
 make teacher      # draw lines the test set never saw                    (~2 min)
 make panel        # put each one to five models                          (~70 min, ~$4)
 make panel-check  # score the panel against the 200 marked by hand
+make labels       # join the lines and the answers into one file
+make check-teacher  # hand-label 100 of them blind, to measure the panel
 ```
 
 Measuring:
@@ -201,19 +210,20 @@ Split by whether the line is a phrase, both models measured the same way:
 
 |              | lines | senses | baseline | untrained 110M | trained 22M |
 | ------------ | ----: | -----: | -------: | -------------: | ----------: |
-| phrases      |    18 |    2.0 |    88.9% |          83.3% |       94.4% |
-| single words |   131 |    7.7 |    50.4% |          51.9% |       60.3% |
-| all          |   149 |    7.0 |    55.0% |          55.7% |       64.4% |
+| phrases      |    18 |    2.0 |    88.9% |          83.3% |       88.9% |
+| single words |   131 |    7.7 |    50.4% |          51.9% |       62.6% |
+| all          |   149 |    7.0 |    55.0% |          55.7% |       65.8% |
 
-On single words the trained model is 9.9 points ahead of the baseline where the
-untrained one managed 1.5. On phrases it is ahead too, by 5.6 — the earlier run was
-behind the baseline there, which is what suggested skipping the model below three
-senses. That rule is off the table: on 18 lines one either way is noise, but the model
-is no longer the risk.
+On single words the trained model is 12.2 points ahead of the baseline where the
+untrained one managed 1.5. On phrases it only matches the baseline — but the baseline is
+88.9% there, against 2.0 senses to choose from, so there is almost nothing to win. An
+earlier run came out behind, which is what suggested skipping the model below three
+senses. That rule is off the table: on 18 lines one either way is noise, and the model is
+no longer the risk.
 
 ### Where it goes wrong
 
-53 of 149 lines get the wrong sense first; 31 of those still have a right sense in the
+51 of 149 lines get the wrong sense first; 30 of those still have a right sense in the
 top three. How badly wrong the rest are is not measured — WordNet's verbs are three
 levels deep against nine for nouns, so `buy` as trade scores further from `buy` as
 purchase than `hand` the body part does from `hand` the card game.
@@ -239,7 +249,7 @@ the two. And the test is lenient: `1,3` first and `3` second counts as agreement
 lines the interval is roughly ±9 points, so the honest reading is a ceiling somewhere
 above 84%.
 
-Even at 84% the model is twenty points short, which is what makes the next phase worth
+Even at 84% the model is eighteen points short, which is what makes the next phase worth
 paying for. The two lines that disagreed are the expected kind:
 
 - _"At night he becomes the night-walker"_ — `become` as entering a state, or as
@@ -265,21 +275,82 @@ runs every job in one session so a single push answers every question. Both read
 be looked at, and the GPU only trains.
 
 Needs the Kaggle CLI and a token: `uv tool install kaggle`, then Settings → API on
-kaggle.com, and the token string into `~/.kaggle/access_token`. The account has to be
+kaggle.com, and the token string into `~/.kaggle/access_token`. An older pip-installed
+CLI on PATH will fail on that token format, so the Makefile calls `~/.local/bin/kaggle`
+directly; override with `make kaggle KAGGLE=...`. The account has to be
 phone-verified or Kaggle quietly hands out a CPU instead of a GPU, which is why
 `kernel.py` stops on the first line if there is no GPU.
 
 ```sh
 make ufsac                      # once: download the corpora and build the examples
 make kaggle M="what changed"    # upload the data, push the script
-kaggle kernels status ofarukkavlak/vocabboost-wsd-train
-kaggle kernels output ofarukkavlak/vocabboost-wsd-train -p data/
+kaggle kernels status ofarukkavlak/vocabboost-wsd-training
+kaggle kernels output ofarukkavlak/vocabboost-wsd-training -p data/
 ```
 
 Then unzip a model into `data/model` and run `make evaluate` here. It uses the same
 code that scored the untrained models, so the comparison is like for like.
 
-### The run
+### Where the subtitle labels go
+
+Four jobs in one session, one question: is 3,708 lines of the right register worth
+anything on top of 177,665 lines of the wrong one?
+
+| job              | data                      | examples | epochs | first | first 3 |
+| ---------------- | ------------------------- | -------: | -----: | ----: | ------: |
+| model-semcor     | semcor, the control       |  177,665 |      1 | 64.4% |   83.9% |
+| model-mixed      | semcor + labels, one pile |  181,373 |      1 | 61.7% |   83.9% |
+| model-tuned      | labels, from model-semcor |    3,708 |      3 | 67.1% |   87.9% |
+| model-tuned-4of5 | same, including 4 of 5    |    5,563 |      3 | 65.8% |   86.6% |
+
+**Mixing them made it worse**, by 2.7 points. The expectation was that nothing would
+happen — 3,708 examples is 2% of the pile and one pass cannot weight them. Instead the
+2% was enough to disturb and not enough to teach.
+
+**Two stages read as better**, and the 4-of-5 labels as worse. Both readings are 1.3 to
+2.7 points, and none of these four jobs seeded torch, so none of them can tell a real
+difference from a different batch order. The next section is what replaced them.
+
+### One score is not a result
+
+The tuned run was repeated to save a model the first session had overwritten. Same code,
+same data, same `--seed 17`. The control came back **68.5%** where it had twice been
+**64.4%**.
+
+Nothing had changed. `run.py` seeded Python's `random`, which fixes the data — which rows,
+which wrong answers, which words are held out — and never seeded torch, which fixes the
+training: batch order and dropout. So every run drew a different training order, and four
+points moved with it. That is wider than every difference the table above claims.
+
+`run.py` now seeds torch too, and both settings were rerun at three seeds. Control and
+tuned share a seed inside each pair, so the difference is read pair by pair rather than
+between averages.
+
+| seed | control | tuned | first | first 3 |
+| ---- | ------: | ----: | ----: | ------: |
+| 17   |   63.1% | 65.8% |  +2.7 |    +2.7 |
+| 23   |   63.1% | 64.4% |  +1.3 |     0.0 |
+| 41   |   63.1% | 66.4% |  +3.3 |    +0.7 |
+
+Three things come out of it.
+
+**The four points were the seed.** The control landed on 63.1% at all three, where the
+unseeded runs had drawn 64.4, 64.4 and 68.5. Exactly equal is luck — 149 lines means a
+point is a line and a half — but the spread collapsed, which is the point.
+
+**Two stages help, a little.** +2.7, +1.3 and +3.3 at first place: positive at every
+seed, mean +2.4. That is four lines out of 149, so it is small. It is also the same
+direction three times, which is more than any earlier number here could say.
+
+**The top-three claim does not survive.** Two unseeded runs had both shown +4.0 and that
+was read as the effect the card would feel. At three seeds it is +2.7, 0.0 and +0.7. Two
+draws that agreed are not a measurement, and this is what it costs to find that out.
+
+One caveat the sealed lines exist for: the best epoch is picked by first-place accuracy
+on the same 149 lines the table reports, so +2.4 is the flattering reading of it. Phase
+17 opens the 51 sealed lines once and says what it is worth where nothing was chosen.
+
+### The first run
 
 `all-MiniLM-L6-v2`, all 177,665 SemCor examples, one epoch, batch of 64. Wrong answers
 are drawn from the other senses of the same word — telling `safe` the strongbox from
@@ -310,6 +381,10 @@ so it is not junk.
 
 **More data has stopped buying anything.** 50k to 177k was worth 5.3 points; 177k to
 1.03M is worth zero. The curve flattened between those two runs.
+
+These are one run each, and the section below puts the run-to-run spread at four points,
+so a real gain smaller than that would be hidden here. It does not rescue OMSTI: a gain
+this table cannot see is a gain not worth six times the data.
 
 The held-out column is the interesting part. The combined run scores highest there —
 0.805, above either corpus alone — while its subtitle score does not move. The model
@@ -412,6 +487,77 @@ Four families answer in prose where a number was asked for and are not on the pa
 Mistral, Cohere, Phi, and DeepSeek — the last on 57 of 200 lines.
 
 Cost: measured at $0.0004 a line for five models, so ten thousand lines is roughly $4.
+
+### What the panel labelled
+
+8,440 lines, drawn from the same pool as the test set with the test set held out, the
+phrases pointed at their phrase, and the single-sense lines dropped. 42,200 calls, nine
+of which came back without a number.
+
+| agreed | lines |       |
+| ------ | ----: | ----: |
+| 5 of 5 | 3,833 | 45.5% |
+| 4 of 5 | 1,932 | 22.9% |
+| 3 of 5 | 1,976 | 23.4% |
+| 2 of 5 |   676 |  8.0% |
+| 1 of 5 |    14 |  0.2% |
+
+Unanimity ran at 45.5% against the 42% the 200-line measurement predicted, so the larger
+pool behaves like the small one. That leaves **3,708 usable labels** over 1,560 distinct
+words, plus **125 lines where all five agreed no sense fits** — the abstain examples
+phase 15 needs, and five models saying it together is worth more than one saying it.
+
+58.9% of the labels are the word's commonest sense, against SemCor's 68.5% and OMSTI's
+46.5%. Between the two is where it should be: a reader looks a word up when the obvious
+sense does not fit, so a set that was 68% obvious would be teaching the wrong habit.
+
+3,708 is small next to SemCor's 177,665, and deliberately so — the measured gap was
+register, not volume. The bet paid, modestly: +2.4 points at first place, positive at all
+three seeds. The section on seeds has the pairs.
+
+`make labels` joins the lines and the answers into `teacher-labels.jsonl`, in the shape
+`build_semcor.py` produces, so training reads both the same way. Every line is kept, not
+just the unanimous ones: `agreed` is a difficulty score, and the split lines are what
+phase 15 learns to say nothing from.
+
+### How wrong the teacher is
+
+100 of the panel's own lines were labelled again by hand, blind: no panel answer shown,
+the buckets mixed together, and the senses shuffled as usual.
+
+| agreed | matches the person | predicted |
+| ------ | -----------------: | --------: |
+| 5 of 5 |        58/60 = 97% |     92.9% |
+| 4 of 5 |        32/40 = 80% |     78.9% |
+
+The 4 of 5 bucket landed where the 200-line measurement put it, which is the better news
+of the two: the prediction holds on a pool forty times the size.
+
+Unanimity came out cleaner than predicted. On 60 lines the interval is around ±5 points,
+so the honest reading is "above 92%" rather than 97 — but that is already the labeller's
+own 28-in-30, and no set of labels can be measured cleaner than the person measuring it.
+
+Both misses are the granularity problem, not a wrong label:
+
+- _"transfer all the women from this boat into that boat"_ — `transfer` as "move from
+  one place to another", or as "move around".
+- _"you got no reason to believe me"_ — `reason` as "a rational motive", or as "a fact
+  that logically justifies".
+
+The same kind as the two lines the labeller disagreed with themselves on. A model will
+lose these too, and nothing in the data can fix them.
+
+That leaves a choice worth measuring rather than arguing:
+
+|             | lines | label quality |
+| ----------- | ----: | ------------: |
+| 5 of 5 only | 3,708 |           97% |
+| plus 4 of 5 | 5,640 |          ~91% |
+
+Half again as much data for six points of label error. One unseeded run put 4-of-5 1.3
+points behind, which is inside what the seed alone was moving at the time, so the
+question is still open. It needs the same three-seed treatment the two-stage question
+got.
 
 ### Now worth spending
 
