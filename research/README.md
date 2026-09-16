@@ -92,6 +92,7 @@ make evaluate    # score data/model against the working set
 make compare     # every model side by side
 make failures    # the lines the model gets wrong
 make sense-split # accuracy when the right sense is the commonest, and when not
+make confidence  # when the card leads with one sense, and when it does not
 make lookup      # check phrase matching on a few known cases
 ```
 
@@ -636,3 +637,74 @@ worth closing.
 
 That is the argument the money needed. It was not available before the runs, which is
 why they came first.
+
+## Knowing when not to answer
+
+The model always has a nearest sense, even when nothing fits. Wrong a third of the time
+and sure every time, it would teach wrong meanings. So the card leads with one sense only
+when the model is confident, and otherwise says the line does not settle it and shows
+the likeliest few.
+
+### What confidence is
+
+Two readings, both on the 354 unanimous lines of the validation words:
+
+| answers | right, by top score | right, by gap |
+| ------: | ------------------: | ------------: |
+|    100% |               64.7% |         64.7% |
+|     80% |               68.2% |         69.6% |
+|     60% |               71.2% |         79.2% |
+|     40% |               72.5% |         86.6% |
+|     30% |               73.6% |         90.6% |
+
+The top score barely separates right from wrong: answering only on the surest 30% lifts
+accuracy nine points. A line can sit close to every sense at once, and a high score then
+says nothing about which one it means. The gap between the first and second choice does
+the job — it is how far ahead the answer is, not how near.
+
+### Where the line goes
+
+The bar was set before the curve was read: a sense the card leads with must be right at
+least **85%** of the time. That is how often the labeller agreed with themselves days
+later. Asking more claims a certainty the labels do not have; asking less shows a wrong
+meaning as the answer, and the reader remembers the one at the top.
+
+The lowest gap that clears it on the validation words is **0.081**. The test words were
+then read once, with that threshold:
+
+|            | leads with one | right | otherwise, right sense in the top 3 |
+| ---------- | -------------: | ----: | ----------------------------------: |
+| validation |          45.5% | 85.1% |                               87.6% |
+| test       |          43.5% | 88.2% |                               90.5% |
+
+It holds on words it was not chosen on. The card leads with one sense on a little under
+half the lines and is right on nine in ten of them; on the rest the right sense is among
+three shown on nine in ten.
+
+### How many to show
+
+Where the model is not confident, how often the right sense is in the first few:
+
+| shown | validation |  test |
+| ----: | ---------: | ----: |
+|     1 |      47.4% | 54.5% |
+|     2 |      79.9% | 78.4% |
+|     3 |      87.6% | 90.5% |
+|     4 |      93.3% | 93.5% |
+|     5 |      96.9% | 95.2% |
+
+Three. Each sense up to the third is worth ten to thirty points and each after it three
+or four. Five would reach 96%, but the median word on these lines has five senses, so
+five is every sense — the wall the extension shows today. The rest stay one click away,
+and a count of "+1 more" is sillier than the sense itself, so a lone fourth is shown too.
+
+### Not solved
+
+- **No sense fits.** Where all five panel models said none of the senses fits, the card
+  still leads with one on 3 of 8 validation lines and 3 of 6 test lines. The gap measures
+  which sense is ahead, not whether any is right. Fourteen lines cannot say how often
+  this happens, only that the threshold does not catch it.
+- **Words with many senses.** At six senses or more, what the card leads with was 67.9%
+  right on the validation words and 86.7% on the test words, on about fifty lines each.
+  The two disagree, so it is noise until more lines say otherwise. A threshold per
+  sense count would fit fifty lines, not the words.
