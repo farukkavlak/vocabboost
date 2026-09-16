@@ -2,7 +2,7 @@
 
 Look up a word from a film's subtitles without leaving the film.
 
-![The panel opening in the caption's place, a word being looked up, and the model asked for the meaning in that line](docs/flow.gif)
+![The panel opening in the caption's place, one word the model is sure about, and one where it shows the likeliest meanings](docs/flow.gif)
 
 Press the shortcut. The video pauses and the subtitle line stays where it was, but its
 words are now clickable. Click one and you get the meaning it has in that line, with an

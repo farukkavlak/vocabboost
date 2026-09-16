@@ -2,30 +2,10 @@ import { test, lookup, watchPage } from "./fixture";
 
 /**
  * Plays the flow once, slowly enough to read, so `npm run recording` can turn it into
- * the animation in the README. Asserts nothing.
+ * the animation in the README. Asserts nothing. No key is set: this is the default flow.
  */
-const ANSWER = {
-  definition: "without anyone helping him, for the whole of that year",
-  partOfSpeech: "adverb",
-  cefr: "A2",
-  phrase: "",
-};
-
 test("@shots the flow, end to end", async ({ context, worker }) => {
   const page = await watchPage(context);
-
-  await context.route("https://api.anthropic.com/**", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        content: [{ type: "text", text: JSON.stringify(ANSWER) }],
-      }),
-    }),
-  );
-  await worker.evaluate(async () => {
-    await chrome.storage.local.set({ "key anthropic": "sk-test" });
-    await chrome.storage.sync.set({ provider: "anthropic" });
-  });
 
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.addStyleTag({
@@ -56,25 +36,35 @@ test("@shots the flow, end to end", async ({ context, worker }) => {
     window.player.srcObject = canvas.captureStream(12);
     void window.player.play();
   });
-  await page.evaluate(() => window.showCaption(["he had to run the whole"]));
-  await page.waitForTimeout(1200);
-  await page.evaluate(() => window.showCaption(["department alone this year"]));
+  // A word the model is sure about: one sense, the rest folded.
+  await page.evaluate(() => window.showCaption(["I lived alone for a year."]));
   await page.waitForTimeout(1600);
-
   await lookup(worker);
-  await page.waitForTimeout(1600);
-
-  const word = page.getByRole("button", { name: "alone", exact: true });
-  await word.hover();
-  await page.waitForTimeout(900);
-  await word.click();
-  await page.waitForTimeout(2200);
-
-  await page.locator("#vocab-meaning .ask").click();
+  await page.waitForTimeout(1200);
+  const alone = page.getByRole("button", { name: "alone", exact: true });
+  await alone.hover();
+  await page.waitForTimeout(600);
+  await alone.click();
   await page.waitForTimeout(2600);
-
   await page.keyboard.press("Escape");
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(500);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(1400);
+
+  // A word it is not sure about: the likeliest few, the right one first.
+  await page.evaluate(() =>
+    window.showCaption(["He had to run the department."]),
+  );
+  await page.waitForTimeout(1600);
+  await lookup(worker);
+  await page.waitForTimeout(1200);
+  const run = page.getByRole("button", { name: "run", exact: true });
+  await run.hover();
+  await page.waitForTimeout(600);
+  await run.click();
+  await page.waitForTimeout(3400);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(500);
   await page.keyboard.press("Escape");
   await page.waitForTimeout(1200);
   await page.close();
