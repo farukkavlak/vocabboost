@@ -85,6 +85,10 @@ language.addEventListener("change", () => {
   void saveLanguage(language.value);
 });
 
+document.getElementById("open-log")?.addEventListener("click", () => {
+  void chrome.tabs.create({ url: chrome.runtime.getURL("logbook.html") });
+});
+
 document.getElementById("change-shortcut")?.addEventListener("click", () => {
   // chrome:// URLs cannot be opened from a link on a page.
   void chrome.tabs.create({ url: "chrome://extensions/shortcuts" });

@@ -1,6 +1,4 @@
-function escapeRegExp(literal: string): string {
-  return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+import { escapeRegExp } from "../../text";
 
 /**
  * Turns a Chrome match pattern into the regular expression `CaptionSource.matches` uses,

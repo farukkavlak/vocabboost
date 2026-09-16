@@ -2,6 +2,27 @@ import { clamp, EDGE } from "./layout";
 import { explainWord, lookupWord, modelReady } from "./lookup";
 import { LookupError } from "../meaning";
 import type { Meaning, Sense, Target } from "../meaning";
+import { logLookup, type Moment } from "../logbook/store";
+
+/** Where a line came from; the word log needs it besides the answer. */
+export interface LineOrigin {
+  moment: Moment;
+  previous?: string;
+}
+
+function remember(target: Target, origin: LineOrigin, meaning: Meaning): void {
+  // A log that cannot be written must not break the lookup it records.
+  void logLookup({
+    headword: meaning.phrase ?? target.word,
+    word: target.word,
+    occurrence: target.occurrence,
+    ...(meaning.partOfSpeech ? { partOfSpeech: meaning.partOfSpeech } : {}),
+    senses: meaning.senses,
+    confident: meaning.confident !== false,
+    line: target.sentence,
+    ...origin,
+  }).catch(() => undefined);
+}
 
 /** Between the card and the panel it belongs to. */
 const GAP = 8;
@@ -181,6 +202,7 @@ export function openCard(
   panel: HTMLElement,
   button: HTMLElement,
   target: Target,
+  origin: LineOrigin,
 ): void {
   const { word } = target;
   closeCard(root);
@@ -226,9 +248,10 @@ export function openCard(
   const ready = modelReady();
 
   void lookupWord(target)
-    .then(async (meaning) =>
-      fill(meaning, (await ready) ? explain(meaning) : undefined),
-    )
+    .then(async (meaning) => {
+      remember(target, origin, meaning);
+      fill(meaning, (await ready) ? explain(meaning) : undefined);
+    })
     .catch(async (error: unknown) =>
       fill(
         { senses: [{ definition: said(error) }] },
