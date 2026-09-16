@@ -30,12 +30,12 @@ OUT = pathlib.Path("/kaggle/working")
 # whole different draw of the experiment. Control and tuned share the seed within each
 # pair, which is the point: the difference is read pair by pair, not across pairs.
 #
-# Nine jobs, about two hours. The open question is the 4-of-5 labels: half again as much
-# data for six points of label error. One unseeded run put them 1.3 points behind, which
-# was inside what the seed alone was moving, so both bars run at all three seeds against
-# the same controls.
+# Six jobs, about an hour. The seeded controls scored 63.1% on one run and 64.4, 64.4 and
+# 61.7 on the next, so the seed does not pin a GPU run down. The controls are kept this
+# time, to score them on the panel test lines next to the tuned models.
 #
-# Mixing the corpora is settled and is not repeated.
+# Settled and not repeated: mixing the corpora, and the 4-of-5 labels (a tie with 5-of-5
+# on the same test lines, so the cleaner labels stay).
 SEEDS = [17, 23, 41]
 JOBS = []
 for seed in SEEDS:
@@ -43,10 +43,9 @@ for seed in SEEDS:
     JOBS.append((control, ["semcor.jsonl"], ["--seed", str(seed)]))
     # Three epochs: 3,708 examples is 58 steps at batch 64, and `run.py` keeps whichever
     # epoch scored best on the validation words rather than the last one.
-    for bar in (5, 4):
-        JOBS.append((f"model-tuned{bar}-{seed}", ["teacher-labels.jsonl"],
-                     ["--agreed", str(bar), "--from", control, "--seed", str(seed),
-                      "--epochs", "3", "--split", "label-split.json"]))
+    JOBS.append((f"model-tuned-{seed}", ["teacher-labels.jsonl"],
+                 ["--from", control, "--seed", str(seed),
+                  "--epochs", "3", "--split", "label-split.json"]))
 
 NEEDED = ["run.py", "working.jsonl", "semcor.jsonl", "teacher-labels.jsonl",
           "label-split.json"]
@@ -91,12 +90,9 @@ def main():
                         "--out", str(OUT / name), *options], check=True)
         built.add(name)
 
-    # Nine models is most of a gigabyte of output to download for numbers that are
-    # already in the log. Only the tuned ones are kept; the controls exist to be trained
-    # on top of, and one is already on the laptop.
+    # Every model is kept: the controls are scored on the panel test lines afterwards.
     for name in sorted(built):
-        if name.startswith("model-tuned"):
-            shutil.make_archive(str(OUT / name), "zip", OUT / name)
+        shutil.make_archive(str(OUT / name), "zip", OUT / name)
         shutil.rmtree(OUT / name)
 
 
