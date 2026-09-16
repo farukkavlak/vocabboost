@@ -91,6 +91,7 @@ make baseline    # what the extension does today
 make evaluate    # score data/model against the working set
 make compare     # every model side by side
 make failures    # the lines the model gets wrong
+make sense-split # accuracy when the right sense is the commonest, and when not
 make lookup      # check phrase matching on a few known cases
 ```
 
@@ -222,6 +223,24 @@ against 2.0 senses to choose from, so there is almost nothing to win. An
 earlier run came out behind, which is what suggested skipping the model below three
 senses. That rule is off the table: on 18 lines one either way is noise, and the model is
 no longer the risk.
+
+Split by whether the right sense is the first one WordNet lists:
+
+| test set          | right sense   | lines | first sense | model | top 3 |
+| ----------------- | ------------- | ----: | ----------: | ----: | ----: |
+| hand-labelled     | the commonest |    82 |        100% | 85.4% | 98.8% |
+|                   | another one   |    67 |          0% | 41.8% | 73.1% |
+| panel test, 5 / 5 | the commonest |   252 |        100% | 83.7% | 99.6% |
+|                   | another one   |   157 |          0% | 45.9% | 83.4% |
+
+Showing the first sense is right exactly when the line uses the commonest sense, and never
+otherwise. The model trades: it gives up about 15 points where the commonest sense is
+right to find the others four times in ten. The second row is the one that matters — a
+reader looks a word up mostly when the obvious sense does not fit — and there the model
+is wrong more often than right.
+
+Both test sets say the same thing, which is worth more than either alone: the hand labels
+are few, and the panel labels are about 3% wrong.
 
 ### Where it goes wrong
 
