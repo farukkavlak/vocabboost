@@ -114,8 +114,9 @@ of NLTK's own tagger, which gives the same tags on all 1,666 fixture lines.
 **The vocabulary ships as JSON** (19 MB), not SQLite: smaller, about 120 MB in memory
 against 150, and no library.
 
-The extension is about 62 MB unpacked. The offscreen page closes after two idle minutes
-to give its memory back.
+The extension is about 62 MB unpacked. The offscreen page closes after two idle minutes;
+in the extension the model adds about 350 MB while open, and closing the page gives it
+back within about half a minute (`npm run test:memory`).
 
 ## Not solved
 

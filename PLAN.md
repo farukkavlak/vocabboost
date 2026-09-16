@@ -82,6 +82,7 @@ Playwright runs a real Chromium with the built extension.
 - `npm test`: the full suite, with pages served from fixtures under the real URLs
 - `npm run test:live`: checks the DOM contract on youtube.com
 - `npm run shots`: screenshots for visual review
+- `npm run test:memory`: checks the model's memory is given back (slow)
 - `npm run recording`: rebuilds `docs/flow.gif` (needs ffmpeg)
 
 Not covered: live caption text (YouTube hides captions from automated sessions), the
@@ -155,7 +156,7 @@ The research lives in `research/`, in Python. Only phase 16 touches the extensio
 - [x] The whole chain scores 69.2% on the test lines, matching the research
 - [x] The model runs offline in an offscreen page that closes after two idle minutes
 - [x] The local model is the default; the free dictionary is removed
-- [ ] Measure that memory really is freed after the idle close
+- [x] Memory is freed after the idle close: about +350 MB while open, back within ~30 s
 - [ ] Pass which occurrence of a word was clicked (3 test lines differ without it)
 - [ ] If the model is still too heavy, try static embeddings (Model2Vec)
 

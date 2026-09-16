@@ -58,8 +58,9 @@ key never touches the page.
 
 The local model runs in an offscreen page rather than the worker, which Chrome stops
 after 30 idle seconds. The page opens on the first lookup, which takes about half a
-second, and closes after two idle minutes so its memory goes back — roughly 600 MB,
-measured piece by piece so far.
+second, and closes after two idle minutes. The model adds about 350 MB while the page is
+open, and it is handed back within about half a minute of closing
+(`npm run test:memory`).
 The extension is about 62 MB unpacked: the model 23, the vocabulary 19, the runtime 14,
 the part-of-speech tagger 5.
 

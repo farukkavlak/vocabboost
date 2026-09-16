@@ -72,7 +72,7 @@ Short notes on what we learned, in the order we learned it. Current numbers are 
   better than it was.
 - Some models (Mistral, Cohere, Phi, DeepSeek) answered with text instead of a number,
   so they are not on the panel.
-- About $4 for 8,440 lines. 3,708 had all five agreeing on a sense.
+- About $3 for 8,440 lines. 3,708 had all five agreeing on a sense.
 - Adding the 4-of-5 lines (more data, more errors) was a tie. We keep 5-of-5 only.
 - Compare two models only on the same lines. The Kaggle log once compared them on
   different lines and looked wrong.
@@ -107,7 +107,8 @@ Short notes on what we learned, in the order we learned it. Current numbers are 
 - Measure memory for the test browser's own processes only. I once measured the
   biggest Chrome tab on the machine by mistake.
 - The model lives in an offscreen page. Chrome stops an idle service worker after 30 s.
-- The page closes after 2 idle minutes so the memory is freed.
+- The page closes after 2 idle minutes so the memory is freed. Chrome gives it back
+  slowly: most of it within about 30 s, not at once.
 - Vite inlined the 14 MB runtime into the bundle twice. Using onnxruntime's build with
   external files fixed it (39 MB → 1.2 MB).
 - The same 8-bit model scores slightly differently in Python, Chrome and Node.
