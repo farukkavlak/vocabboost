@@ -156,6 +156,9 @@ check-onnx:
 pos-effect:
 	$(PY) scripts/pos_effect.py
 
+tagger:
+	$(PY) scripts/export_tagger.py
+
 sense-distance:
 	$(PY) scripts/sense_distance.py
 
@@ -176,4 +179,4 @@ clean:
 
 .PHONY: setup pool wiktionary vocab semcor ufsac candidates phrases label split \
         recheck teacher panel panel-check labels check-teacher kaggle baseline evaluate compare lookup failures lexicons \
-        phrase-split sense-split confidence onnx check-onnx pos-effect sense-distance phrase-impact lint clean
+        phrase-split sense-split confidence onnx check-onnx pos-effect tagger sense-distance phrase-impact lint clean

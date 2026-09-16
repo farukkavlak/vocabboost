@@ -659,8 +659,12 @@ worker cannot hold a model.
       got "no sense fits" from the panel and never reached the test set, so a tagger that
       disagrees with NLTK is scored wrong even where it is right. So NLTK's own tagger
       ships: an averaged perceptron, about a hundred lines, with 5.7 MB of weights.
-- [ ] Port NLTK's tokenizer and perceptron tagger to TypeScript, and check they give the
-      same tag for the looked-up word as Python does on every test line.
+- [x] Port NLTK's tokenizer and perceptron tagger to TypeScript, and check they give the
+      same tag for the looked-up word as Python does on every test line. Same tokens and
+      same tags on all 1,666 lines of the validation and test words. The one departure is
+      sentence splitting — NLTK's Punkt is a model of its own — and the simple rule used
+      instead changes the looked-up word's tag on one line in 8,580. Weights rounded to
+      three decimals: 5.1 MB.
 - [ ] Port the lemmatizer and phrase matching to TypeScript, and check they find the
       same entries as the Python ones on the test lines. `ran` finds `run` through
       WordNet's irregular list, `boxes` through suffix rules, `ran into` through both.
