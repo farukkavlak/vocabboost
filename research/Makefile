@@ -79,6 +79,10 @@ labels:
 check-teacher:
 	$(PY) scripts/check_teacher.py
 
+# Decides once which words train, which choose the epoch, and which report.
+label-split:
+	$(PY) scripts/split_labels.py
+
 # --- training ----------------------------------------------------------------
 
 # Stages the prepared data as a Kaggle dataset and pushes the script that trains on it.
@@ -95,7 +99,7 @@ KAGGLE ?= $(HOME)/.local/bin/kaggle
 
 kaggle:
 	rm -rf data/kaggle && mkdir -p data/kaggle
-	cp $(CORPORA) data/working.jsonl \
+	cp $(CORPORA) data/working.jsonl data/label-split.json \
 	  kaggle/run.py kaggle/dataset-metadata.json data/kaggle/
 	$(KAGGLE) datasets version -p data/kaggle -t -m "$(M)"
 	$(KAGGLE) kernels push -p kaggle

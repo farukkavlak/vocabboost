@@ -502,8 +502,14 @@ one evaluation puts GPT-4 between 56% and 77% on this task depending on the setu
       up when the usage is odd. The bi-encoder paper measures the size of this: 94.1 F1 on
       the commonest sense of a word against 52.6 on the rest. The gap, not the average, is
       the real problem.
-- [ ] Add "none of these senses fit" examples, which phase 15 needs
-- [ ] Split into train, validation and test, and record the split
+- [x] Add "none of these senses fit" examples, which phase 15 needs. 352 of them, where
+      all five models agreed no sense fits — `club` in `club soda`. Five models saying it
+      together is worth more than one saying it.
+- [x] Split into train, validation and test, and record the split. 2,175 words by word
+      and stratified by band, written to `data/label-split.json`: 1,739 words to train
+      on, 218 to choose the epoch with, 218 to report on. It used to be drawn at runtime
+      from the same seed that fixed the batch order, so two settings compared at two
+      seeds were validating on two different sets of words.
 
 **Exit:** a dataset with a measured label error rate and a sense distribution we chose
 rather than inherited, plus a second, larger test set labelled by the panel. It is

@@ -7,9 +7,6 @@ dataset and pushes this script.
 Sessions last twelve hours and run detached. Colab's free session ends around fifty
 minutes and took a training run with it, which is why this is here.
 
-The short job runs first, so a session that dies halfway still leaves the cheap answer
-in the log.
-
 Nothing is copied into `/kaggle/working`: everything there is kept as the run's output,
 and copying the corpora in once made it 680 MB. The dataset is read where it is mounted
 and only the trained models are written out.
@@ -33,20 +30,26 @@ OUT = pathlib.Path("/kaggle/working")
 # whole different draw of the experiment. Control and tuned share the seed within each
 # pair, which is the point: the difference is read pair by pair, not across pairs.
 #
-# Six jobs, about ninety minutes. Two questions the last session settled — mixing the
-# corpora and the 4-of-5 labels — are not repeated.
+# Nine jobs, about two hours. The open question is the 4-of-5 labels: half again as much
+# data for six points of label error. One unseeded run put them 1.3 points behind, which
+# was inside what the seed alone was moving, so both bars run at all three seeds against
+# the same controls.
+#
+# Mixing the corpora is settled and is not repeated.
 SEEDS = [17, 23, 41]
 JOBS = []
 for seed in SEEDS:
     control = f"model-semcor-{seed}"
     JOBS.append((control, ["semcor.jsonl"], ["--seed", str(seed)]))
     # Three epochs: 3,708 examples is 58 steps at batch 64, and `run.py` keeps whichever
-    # epoch scored best rather than the last one.
-    JOBS.append((f"model-tuned-{seed}", ["teacher-labels.jsonl"],
-                 ["--agreed", "5", "--from", control, "--seed", str(seed),
-                  "--epochs", "3"]))
+    # epoch scored best on the validation words rather than the last one.
+    for bar in (5, 4):
+        JOBS.append((f"model-tuned{bar}-{seed}", ["teacher-labels.jsonl"],
+                     ["--agreed", str(bar), "--from", control, "--seed", str(seed),
+                      "--epochs", "3", "--split", "label-split.json"]))
 
-NEEDED = ["run.py", "working.jsonl", "semcor.jsonl", "teacher-labels.jsonl"]
+NEEDED = ["run.py", "working.jsonl", "semcor.jsonl", "teacher-labels.jsonl",
+          "label-split.json"]
 
 
 def find_data():
@@ -81,15 +84,16 @@ def main():
         # `--from model-semcor` means the directory an earlier job wrote, so the
         # archiving waits until every job has run.
         options = [str(OUT / o) if o in built else o for o in options]
+        options = [str(data / o) if o == "label-split.json" else o for o in options]
         subprocess.run([sys.executable, str(data / "run.py"),
                         "--data", *[str(data / c) for c in corpora],
                         "--test", str(data / "working.jsonl"),
                         "--out", str(OUT / name), *options], check=True)
         built.add(name)
 
-    # Six models is half a gigabyte of output to download for numbers that are already
-    # in the log. Only the tuned ones are kept; the controls exist to be trained on top
-    # of, and one is already on the laptop.
+    # Nine models is most of a gigabyte of output to download for numbers that are
+    # already in the log. Only the tuned ones are kept; the controls exist to be trained
+    # on top of, and one is already on the laptop.
     for name in sorted(built):
         if name.startswith("model-tuned"):
             shutil.make_archive(str(OUT / name), "zip", OUT / name)

@@ -80,6 +80,7 @@ make panel        # put each one to five models                          (~70 mi
 make panel-check  # score the panel against the 200 marked by hand
 make labels       # join the lines and the answers into one file
 make check-teacher  # hand-label 100 of them blind, to measure the panel
+make label-split  # decide once which words train, which choose, which report
 ```
 
 Measuring:
@@ -558,6 +559,40 @@ Half again as much data for six points of label error. One unseeded run put 4-of
 points behind, which is inside what the seed alone was moving at the time, so the
 question is still open. It needs the same three-seed treatment the two-stage question
 got.
+
+### Train, choose, report
+
+2,175 words, divided once and written to `data/label-split.json`.
+
+|            | words | lines | 5 of 5 | no sense fits | commonest |
+| ---------- | ----: | ----: | -----: | ------------: | --------: |
+| train      | 1,739 | 6,765 |  2,945 |           295 |     58.5% |
+| validation |   218 |   807 |    354 |            34 |     59.0% |
+| test       |   218 |   859 |    409 |            23 |     61.6% |
+
+Split by word, and stratified by frequency band. By word because a lemma here has 2.4
+lines on average, so splitting by line would put the same word on both sides and let the
+model recognise it rather than read the sentence. By band because the bands are not
+equally hard — the baseline is 52% on everyday words and 43% on uncommon ones — and an
+unstratified draw would let the mix drift between the parts.
+
+Written down rather than drawn at runtime. `run.py` used to divide the words itself,
+with the same seed that fixes the batch order, so two settings compared at two seeds were
+also being validated on two different sets of words.
+
+What it buys: the epoch is now chosen by ranking accuracy on the validation words instead
+of on the 149 hand-labelled lines. Choosing on the set you then report flatters it by
+however much the epochs differ, and they differ — the three-epoch run went 66.4, 67.1,
+65.8 there. The held-out triplet score cannot do the job either: it climbs through every
+epoch, so it would pick the worst of the three.
+
+Every line of a word goes with it — the unanimous ones, the ones the panel split on, and
+the 352 where all five said no sense fits. Phase 15 calibrates on how often the model is
+right at a given confidence, and it can only do that where the hard lines are still in.
+
+The test part is not the sealed 51. It is panel-labelled, so it carries the panel's own
+error: 3% where five models agreed, 20% where four did. It narrows an error bar; it
+cannot settle a comparison. The 51 stay sealed for phase 17.
 
 ### Now worth spending
 
