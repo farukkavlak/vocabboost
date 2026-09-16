@@ -8,7 +8,8 @@ laptop where it can be looked at. More than one file trains on them together. Ne
 `working.jsonl` beside it — the hand-labelled subtitle lines.
 
     python run.py --data semcor.jsonl --out model-semcor
-    python run.py --data teacher-labels.jsonl --from model-semcor --out model-tuned
+    python run.py --data teacher-labels.jsonl --from model-semcor --out model-tuned \
+      --split label-split.json
 
 `--from` continues from a model already trained rather than starting fresh. Mixing
 3,708 subtitle lines into 177,665 SemCor ones makes them 2% of the data and one pass
@@ -21,6 +22,11 @@ training set. The **loss** is how wrong the model is now; training drives it dow
 Loss on the training data alone tells you nothing — a memorising model shows a falling
 loss and a test score that stops moving. So the subtitle lines are scored after every
 epoch, not only at the end.
+
+`--split` reads the word split `scripts/split_labels.py` wrote. Without it the words are
+divided here and the division moves with `--seed`, so two settings compared at two seeds
+were also being validated on two different sets of words. SemCor has no split file and
+falls back to that; the panel labels have one and should use it.
 
 One score is not a result. Training is random — batch order, dropout — so the same job
 twice gives two numbers, and the gap between them was four points before the seeding
@@ -113,6 +119,12 @@ def pairs(rows, rng):
     return made
 
 
+def as_test(row):
+    """A training row in the shape `score` reads, so both test sets go through one path."""
+    return {"lemma": row["lemma"], "text": row["text"],
+            "senses": [{"key": key} for key in row["candidates"]], "label": [row["key"]]}
+
+
 def score(encoder, test):
     """How often the right sense is first, in the top three, in the top five."""
     lines = encoder.encode([line_text(r) for r in test], convert_to_tensor=True,
@@ -145,6 +157,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", nargs="+", default=["semcor.jsonl"])
     parser.add_argument("--test", default="working.jsonl")
+    parser.add_argument("--split", default=None,
+                        help="a word split from scripts/split_labels.py")
     parser.add_argument("--out", default="model")
     parser.add_argument("--from", dest="start", default=MODEL,
                         help="a trained model to continue from, instead of the base one")
@@ -170,15 +184,29 @@ def main():
 
     # Split by word, not by row. The same word in both halves would let the model
     # recognise it rather than read the sentence.
-    words = sorted({r["lemma"] for r in rows})
-    rng.shuffle(words)
-    held = set(words[: len(words) // 10])
-    train = [r for r in rows if r["lemma"] not in held]
+    if args.split:
+        split = json.load(open(args.split, encoding="utf-8"))
+        where = {word: part for part, words in split.items() for word in words}
+        missing = {r["lemma"] for r in rows} - set(where)
+        if missing:
+            raise SystemExit(f"{len(missing)} words are not in {args.split}")
+        train = [r for r in rows if where[r["lemma"]] == "train"]
+        valid = [r for r in rows if where[r["lemma"]] == "validation"]
+        panel = [as_test(r) for r in rows if where[r["lemma"]] == "test"]
+    else:
+        words = sorted({r["lemma"] for r in rows})
+        rng.shuffle(words)
+        held = set(words[: len(words) // 10])
+        train = [r for r in rows if r["lemma"] not in held]
+        valid = [r for r in rows if r["lemma"] in held][:2_000]
+        panel = []
     if args.examples:
         train = train[: args.examples]
-    valid = [r for r in rows if r["lemma"] in held][:2_000]
     print(f"train {len(train):,} examples, {len({r['lemma'] for r in train}):,} words")
-    print(f"valid {len(valid):,} examples, {len({r['lemma'] for r in valid}):,} words\n")
+    print(f"valid {len(valid):,} examples, {len({r['lemma'] for r in valid}):,} words")
+    if panel:
+        print(f"panel {len(panel):,} examples, held back until the last epoch")
+    print()
 
     test = [json.loads(line) for line in open(args.test, encoding="utf-8")]
     base = sum(1 for r in test if r["senses"][0]["key"] in r["label"])
@@ -189,6 +217,7 @@ def main():
     model = SentenceTransformer(args.start)
     checker = evaluation.TripletEvaluator.from_input_examples(pairs(valid, rng),
                                                              name="held-out words")
+    chooser = [as_test(r) for r in valid] if args.split else []
     print(f"epoch 0  held-out {held_out_score(checker, model):.3f}  "
           f"subtitles {score(model, test)}", flush=True)
 
@@ -201,23 +230,35 @@ def main():
                   show_progress_bar=True)
         subtitles = score(model, test)
         print(f"epoch {epoch}  held-out {held_out_score(checker, model):.3f}  "
-              f"subtitles {subtitles}", flush=True)
+              f"subtitles {subtitles}", end="", flush=True)
 
         # The last epoch is not the best one. The three-epoch run went 66.4, 67.1, 65.8
-        # on subtitles while the held-out score kept climbing — the model learning the
-        # 3,322 examples rather than the task. So the epoch is chosen on the subtitle
-        # score, and the held-out score cannot do it: it would pick the worst of the
-        # three.
+        # on subtitles while the held-out triplet score kept climbing — the model
+        # learning its 3,322 examples rather than the task, so the triplet score cannot
+        # choose the epoch either: it would pick the worst of the three.
         #
-        # That is a choice made on the working set, which flatters the working set by
-        # however much the epochs differ. It is why 51 lines were sealed in phase 10 and
-        # are opened once, in phase 17.
-        if subtitles[1] > best[0]:
-            best = (subtitles[1], epoch)
+        # So the epoch is chosen by ranking accuracy on the validation words, which are
+        # panel-labelled and in the split file. It used to be chosen on the subtitle
+        # score, which flattered the subtitle score by however much the epochs differ.
+        if chooser:
+            picked = score(model, chooser)
+            print(f"  validation {picked}", end="")
+        else:
+            picked = subtitles
+        print(flush=True)
+        if picked[1] > best[0]:
+            best = (picked[1], epoch)
             model.save(args.out)
 
+    where = "validation words" if chooser else "the subtitle lines"
     print(f"\nsaved epoch {best[1]} to {args.out}/, "
-          f"the best of {args.epochs} at {best[0]}%", flush=True)
+          f"the best of {args.epochs} at {best[0]}% on {where}", flush=True)
+
+    # Scored once, on the model that was saved, and never used to choose anything. The
+    # panel labelled these words too, so this carries the panel's own error rate; it is a
+    # second opinion with tighter error bars, not a replacement for the sealed 51.
+    if panel:
+        print(f"panel test    {score(SentenceTransformer(args.out), panel)}", flush=True)
 
 
 if __name__ == "__main__":
