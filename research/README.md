@@ -13,40 +13,41 @@ Each number is the share of 149 hand-labelled lines where the right sense came f
 `first 3` and `first 5` are the share where it was somewhere in the top three or five,
 which is what the card shows.
 
-|                                |   size | first |   first 3 | first 5 |
-| ------------------------------ | -----: | ----: | --------: | ------: |
-| first sense in the dictionary  |      0 | 45.6% |         - |       - |
-| + phrase matching              |      0 | 55.0% |         - |       - |
-| untrained 22M encoder          |  23 MB | 47.7% |     75.2% |   88.6% |
-| untrained 110M encoder         | 110 MB | 55.7% |     80.5% |   89.3% |
-| trained on SemCor              |  23 MB | 68.5% |     83.2% |   91.3% |
-| **+ tuned on subtitle labels** |  23 MB | 67.8% | **87.2%** |   90.6% |
-| the labeller, relabelling      |      — | 93.0% |         - |       - |
+|                                |   size |     first | first 3 | first 5 |
+| ------------------------------ | -----: | --------: | ------: | ------: |
+| first sense in the dictionary  |      0 |     45.6% |       - |       - |
+| + phrase matching              |      0 |     55.0% |       - |       - |
+| untrained 22M encoder          |  23 MB |     47.7% |   75.2% |   88.6% |
+| untrained 110M encoder         | 110 MB |     55.7% |   80.5% |   89.3% |
+| trained on SemCor              |  23 MB |     63.1% |   83.2% |   91.3% |
+| **+ tuned on subtitle labels** |  23 MB | **65.8%** |   85.9% |   91.3% |
+| the labeller, relabelling      |      — |     93.0% |       - |       - |
 
 The extension today shows the first sense the dictionary lists, and is wrong more often
 than right. The trained 22M model is the best here and the only one small enough to ship.
 
-The two trained rows are one run each and the first column moves about four points
-between runs, so read the difference between them in the top three, not at first place.
-The section on seeds below is why.
+The two trained rows are one seed, the one every other table here is measured on. Both
+settings were run at three seeds; the section on seeds gives the spread and the paired
+difference, which is the honest way to read the gap between them.
 
 The last row is the ceiling: 30 lines relabelled blind days later, agreeing with the
 first answer 28 times. No model measured against these labels can honestly claim much
-past it — and the model is 25 points below, so the gap is real work, not noise.
+past it — and the model is 27 points below, so the gap is real work, not noise.
 
 By frequency band, both measured after phrase matching:
 
 | band     | senses a word | baseline | trained |
 | -------- | ------------: | -------: | ------: |
 | everyday |           9.3 |    52.0% |   56.0% |
-| common   |           5.8 |    70.0% |   76.0% |
-| uncommon |           6.0 |    42.9% |   71.4% |
+| common   |           5.8 |    70.0% |   78.0% |
+| uncommon |           6.0 |    42.9% |   63.3% |
 
-The model is ahead in every band, but the gain is lopsided: 28 points on uncommon words
-against 6 and 4 on the others. A common word's commonest sense usually is the right one,
+The model is ahead in every band, but the gain is lopsided: 20 points on uncommon words
+against 8 and 4 on the others. A common word's commonest sense usually is the right one,
 so the dictionary's ordering is hard to beat there. A reader who clicks `vaudeville` is
-served much better than one who clicks `play`. Fifty lines a band and one run each, so
-the split is a direction, not a measurement.
+served much better than one who clicks `play`. Fifty lines a band and one seed, and the
+uncommon figure was 71.4% on an earlier unseeded run, so the split is a direction, not a
+measurement.
 
 ## Running it
 
@@ -210,10 +211,10 @@ Split by whether the line is a phrase, both models measured the same way:
 |              | lines | senses | baseline | untrained 110M | trained 22M |
 | ------------ | ----: | -----: | -------: | -------------: | ----------: |
 | phrases      |    18 |    2.0 |    88.9% |          83.3% |       88.9% |
-| single words |   131 |    7.7 |    50.4% |          51.9% |       64.9% |
-| all          |   149 |    7.0 |    55.0% |          55.7% |       67.8% |
+| single words |   131 |    7.7 |    50.4% |          51.9% |       62.6% |
+| all          |   149 |    7.0 |    55.0% |          55.7% |       65.8% |
 
-On single words the trained model is 14.5 points ahead of the baseline where the
+On single words the trained model is 12.2 points ahead of the baseline where the
 untrained one managed 1.5. On phrases it only matches the baseline — but the baseline is
 88.9% there, against 2.0 senses to choose from, so there is almost nothing to win. An
 earlier run came out behind, which is what suggested skipping the model below three
@@ -222,7 +223,7 @@ no longer the risk.
 
 ### Where it goes wrong
 
-53 of 149 lines get the wrong sense first; 31 of those still have a right sense in the
+51 of 149 lines get the wrong sense first; 30 of those still have a right sense in the
 top three. How badly wrong the rest are is not measured — WordNet's verbs are three
 levels deep against nine for nouns, so `buy` as trade scores further from `buy` as
 purchase than `hand` the body part does from `hand` the card game.
@@ -248,7 +249,7 @@ the two. And the test is lenient: `1,3` first and `3` second counts as agreement
 lines the interval is roughly ±9 points, so the honest reading is a ceiling somewhere
 above 84%.
 
-Even at 84% the model is sixteen points short, which is what makes the next phase worth
+Even at 84% the model is eighteen points short, which is what makes the next phase worth
 paying for. The two lines that disagreed are the expected kind:
 
 - _"At night he becomes the night-walker"_ — `become` as entering a state, or as
@@ -307,8 +308,8 @@ happen — 3,708 examples is 2% of the pile and one pass cannot weight them. Ins
 2% was enough to disturb and not enough to teach.
 
 **Two stages read as better**, and the 4-of-5 labels as worse. Both readings are 1.3 to
-2.7 points, which the next section shows is inside the noise. The honest version of this
-table is the first-3 column, and the paragraph after it.
+2.7 points, and none of these four jobs seeded torch, so none of them can tell a real
+difference from a different batch order. The next section is what replaced them.
 
 ### One score is not a result
 
@@ -319,26 +320,35 @@ same data, same `--seed 17`. The control came back **68.5%** where it had twice 
 Nothing had changed. `run.py` seeded Python's `random`, which fixes the data — which rows,
 which wrong answers, which words are held out — and never seeded torch, which fixes the
 training: batch order and dropout. So every run drew a different training order, and four
-points moved with it.
+points moved with it. That is wider than every difference the table above claims.
 
-That is wider than every difference in the table above. The +2.7 for two-stage training
-is not a result; it is one draw from a distribution nobody had measured.
+`run.py` now seeds torch too, and both settings were rerun at three seeds. Control and
+tuned share a seed inside each pair, so the difference is read pair by pair rather than
+between averages.
 
-One thing does survive:
+| seed | control | tuned | first | first 3 |
+| ---- | ------: | ----: | ----: | ------: |
+| 17   |   63.1% | 65.8% |  +2.7 |    +2.7 |
+| 23   |   63.1% | 64.4% |  +1.3 |     0.0 |
+| 41   |   63.1% | 66.4% |  +3.3 |    +0.7 |
 
-| run   | control | tuned |  gap |
-| ----- | ------: | ----: | ---: |
-| first |   83.9% | 87.9% | +4.0 |
-| again |   83.2% | 87.2% | +4.0 |
+Three things come out of it.
 
-Two independent runs, the same gap to the decimal, in the top three. That is the column
-the card shows, and the reading is consistent with what a short second pass would do:
-3,708 examples move the right sense from the top five into the top three, and are not
-enough to put it first.
+**The four points were the seed.** The control landed on 63.1% at all three, where the
+unseeded runs had drawn 64.4, 64.4 and 68.5. Exactly equal is luck — 149 lines means a
+point is a line and a half — but the spread collapsed, which is the point.
 
-`run.py` now seeds torch as well. That makes a run repeatable; it does not make one run
-informative, so the next session runs both settings at three seeds and reports the
-spread.
+**Two stages help, a little.** +2.7, +1.3 and +3.3 at first place: positive at every
+seed, mean +2.4. That is four lines out of 149, so it is small. It is also the same
+direction three times, which is more than any earlier number here could say.
+
+**The top-three claim does not survive.** Two unseeded runs had both shown +4.0 and that
+was read as the effect the card would feel. At three seeds it is +2.7, 0.0 and +0.7. Two
+draws that agreed are not a measurement, and this is what it costs to find that out.
+
+One caveat the sealed lines exist for: the best epoch is picked by first-place accuracy
+on the same 149 lines the table reports, so +2.4 is the flattering reading of it. Phase
+17 opens the 51 sealed lines once and says what it is worth where nothing was chosen.
 
 ### The first run
 
@@ -502,7 +512,8 @@ phase 15 needs, and five models saying it together is worth more than one saying
 sense does not fit, so a set that was 68% obvious would be teaching the wrong habit.
 
 3,708 is small next to SemCor's 177,665, and deliberately so — the measured gap was
-register, not volume. Phase 14 is where that bet gets settled.
+register, not volume. The bet paid, modestly: +2.4 points at first place, positive at all
+three seeds. The section on seeds has the pairs.
 
 `make labels` joins the lines and the answers into `teacher-labels.jsonl`, in the shape
 `build_semcor.py` produces, so training reads both the same way. Every line is kept, not
@@ -543,8 +554,10 @@ That leaves a choice worth measuring rather than arguing:
 | 5 of 5 only | 3,708 |           97% |
 | plus 4 of 5 | 5,640 |          ~91% |
 
-Half again as much data for six points of label error. Phase 14 trains both and reports
-both, since Kaggle runs every job in one session and the second costs nothing.
+Half again as much data for six points of label error. One unseeded run put 4-of-5 1.3
+points behind, which is inside what the seed alone was moving at the time, so the
+question is still open. It needs the same three-seed treatment the two-stage question
+got.
 
 ### Now worth spending
 

@@ -302,7 +302,7 @@ measured, and why the model must never see the test set while it is being traine
 - [x] Relabel 30 of them blind, days later, and measure how often you agree with
       yourself: 28 of 30. It flatters us — same person twice where the published 70-78%
       is two people, and a lenient test where `1,3` then `3` counts as agreement — so
-      read it as a ceiling somewhere above 84%. The model is at 67.8%, sixteen points
+      read it as a ceiling somewhere above 84%. The model is at 65.8%, eighteen points
       short, which is what makes phase 13's second half worth paying for. Both
       disagreements were WordNet distinctions the line does not settle: `become` as
       entering a state against undergoing a change, `captain` as a leader against a rank.
@@ -542,12 +542,14 @@ this register.
       scored 64.4% twice and then 68.5%: `run.py` seeded Python's `random` and never
       seeded torch, so batch order and dropout moved freely. Four points of movement,
       wider than every difference being claimed. Torch is seeded now.
-- [ ] Rerun both settings at three seeds and report the spread. One score is not a
-      result, and the +2.7 for two stages was one draw from a distribution nobody had
-      measured. The top-three gap held at +4.0 across both runs, which is the one
-      reading that survived.
-- [ ] Settle the 4-of-5 question. One run put it 1.3 points behind, which is inside the
-      noise, so it is not settled.
+- [x] Rerun both settings at three seeds and report the spread. With torch seeded the
+      control lands on 63.1% at all three, where it had drawn 64.4, 64.4 and 68.5. Paired
+      by seed, two stages are worth +2.7, +1.3 and +3.3 — small, and positive every time.
+      The top-three gap does not survive: +2.7, 0.0 and +0.7, where two unseeded runs had
+      both said +4.0.
+- [ ] Settle the 4-of-5 question. One unseeded run put it 1.3 points behind, which is
+      inside what the seed alone was moving, so it is not settled. Needs the same three
+      seeds.
 - [x] Watch training loss and validation loss together. Seen, on the tuned run: the
       held-out triplet score climbs through every epoch (0.852, 0.855, 0.855, 0.865)
       while the subtitle score turns at epoch 2 (64.4, 66.4, 67.1, 65.8). Still learning
@@ -558,17 +560,18 @@ this register.
       commonest senses and 53 on the rest averages to something respectable and is still
       wrong exactly when it is asked.
 - [x] Report it split by frequency band, against the baseline as it stands after phrase
-      matching: 56.0% against 52.0% on everyday words, 72.0% against 70.0% on common,
-      65.3% against 42.9% on uncommon. It is ahead everywhere now, but the gain is
-      lopsided — 22 points on uncommon words against 4 and 2 on the rest, because a
-      common word's commonest sense usually is the right one.
+      matching: 56.0% against 52.0% on everyday words, 78.0% against 70.0% on common,
+      63.3% against 42.9% on uncommon. It is ahead everywhere now, but the gain is
+      lopsided — 20 points on uncommon words against 8 and 4 on the rest, because a
+      common word's commonest sense usually is the right one. Fifty lines a band and one
+      seed, so read it as a direction.
 - [x] Try one smaller and one larger model and record accuracy, size and speed for
       each. The trained 22M beats the untrained 110M by 8.7 points at a fifth of the
       size, which is the only comparison that matters — the 110M was never going in a
       browser.
 
-**Exit:** a trained model that beats phase 12, and it does: 67.8% against 55.7% for the
-untrained 110M and 55.0% for the baseline, and 87.2% in the top three against 80.5%.
+**Exit:** a trained model that beats phase 12, and it does: 65.8% against 55.7% for the
+untrained 110M and 55.0% for the baseline, and 85.9% in the top three against 80.5%.
 Eighteen minutes on a free GPU, plus five for the pass on the subtitle labels.
 
 Two runs, one changing only the amount of data: 50,000 examples gave 59.1%, all 177,665
