@@ -8,16 +8,16 @@ export default {
   name: "VocabBoost",
   version: "1.0",
   manifest_version: 3,
-  // No longer "powered by AI": the default path is a free dictionary and no key at all.
+  // The default path is a model shipped inside the extension: no key, no network.
   description:
-    "Look up a word from the subtitles without leaving the video, and hear how it sounds.",
+    "Look up a word from the subtitles and see what it means in that line, without leaving the video.",
   // `offscreen` holds the model in a page of its own; the worker is stopped when idle.
   permissions: ["storage", "offscreen"],
   // The model runs as WebAssembly, which extension pages refuse without this.
   content_security_policy: {
     extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
   },
-  host_permissions: [...matches, "https://api.dictionaryapi.dev/*"],
+  host_permissions: matches,
   // Asked for beside the key field: an install with no key never calls these.
   optional_host_permissions: llmProviders.map((provider) => provider.origin),
   action: { default_popup: "settings.html" },

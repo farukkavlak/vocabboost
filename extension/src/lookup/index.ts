@@ -1,10 +1,11 @@
 import { LookupError } from "../meaning";
 import type { Meaning, MeaningProvider } from "../meaning";
 import { readCache, writeCache } from "./cache";
-import { dictionary } from "./providers/dictionary";
+import { local } from "./providers/local";
 import { configured } from "./settings";
 
-const provider: MeaningProvider = dictionary;
+/** The model shipped with the extension answers first, with no key and no network. */
+const provider: MeaningProvider = local;
 
 export async function lookupWord(
   word: string,
@@ -20,7 +21,7 @@ export async function lookupWord(
   return meaning;
 }
 
-/** The second step: what the word means in this line, which no dictionary can answer. */
+/** The second step, for readers who added a key: a model that writes its own answer. */
 export async function explainWord(
   word: string,
   sentence: string,

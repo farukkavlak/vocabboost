@@ -64,31 +64,14 @@ const PLATFORMS = {
   },
 };
 
-/** The definition the stubbed dictionary returns for every word. */
-export const MEANING = "to manage or be in charge of something";
-export const EXAMPLE = "She runs the department single-handed.";
-export const AUDIO =
-  "https://api.dictionaryapi.dev/media/pronunciations/en/run-uk.mp3";
-
-/** One entry in the shape api.dictionaryapi.dev answers with. */
-export function entry(senses = [{ definition: MEANING, example: EXAMPLE }]) {
-  return [
-    {
-      word: "run",
-      phonetic: "/rʌn/",
-      phonetics: [{ text: "/rʌn/", audio: AUDIO }],
-      meanings: [{ partOfSpeech: "verb", definitions: senses }],
-    },
-  ];
-}
+/**
+ * What the shipped model answers first for "run" in "he had to run the department". Not
+ * a stub: lookups run the real model, so a change to it shows up here.
+ */
+export const RUN = "direct or control; projects, businesses, etc.";
 
 interface WatchOptions {
   platform?: keyof typeof PLATFORMS;
-  /** An entry, "missing" for the API's 404, or "unreachable" for the service being down. */
-  dictionary?: unknown[] | "missing" | "unreachable";
-  /** Called with each word the dictionary is asked for. Lookups run in the worker, so
-   *  the page never sees these requests. */
-  onLookup?: (word: string) => void;
 }
 
 /**
@@ -97,7 +80,7 @@ interface WatchOptions {
  */
 export async function watchPage(
   context: BrowserContext,
-  { platform = "youtube", dictionary = entry(), onLookup }: WatchOptions = {},
+  { platform = "youtube" }: WatchOptions = {},
 ): Promise<Page> {
   const { url, pattern, fixture } = PLATFORMS[platform];
   const html = readFileSync(resolve(here, fixture), "utf8");
@@ -105,36 +88,6 @@ export async function watchPage(
   await context.route(pattern, (route) =>
     route.fulfill({ contentType: "text/html", body: html }),
   );
-  await context.route("https://api.dictionaryapi.dev/**", (route) => {
-    // The pronunciation lives on the same host as the entries.
-    if (route.request().url().endsWith(".mp3")) {
-      return route.fulfill({ contentType: "audio/mpeg", body: "" });
-    }
-
-    onLookup?.(
-      decodeURIComponent(new URL(route.request().url()).pathname)
-        .split("/")
-        .pop() ?? "",
-    );
-
-    if (dictionary === "unreachable") {
-      return route.abort();
-    }
-
-    if (dictionary === "missing") {
-      return route.fulfill({
-        status: 404,
-        contentType: "application/json",
-        body: JSON.stringify({ title: "No Definitions Found" }),
-      });
-    }
-
-    return route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify(dictionary),
-    });
-  });
-
   const page = await context.newPage();
   await page.goto(url);
   return page;

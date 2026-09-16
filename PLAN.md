@@ -688,8 +688,11 @@ worker cannot hold a model.
       compute. That settles it for 8-bit: one line in 409 is not worth 250 MB.
 - [ ] Load the model only when a lookup needs it, and close it after about two idle
       minutes so the memory goes back. A reader who is not looking anything up pays
-      nothing; the first lookup after a pause waits 0.6 seconds for the load.
-- [ ] Only for readers who chose the local provider. Someone using a key never loads it.
+      nothing; the first lookup after a pause waits 0.6 seconds for the load. Built;
+      what is left is measuring that the memory really does go back.
+- [x] ~~Only for readers who chose the local provider.~~ Every reader gets the local
+      answer first now, and a key adds a second step on top of it, so there is no one
+      who never loads it.
 - [x] Decide whether to store each sense's vector in `vocab.db` rather than encoding the
       definitions on every lookup. Not now: encoding them takes about 0.1 seconds a word,
       which nobody waits on, and storing them is 117,659 senses of 384 numbers — 45 MB
@@ -707,12 +710,14 @@ worker cannot hold a model.
       network off: the first answer takes about half a second, the next a tenth. The
       page runs onnxruntime's plain WebAssembly build, 14 MB against 28 for the WebGPU
       one transformers.js asks for, and needs `wasm-unsafe-eval` in the manifest.
-- [ ] `providers/local.ts`, same interface as `anthropic.ts` and `openai.ts`, no key, no
+- [x] `providers/local.ts`, same interface as `anthropic.ts` and `openai.ts`, no key, no
       host permission, and the default choice
-- [ ] Remove the free dictionary. Every card then reads from WordNet, the senses the
+- [x] Remove the free dictionary. Every card then reads from WordNet, the senses the
       research measured, and the network is only for readers who add a key. Its
       pronunciation and audio go with it, for now.
-- [ ] A word WordNet does not have gets a card that says so, rather than a guess
+- [x] A word WordNet does not have gets a card that says so, rather than a guess. Until
+      the phase 15 card exists, the card marks an unsure answer with a line of text and
+      counts the senses it left out.
 - [x] Ship `vocab.db` and the weights as data. Manifest V3 bans remote code, but weights
       are data. The runtime `.wasm` is code and has to be bundled. About 62 MB unpacked:
       the model 23, the vocabulary 19, the runtime 14, the tagger 5.

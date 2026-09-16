@@ -1,4 +1,4 @@
-import { test, expect, lookup, play, settled, watchPage } from "./fixture";
+import { RUN, test, expect, lookup, play, settled, watchPage } from "./fixture";
 
 test("stands in for the caption instead of appearing somewhere else", async ({
   context,
@@ -71,7 +71,7 @@ test("opens the meaning above the word when there is no room below", async ({
 
   const word = page.getByRole("button", { name: "run", exact: true });
   await word.click();
-  await expect(page.locator("#vocab-meaning")).toContainText("to manage");
+  await expect(page.locator("#vocab-meaning")).toContainText(RUN);
   await settled(page);
 
   const wordBox = await word.boundingBox();
@@ -132,7 +132,7 @@ test("the meaning never covers the line it explains", async ({
 
   // Anchored on the word alone, the card would cover the rest of the sentence.
   await page.getByRole("button", { name: "had", exact: true }).click();
-  await expect(page.locator("#vocab-meaning")).toContainText("to manage");
+  await expect(page.locator("#vocab-meaning .sense").first()).toBeVisible();
   await settled(page);
 
   const line = await page.locator("#vocab-panel .line").boundingBox();

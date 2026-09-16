@@ -5,11 +5,13 @@ Look up a word from a film's subtitles without leaving the film.
 ![The panel opening in the caption's place, a word being looked up, and the model asked for the meaning in that line](docs/flow.gif)
 
 Press the shortcut. The video pauses and the subtitle line stays where it was, but its
-words are now clickable. Click one and you get its meaning, an example, and how it
-sounds. Esc, a click anywhere else, or pressing play puts the film back.
+words are now clickable. Click one and you get the meaning it has in that line, with an
+example. Esc, a click anywhere else, or pressing play puts the film back.
 
-None of that needs an account or a key. If the dictionary is not enough, one more press
-asks a model what the word means in that line, using your own API key.
+None of that needs an account, a key or a network. A small model inside the extension
+reads the line and picks the dictionary sense it uses. When the line does not settle it,
+the card says so and shows the likeliest few. If you want a written explanation instead,
+one more press asks Claude or OpenAI, using your own API key.
 
 ## Install
 
@@ -27,10 +29,10 @@ popup links there and shows the one you actually have.
 
 ## Keys
 
-The dictionary is [dictionaryapi.dev](https://dictionaryapi.dev): free, no key, and the
-only source of a pronunciation and a real example sentence.
+The meanings come from WordNet, shipped with the extension. A word WordNet does not
+have gets a card that says so. There is no pronunciation for now.
 
-The model is optional and uses your own key, Claude or OpenAI.
+The provider's model is optional and uses your own key, Claude or OpenAI.
 
 - The key stays on your machine, in `storage.local`. Not in `sync`, which would copy it
   to Google. There is no server of ours for it to reach.
@@ -54,11 +56,20 @@ caption is often gone by the time you react to it. The panel is drawn in a shado
 so page styles cannot reach it. Lookups run in the background worker, which is why the
 key never touches the page.
 
+The local model runs in an offscreen page rather than the worker, which Chrome stops
+after 30 idle seconds. The page opens on the first lookup, which takes about half a
+second, and closes after two idle minutes so its memory goes back — roughly 600 MB,
+measured piece by piece so far.
+The extension is about 62 MB unpacked: the model 23, the vocabulary 19, the runtime 14,
+the part-of-speech tagger 5.
+
 ## research/
 
-Work on a meaning provider that needs no key and no network: a 23 MB encoder that picks
-which sense of a word a subtitle line is using. Not shipped yet. `research/README.md`
-has the numbers.
+How the local model was built and measured: a 23 MB encoder, fine-tuned to pick which
+sense of a word a subtitle line is using. On 149 hand-labelled lines it picks the right
+sense first 66% of the time and has it in its top three 87%, against 55% for showing the
+dictionary's first sense. `research/README.md` has
+the numbers.
 
 ---
 

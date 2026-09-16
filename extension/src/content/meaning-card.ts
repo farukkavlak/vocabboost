@@ -56,32 +56,6 @@ function paragraph(className: string, text: string): HTMLElement {
   return element;
 }
 
-/** Fetched, not set as a src: a remote src answers to the host page's CSP, ours does not. */
-async function speak(url: string): Promise<void> {
-  const response = await fetch(url);
-  const objectUrl = URL.createObjectURL(await response.blob());
-  const audio = new Audio(objectUrl);
-  audio.addEventListener("ended", () => URL.revokeObjectURL(objectUrl));
-  await audio.play();
-}
-
-function speaker(url: string): HTMLElement {
-  const button = document.createElement("button");
-  button.className = "speak";
-  button.type = "button";
-  button.title = "Play pronunciation";
-  button.setAttribute("aria-label", "Play pronunciation");
-  button.innerHTML =
-    '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
-    '<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>' +
-    '<path d="M16 8.5a4.5 4.5 0 0 1 0 7" fill="none" stroke="currentColor" ' +
-    'stroke-width="1.8" stroke-linecap="round"/></svg>';
-  button.addEventListener("click", () => {
-    void speak(url).catch(() => button.classList.add("unavailable"));
-  });
-  return button;
-}
-
 function head(word: string, meaning: Meaning): HTMLElement {
   const element = document.createElement("div");
   element.className = "head";
@@ -89,17 +63,6 @@ function head(word: string, meaning: Meaning): HTMLElement {
   const title = document.createElement("h1");
   title.textContent = word;
   element.append(title);
-
-  if (meaning.phonetic) {
-    const phonetic = document.createElement("span");
-    phonetic.className = "phonetic";
-    phonetic.textContent = meaning.phonetic;
-    element.append(phonetic);
-  }
-
-  if (meaning.audio) {
-    element.append(speaker(meaning.audio));
-  }
 
   if (meaning.partOfSpeech) {
     element.append(badge(meaning.partOfSpeech));
@@ -112,12 +75,12 @@ function head(word: string, meaning: Meaning): HTMLElement {
   return element;
 }
 
-/** The dictionary says what the word can mean; this asks what it means here. */
-function inSentence(onPress: () => void): HTMLElement {
+/** For readers who added a key: a model that writes its own explanation of the line. */
+function askModel(onPress: () => void): HTMLElement {
   const button = document.createElement("button");
   button.className = "ask";
   button.type = "button";
-  button.textContent = "In this sentence →";
+  button.textContent = "Ask your model →";
   button.addEventListener("click", () => {
     // A model call takes seconds; a button that still looks live but does nothing is
     // worse than one that says what it is doing.
@@ -156,6 +119,22 @@ function render(
     card.append(element);
   }
 
+  // The card design of phase 15 replaces these two lines.
+  if (meaning.confident === false) {
+    card.append(
+      paragraph("note", "The line does not settle it. The likeliest meanings:"),
+    );
+  }
+
+  if (meaning.more) {
+    card.append(
+      paragraph(
+        "note",
+        `${meaning.more} more ${meaning.more === 1 ? "meaning" : "meanings"}`,
+      ),
+    );
+  }
+
   if (meaning.translation) {
     card.append(paragraph("translation", meaning.translation));
   }
@@ -165,7 +144,7 @@ function render(
   }
 
   if (ask) {
-    card.append(inSentence(ask));
+    card.append(askModel(ask));
   }
 }
 
@@ -218,26 +197,20 @@ export function openCard(
       ? error.message
       : `Could not look up "${word}".`;
 
-  // The model replaces the senses, not the pronunciation: it has none to give, and the
-  // reader should not lose what the dictionary already showed them — which holds when it
-  // fails too, so the answer stays on screen with the reason under it.
-  const explain = (dictionary: Meaning | null) => (): void => {
-    const spoken = {
-      phonetic: dictionary?.phonetic,
-      audio: dictionary?.audio,
-    };
-
+  // When the provider's model fails, the local answer stays on screen with the reason
+  // under it.
+  const explain = (local: Meaning | null) => (): void => {
     void explainWord(word, sentence)
-      .then((meaning) => fill({ ...meaning, ...spoken }))
+      .then((meaning) => fill(meaning))
       .catch((error: unknown) =>
-        dictionary
-          ? fill(dictionary, explain(dictionary), said(error))
+        local
+          ? fill(local, explain(local), said(error))
           : fill({ senses: [{ definition: said(error) }] }, explain(null)),
       );
   };
 
-  // Asked in parallel: the dictionary call is the slow one, and a button that leads
-  // nowhere should not be drawn at all.
+  // Asked in parallel: the first lookup loads the model, and a button that leads nowhere
+  // should not be drawn at all.
   const ready = modelReady();
 
   void lookupWord(word, sentence)

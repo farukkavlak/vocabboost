@@ -12,32 +12,7 @@ const ANSWER = {
 };
 
 test("@shots the flow, end to end", async ({ context, worker }) => {
-  const page = await watchPage(context, {
-    dictionary: [
-      {
-        word: "alone",
-        phonetic: "/əˈləʊn/",
-        phonetics: [
-          {
-            text: "/əˈləʊn/",
-            audio:
-              "https://api.dictionaryapi.dev/media/pronunciations/en/alone-uk.mp3",
-          },
-        ],
-        meanings: [
-          {
-            partOfSpeech: "adverb",
-            definitions: [
-              {
-                definition: "Without outside help.",
-                example: "The job was too hard for me to do alone.",
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  });
+  const page = await watchPage(context);
 
   await context.route("https://api.anthropic.com/**", (route) =>
     route.fulfill({

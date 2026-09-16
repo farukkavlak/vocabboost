@@ -1,5 +1,5 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test";
-import { test, expect, lookup, watchPage, MEANING } from "./fixture";
+import { test, expect, lookup, watchPage, RUN } from "./fixture";
 
 const LINE = ["he had to run the department"];
 const ASK = "#vocab-meaning .ask";
@@ -41,13 +41,13 @@ async function openCard(
   return page;
 }
 
-test("offers the model as a second step, once the dictionary has answered", async ({
+test("offers the model as a second step, once the local answer is in", async ({
   context,
   worker,
 }) => {
   await setKey(worker, "anthropic", "sk-ant-test");
   const page = await openCard(context, worker);
-  await expect(page.locator(ASK)).toHaveText("In this sentence →");
+  await expect(page.locator(ASK)).toHaveText("Ask your model →");
 });
 
 test("leaves the step out when no key has been added", async ({
@@ -83,10 +83,10 @@ test("asks the chosen provider with the whole line and shows what it answers", a
   await page.locator(ASK).click();
 
   const card = page.locator("#vocab-meaning");
-  await expect(card.locator(".definition")).toHaveText(ANSWER.definition);
+  await expect(card.locator(".definition")).toHaveText([ANSWER.definition]);
   await expect(card.locator(".badge")).toHaveText(["verb", "B2"]);
 
-  // The line is the whole point: the word alone is what the dictionary already answered.
+  // The line is the whole point: the word alone does not say which meaning.
   const sent = JSON.parse(bodies[0] ?? "{}") as {
     model: string;
     messages: { content: string }[];
@@ -95,35 +95,6 @@ test("asks the chosen provider with the whole line and shows what it answers", a
   expect(sent.messages[0]?.content).toContain("he had to run the department");
   expect(sent.model).toBe("claude-haiku-4-5");
   expect(sent.output_config.format.type).toBe("json_schema");
-});
-
-test("keeps the pronunciation the dictionary gave", async ({
-  context,
-  worker,
-}) => {
-  // The model has no recording to offer, and losing one the reader already had would
-  // make asking for the better answer a downgrade.
-  const page = await watchPage(context);
-  await context.route("https://api.anthropic.com/**", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        content: [{ type: "text", text: JSON.stringify(ANSWER) }],
-      }),
-    }),
-  );
-  await setKey(worker, "anthropic", "sk-ant-test");
-
-  await page.evaluate((line) => window.showCaption(line), LINE);
-  await lookup(worker);
-  await page.getByRole("button", { name: "run", exact: true }).click();
-  await page.locator(ASK).click();
-
-  await expect(page.locator("#vocab-meaning .definition")).toHaveText(
-    ANSWER.definition,
-  );
-  await expect(page.locator("#vocab-meaning .phonetic")).toHaveText("/rʌn/");
-  await expect(page.locator("#vocab-meaning .speak")).toBeVisible();
 });
 
 test("uses whichever provider the key belongs to", async ({
@@ -148,13 +119,13 @@ test("uses whichever provider the key belongs to", async ({
   await page.getByRole("button", { name: "run", exact: true }).click();
   await page.locator(ASK).click();
 
-  await expect(page.locator("#vocab-meaning .definition")).toHaveText(
+  await expect(page.locator("#vocab-meaning .definition")).toHaveText([
     ANSWER.definition,
-  );
+  ]);
   expect(called).toBe("openai");
 });
 
-test("keeps the dictionary answer when the model call fails, and offers a retry", async ({
+test("keeps the local answer when the model call fails, and offers a retry", async ({
   context,
   worker,
 }) => {
@@ -174,11 +145,12 @@ test("keeps the dictionary answer when the model call fails, and offers a retry"
   await page.locator(ASK).click();
 
   const card = page.locator("#vocab-meaning");
-  // What the dictionary gave is still there; the failure is a note under it.
-  await expect(card.locator(".definition").first()).toHaveText(MEANING);
-  await expect(card.locator(".phonetic")).toHaveText("/rʌn/");
+  // What the local model gave is still there; the failure is a note under it.
+  await expect(card.locator(".definition").first()).toHaveText(RUN);
   // The provider said why, and saying "500" instead would have thrown that away.
-  await expect(card.locator(".note")).toContainText("Overloaded, try again");
+  await expect(
+    card.locator(".note", { hasText: "Overloaded, try again" }),
+  ).toBeVisible();
   await expect(page.locator(ASK)).toBeEnabled();
 });
 
@@ -204,9 +176,11 @@ test("says so when the model answers with something unusable", async ({
   await page.getByRole("button", { name: "run", exact: true }).click();
   await page.locator(ASK).click();
 
-  await expect(page.locator("#vocab-meaning .note")).toContainText(
-    "Claude answered without a definition.",
-  );
+  await expect(
+    page.locator("#vocab-meaning .note", {
+      hasText: "Claude answered without a definition.",
+    }),
+  ).toBeVisible();
   await expect(page.locator("#vocab-meaning")).not.toContainText("undefined");
 });
 

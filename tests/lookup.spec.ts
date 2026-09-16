@@ -1,9 +1,6 @@
-import { MEANING, test, expect, lookup, play, watchPage } from "./fixture";
+import { RUN, test, expect, lookup, play, watchPage } from "./fixture";
 
-test("shows the meaning returned by the server", async ({
-  context,
-  worker,
-}) => {
+test("shows the meaning the model chose", async ({ context, worker }) => {
   const page = await watchPage(context);
   await page.evaluate(() =>
     window.showCaption(["he had to run the department"]),
@@ -12,25 +9,21 @@ test("shows the meaning returned by the server", async ({
 
   await page.getByRole("button", { name: "run", exact: true }).click();
 
-  await expect(page.locator("#vocab-meaning")).toContainText(MEANING);
+  await expect(page.locator("#vocab-meaning")).toContainText(RUN);
 });
 
 test("says so when the lookup fails instead of failing silently", async ({
   context,
   worker,
 }) => {
-  const page = await watchPage(context, { dictionary: "unreachable" });
-  await page.evaluate(() =>
-    window.showCaption(["he had to run the department"]),
-  );
+  const page = await watchPage(context);
+  await page.evaluate(() => window.showCaption(["I'm gonna go"]));
   await lookup(worker);
 
-  await page.getByRole("button", { name: "run", exact: true }).click();
+  await page.getByRole("button", { name: "gonna", exact: true }).click();
 
-  // A dropped connection reads the same as a 5xx to the reader: the service is not
-  // answering, which is something they can act on.
   await expect(page.locator("#vocab-meaning")).toContainText(
-    "The dictionary is not answering",
+    '"gonna" is not in the dictionary.',
   );
 });
 
@@ -38,7 +31,7 @@ test("Escape closes the meaning first, then the panel", async ({
   context,
   worker,
 }) => {
-  const page = await watchPage(context, { dictionary: "unreachable" });
+  const page = await watchPage(context);
   await play(page);
 
   await page.evaluate(() =>

@@ -4,12 +4,9 @@ export interface Sense {
 }
 
 export interface Meaning {
-  /** Several from the dictionary, which cannot know which one the line used; one from the model. */
+  /** The likeliest few from the local model, nearest first; one from a provider's model. */
   senses: Sense[];
   partOfSpeech?: string;
-  /** IPA. */
-  phonetic?: string;
-  audio?: string;
   /** Set when the word belongs to an idiom or phrasal verb. */
   phrase?: string;
   cefr?: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";

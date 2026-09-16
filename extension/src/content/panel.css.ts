@@ -156,43 +156,6 @@ export const panelStyles = `
     letter-spacing: 0.03em;
   }
 
-  .phonetic {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.9em;
-  }
-
-  .speak {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.6em;
-    height: 1.6em;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.75);
-    cursor: pointer;
-    transition: background-color 100ms ease-out;
-  }
-
-  .speak svg {
-    width: 1em;
-    height: 1em;
-  }
-
-  .speak:hover,
-  .speak:focus-visible {
-    background: rgba(255, 255, 255, 0.2);
-    outline: none;
-  }
-
-  /* The recording would not play: say so on the control rather than in the definition. */
-  .speak.unavailable {
-    opacity: 0.35;
-    cursor: default;
-  }
-
   .sense + .sense {
     margin-top: 6px;
     padding-top: 6px;
