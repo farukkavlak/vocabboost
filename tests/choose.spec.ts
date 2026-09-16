@@ -36,7 +36,7 @@ const TWICE = [
 test("puts the senses the research measured in front of the model", () => {
   const wrong = lines.filter((line) => {
     const entry = entryFor(vocab, tagger, line.text, line.word);
-    const keys = (entry?.senses ?? []).map(([key]) => key).sort();
+    const keys = (entry?.synsets ?? []).map(({ key }) => key).sort();
     return (
       entry?.lemma !== line.lemma ||
       entry.pos !== line.pos ||
@@ -70,7 +70,7 @@ test("scores the test lines as the research did", async () => {
   let led = 0;
   let ledRight = 0;
   for (const line of scored) {
-    const choice = await choose(vocab, tagger, embed, line.text, line.word);
+    const choice = await choose({ vocab, tagger, embed }, line.text, line.word);
     const hit = choice?.ranked[0]?.key === line.label;
     right += Number(hit);
     if (choice?.confident) {

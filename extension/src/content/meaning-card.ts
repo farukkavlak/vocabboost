@@ -75,15 +75,14 @@ function head(word: string, meaning: Meaning): HTMLElement {
   return element;
 }
 
-/** For readers who added a key: a model that writes its own explanation of the line. */
+/** Offered only when the reader has added a provider key. */
 function askModel(onPress: () => void): HTMLElement {
   const button = document.createElement("button");
   button.className = "ask";
   button.type = "button";
   button.textContent = "Ask your model →";
   button.addEventListener("click", () => {
-    // A model call takes seconds; a button that still looks live but does nothing is
-    // worse than one that says what it is doing.
+    // A provider takes seconds to answer; say so rather than look idle.
     button.disabled = true;
     button.textContent = "Asking…";
     onPress();
@@ -119,20 +118,15 @@ function render(
     card.append(element);
   }
 
-  // The card design of phase 15 replaces these two lines.
   if (meaning.confident === false) {
     card.append(
       paragraph("note", "The line does not settle it. The likeliest meanings:"),
     );
   }
 
-  if (meaning.more) {
-    card.append(
-      paragraph(
-        "note",
-        `${meaning.more} more ${meaning.more === 1 ? "meaning" : "meanings"}`,
-      ),
-    );
+  if (meaning.hidden) {
+    const noun = meaning.hidden === 1 ? "meaning" : "meanings";
+    card.append(paragraph("note", `${meaning.hidden} more ${noun}`));
   }
 
   if (meaning.translation) {
@@ -197,8 +191,7 @@ export function openCard(
       ? error.message
       : `Could not look up "${word}".`;
 
-  // When the provider's model fails, the local answer stays on screen with the reason
-  // under it.
+  // If the provider fails, the local answer stays with the reason under it.
   const explain = (local: Meaning | null) => (): void => {
     void explainWord(word, sentence)
       .then((meaning) => fill(meaning))
@@ -209,8 +202,7 @@ export function openCard(
       );
   };
 
-  // Asked in parallel: the first lookup loads the model, and a button that leads nowhere
-  // should not be drawn at all.
+  // Asked in parallel with the lookup, which is slower when the model has to load.
   const ready = modelReady();
 
   void lookupWord(word, sentence)

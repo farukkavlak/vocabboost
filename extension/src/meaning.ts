@@ -3,27 +3,26 @@ export interface Sense {
   example?: string;
 }
 
+/** What the card shows for a word, from the local model or a provider's model. */
 export interface Meaning {
-  /** The likeliest few from the local model, nearest first; one from a provider's model. */
+  /** Best first. */
   senses: Sense[];
   partOfSpeech?: string;
-  /** Set when the word belongs to an idiom or phrasal verb. */
+  /** The idiom or phrasal verb the word belongs to. */
   phrase?: string;
-  cefr?: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-  translation?: string;
-  /**
-   * From the local model: whether the first sense is far enough ahead to lead with.
-   * When it is not, the senses are the likeliest few, and the line does not settle it.
-   */
+  /** Local model only: false when the line does not settle which sense it is. */
   confident?: boolean;
-  /** Senses left out of `senses`, a click away. */
-  more?: number;
+  /** Local model only: how many senses were left out of `senses`. */
+  hidden?: number;
+  /** Provider models only. */
+  cefr?: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+  /** Provider models only, when the reader chose a language. */
+  translation?: string;
 }
 
-/** Enough of a provider to key its answers by. */
 export interface Cacheable {
   readonly id: string;
-  /** Whether the answer depends on the line, and so whether the cache is keyed by it. */
+  /** Whether answers depend on the line, and so are cached per line. */
   readonly usesSentence: boolean;
 }
 
@@ -31,5 +30,5 @@ export interface MeaningProvider extends Cacheable {
   lookup(word: string, sentence: string): Promise<Meaning>;
 }
 
-/** An error whose message is written for the reader rather than for a console. */
+/** An error whose message is meant for the reader. */
 export class LookupError extends Error {}

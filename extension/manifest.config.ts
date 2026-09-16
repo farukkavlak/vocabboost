@@ -1,4 +1,4 @@
-import { llmProviders } from "./src/lookup/providers";
+import { llmProviders } from "./src/lookup/llm";
 import { sources } from "./src/content/sources";
 
 // The single place platforms are declared: adding an adapter updates the manifest too.

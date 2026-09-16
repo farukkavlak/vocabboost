@@ -1,19 +1,17 @@
 import { LookupError } from "../../meaning";
 import type { Cacheable, Meaning } from "../../meaning";
 
-/** The answer the model is asked for, and the shape every adapter constrains it to. */
+const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+
+/** The JSON schema the model's answer is constrained to. */
 function schemaFor(language?: string): object {
   const properties: Record<string, object> = {
     definition: { type: "string" },
     partOfSpeech: { type: "string" },
-    cefr: { type: "string", enum: ["A1", "A2", "B1", "B2", "C1", "C2"] },
+    cefr: { type: "string", enum: LEVELS },
     phrase: { type: "string" },
+    ...(language ? { translation: { type: "string" } } : {}),
   };
-
-  if (language) {
-    properties.translation = { type: "string" };
-  }
-
   return {
     type: "object",
     properties,
@@ -22,43 +20,42 @@ function schemaFor(language?: string): object {
   };
 }
 
-const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+function nonEmpty(value: unknown): string | undefined {
+  return typeof value === "string" && value ? value : undefined;
+}
 
 /**
- * The schema constrains the answer, but a truncated reply is still valid JSON and a
- * missing field would otherwise reach the card as the string "undefined".
+ * Checked even though the schema constrains the answer: a truncated reply is still valid
+ * JSON, and a missing field would reach the card as "undefined".
  */
-function read(text: string, label: string): Meaning {
-  let value: unknown;
+function parseAnswer(text: string, label: string): Meaning {
+  let answer: Record<string, unknown>;
   try {
-    value = JSON.parse(text);
+    answer = JSON.parse(text) as Record<string, unknown>;
   } catch {
     throw new LookupError(`${label} answered with something that is not JSON.`);
   }
 
-  const answer = value as Record<string, unknown>;
-  if (typeof answer.definition !== "string" || !answer.definition) {
+  const definition = nonEmpty(answer.definition);
+  if (!definition) {
     throw new LookupError(`${label} answered without a definition.`);
   }
 
+  const partOfSpeech = nonEmpty(answer.partOfSpeech);
   const cefr = LEVELS.find((level) => level === answer.cefr);
+  const phrase = nonEmpty(answer.phrase);
+  const translation = nonEmpty(answer.translation);
   return {
-    senses: [{ definition: answer.definition }],
-    ...(typeof answer.partOfSpeech === "string" && answer.partOfSpeech
-      ? { partOfSpeech: answer.partOfSpeech }
-      : {}),
+    senses: [{ definition }],
+    ...(partOfSpeech ? { partOfSpeech } : {}),
     ...(cefr ? { cefr } : {}),
-    ...(typeof answer.phrase === "string" && answer.phrase
-      ? { phrase: answer.phrase }
-      : {}),
-    ...(typeof answer.translation === "string" && answer.translation
-      ? { translation: answer.translation }
-      : {}),
+    ...(phrase ? { phrase } : {}),
+    ...(translation ? { translation } : {}),
   };
 }
 
-/** Both providers report their own failures the same way. */
-function reason(body: string): string | undefined {
+/** Both providers put the reason for a failure in `error.message`. */
+function errorMessage(body: string): string | undefined {
   try {
     const parsed = JSON.parse(body) as { error?: { message?: unknown } };
     const message = parsed.error?.message;
@@ -83,37 +80,33 @@ function prompt(word: string, sentence: string, language?: string): string {
 
 export interface LlmConfig {
   id: string;
-  /** Shown in the settings page, and in anything the provider has to be named in. */
+  /** The name shown to the reader. */
   label: string;
-  /** Where the reader gets a key, linked from the settings page. */
+  /** Where to get a key; linked from the settings page. */
   keyUrl: string;
   model: string;
   endpoint: string;
   headers(key: string): Record<string, string>;
   body(text: string, model: string, schema: object): unknown;
-  /** The JSON document the model produced, still as text. */
+  /** The model's JSON answer, still as text. */
   extract(payload: unknown): string | undefined;
 }
 
 export interface Ask {
   key: string;
-  /** Set only when the reader asked for a translation as well. */
+  /** Set when the reader asked for a translation. */
   language?: string | undefined;
 }
 
 export interface LlmProvider extends Cacheable {
   readonly label: string;
   readonly keyUrl: string;
-  /** The host to ask permission for, and to declare in the manifest. */
+  /** The host permission this provider needs. */
   readonly origin: string;
   lookup(word: string, sentence: string, ask: Ask): Promise<Meaning>;
 }
 
-/**
- * Every provider is the same request in different clothes: post JSON with a key,
- * constrain the answer to SCHEMA, read one string back out. Adding one is a file of
- * its own plus a line in the registry.
- */
+/** Every provider is the same request: post JSON with a key, read one JSON answer back. */
 export function llmProvider(config: LlmConfig): LlmProvider {
   return {
     id: config.id,
@@ -140,7 +133,7 @@ export function llmProvider(config: LlmConfig): LlmProvider {
           throw new LookupError(`${config.label} rejected the key.`);
         }
 
-        const said = reason(await response.text());
+        const said = errorMessage(await response.text());
         throw new LookupError(
           said
             ? `${config.label}: ${said}`
@@ -153,7 +146,7 @@ export function llmProvider(config: LlmConfig): LlmProvider {
         throw new LookupError(`${config.label} answered with nothing.`);
       }
 
-      return read(text, config.label);
+      return parseAnswer(text, config.label);
     },
   };
 }

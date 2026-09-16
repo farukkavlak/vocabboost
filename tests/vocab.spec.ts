@@ -40,7 +40,7 @@ test("finds the senses lookup.py finds for every single word", () => {
       const found = sensesOf(data, line.word, line.pos!);
       return (
         found.lemma !== line.lemma ||
-        found.senses.map(([key]) => key).join(" ") !== line.senses.join(" ")
+        found.synsets.map(({ key }) => key).join(" ") !== line.senses.join(" ")
       );
     });
   expect(wrong.map((line) => `${line.word} in ${line.text}`)).toEqual([]);

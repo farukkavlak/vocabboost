@@ -1,27 +1,24 @@
 import { LookupError } from "../meaning";
-import type { Meaning, MeaningProvider } from "../meaning";
+import type { Meaning } from "../meaning";
 import { readCache, writeCache } from "./cache";
-import { local } from "./providers/local";
+import { local } from "./local/client";
 import { configured } from "./settings";
-
-/** The model shipped with the extension answers first, with no key and no network. */
-const provider: MeaningProvider = local;
 
 export async function lookupWord(
   word: string,
   sentence: string,
 ): Promise<Meaning> {
-  const cached = await readCache(provider, word, sentence);
+  const cached = await readCache(local, word, sentence);
   if (cached) {
     return cached;
   }
 
-  const meaning = await provider.lookup(word, sentence);
-  await writeCache(provider, word, sentence, meaning);
+  const meaning = await local.lookup(word, sentence);
+  await writeCache(local, word, sentence, meaning);
   return meaning;
 }
 
-/** The second step, for readers who added a key: a model that writes its own answer. */
+/** The optional second step: the provider the reader added a key for. */
 export async function explainWord(
   word: string,
   sentence: string,

@@ -1,5 +1,5 @@
-import { llmProviders, providerFor } from "./providers";
-import type { LlmProvider } from "./providers/llm";
+import { llmProviders, providerFor } from "./llm";
+import type { LlmProvider } from "./llm/provider";
 
 /**
  * Keys are kept in `storage.local`: `sync` would carry them to Google's servers. The

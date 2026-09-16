@@ -1,11 +1,7 @@
 /**
- * NLTK's word tokenizer, rule for rule, so the tagger downstream sees the tokens it was
- * measured on. The rules are regular expressions applied in order to one string, each
- * padding a piece of punctuation or a contraction with spaces; splitting on whitespace
- * at the end gives the tokens.
- *
- * Python's `\w` matches any letter; JavaScript's only matches ASCII, even with the `u`
- * flag. Subtitle lines are English, and the fixture test is what says it did not matter.
+ * A port of NLTK's word tokenizer, so the tagger sees the tokens it was trained on. Each
+ * rule pads punctuation or a contraction with spaces; splitting on whitespace at the end
+ * gives the tokens.
  */
 
 type Rule = [RegExp, string];
@@ -24,7 +20,6 @@ const PUNCTUATION: Rule[] = [
   [/([:,])$/g, " $1 "],
   [/\.{2,}/gu, " $& "],
   [/[;@#$%&]/g, " $& "],
-  // The final period, once more.
   [/([^.])(\.)([\])}>"']*)\s*$/g, "$1 $2$3 "],
   [/[?!]/g, " $& "],
   [/([^'])' /g, "$1 ' "],
@@ -70,9 +65,8 @@ function words(sentence: string): string[] {
 }
 
 /**
- * NLTK first splits a line into sentences with Punkt, a trained model of its own, so that
- * a period ending a sentence becomes a token. Here any word ending in a period ends one.
- * Over 8,580 labelled lines that changes the tag of the looked-up word once.
+ * NLTK splits sentences with Punkt, a trained model. Here any word ending in a period
+ * ends a sentence, which is close enough for subtitle lines.
  */
 export function tokenize(line: string): string[] {
   return line.split(/(?<=[^.\s]\.)\s+/).flatMap(words);

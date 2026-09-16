@@ -1,11 +1,10 @@
 /**
- * From a clicked word and its line to the senses, ranked, and whether the model is sure.
- * Each step is the one the research measured, in the order it ran there:
+ * Ranks the senses of a clicked word by how well they fit its line:
  *
- * 1. a phrase covering the word wins — `ran into` is `run into`, not `run`
- * 2. otherwise the line is tagged, and the word's part of speech picks its senses
- * 3. the line and every sense are encoded, and the senses ranked by similarity
- * 4. the card leads with the first only if it is far enough ahead of the second
+ * 1. a phrase covering the word wins
+ * 2. otherwise the word's part of speech in the line picks its senses
+ * 3. the model encodes the line and each sense, and the senses are ranked by similarity
+ * 4. the answer is confident when the first is far enough ahead of the second
  */
 
 import { tag, type TaggerData } from "./tagger";
@@ -16,18 +15,14 @@ import {
   sensesOf,
   type Entry,
   type Pos,
+  type Synset,
   type VocabData,
 } from "./vocab";
 
-/**
- * The gap between first and second at which a sense the card leads with is right 85% of
- * the time, chosen on the validation words. On the test words it leads on 43.5% of lines
- * and is right on 88.2% of them.
- */
-export const THRESHOLD = 0.081;
+/** Chosen on the validation words; see research/README.md. */
+export const CONFIDENT_GAP = 0.081;
 
-/** Penn tags to WordNet's parts of speech. Proper nouns are left out, as they were. */
-const PARTS: Record<string, Pos> = {
+const PENN_TO_WORDNET: Record<string, Pos> = {
   NN: "n",
   NNS: "n",
   VB: "v",
@@ -44,31 +39,42 @@ const PARTS: Record<string, Pos> = {
   RBS: "r",
 };
 
-/** Sentences in, one unit-length vector each out. */
+/** Texts in, one unit-length vector per text out. */
 export type Embed = (texts: string[]) => Promise<number[][]>;
+
+export interface Ranked extends Synset {
+  score: number;
+}
 
 export interface Choice {
   lemma: string;
-  /** Unset for a phrase, whose part of speech was never asked. */
+  /** Unset for a phrase. */
   pos?: Pos;
-  /** Every sense, nearest first. */
-  ranked: { key: string; gloss: string; examples: string[]; score: number }[];
-  /** Whether the first is far enough ahead of the second to lead with. */
+  /** Every sense, best first. */
+  ranked: Ranked[];
   confident: boolean;
 }
 
-/** The word's part of speech in this line, or undefined if it is not one WordNet has. */
+export interface Resources {
+  vocab: VocabData;
+  tagger: TaggerData;
+  embed: Embed;
+}
+
+/** The word's part of speech in the line, if it is one WordNet covers. */
 export function partOfSpeech(
   tagger: TaggerData,
   line: string,
   word: string,
 ): Pos | undefined {
   const tokens = tokenize(line);
-  const at = tokens.findIndex((t) => t.toLowerCase() === word.toLowerCase());
-  return at < 0 ? undefined : PARTS[tag(tagger, tokens)[at]!];
+  const index = tokens.findIndex(
+    (token) => token.toLowerCase() === word.toLowerCase(),
+  );
+  return index < 0 ? undefined : PENN_TO_WORDNET[tag(tagger, tokens)[index]!];
 }
 
-/** What to rank for the word: a phrase, or the senses of its part of speech. */
+/** The phrase or the word's senses to rank, or null when WordNet has neither. */
 export function entryFor(
   vocab: VocabData,
   tagger: TaggerData,
@@ -87,13 +93,21 @@ export function entryFor(
     return null;
   }
   const entry = sensesOf(vocab, word, pos);
-  return entry.senses.length ? { ...entry, pos } : null;
+  return entry.synsets.length ? { ...entry, pos } : null;
+}
+
+// The two texts are written as the model saw them in training (research/kaggle/run.py).
+const lineText = (lemma: string, line: string): string => `${lemma}: ${line}`;
+const senseText = (synset: Synset): string =>
+  `${synset.synonyms.join(", ")}: ${[synset.gloss, ...synset.examples].join(" ")}`;
+
+/** Vectors are unit length, so the dot product is the cosine similarity. */
+function dot(a: number[], b: number[]): number {
+  return a.reduce((sum, x, i) => sum + x * b[i]!, 0);
 }
 
 export async function choose(
-  vocab: VocabData,
-  tagger: TaggerData,
-  embed: Embed,
+  { vocab, tagger, embed }: Resources,
   line: string,
   word: string,
 ): Promise<Choice | null> {
@@ -102,33 +116,23 @@ export async function choose(
     return null;
   }
 
-  // Written exactly as the model was trained on them.
   const [lineVector, ...senseVectors] = await embed([
-    `${entry.lemma}: ${line}`,
-    ...entry.senses.map(
-      ([, gloss, examples, synonyms]) =>
-        `${synonyms.join(", ")}: ${[gloss, ...examples].join(" ")}`,
-    ),
+    lineText(entry.lemma, line),
+    ...entry.synsets.map(senseText),
   ]);
-  const ranked = entry.senses
-    .map(([key, gloss, examples], i) => ({
-      key,
-      gloss,
-      examples,
-      // Both are unit length, so the dot product is the cosine.
-      score: senseVectors[i]!.reduce(
-        (sum, x, j) => sum + x * lineVector![j]!,
-        0,
-      ),
+  const ranked = entry.synsets
+    .map((synset, i) => ({
+      ...synset,
+      score: dot(senseVectors[i]!, lineVector!),
     }))
     .sort((a, b) => b.score - a.score);
 
-  const gap =
-    ranked.length > 1 ? ranked[0]!.score - ranked[1]!.score : Infinity;
+  const [first, second] = ranked;
+  const confident = !second || first!.score - second.score >= CONFIDENT_GAP;
   return {
     lemma: entry.lemma,
     ...(entry.pos ? { pos: entry.pos } : {}),
     ranked,
-    confident: gap >= THRESHOLD,
+    confident,
   };
 }

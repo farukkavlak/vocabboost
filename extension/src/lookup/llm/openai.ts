@@ -1,4 +1,4 @@
-import { llmProvider } from "./llm";
+import { llmProvider } from "./provider";
 
 interface Response {
   choices?: { message?: { content?: string } }[];

@@ -5,11 +5,10 @@ A browser cannot open SQLite without shipping a build of it. As JSON the vocabul
 
 Two files are written:
 
-- `extension/public/vocab.json`: every sense once, as `[key, gloss, examples, synonyms]`;
-  every entry as lemma, then part of speech, then indexes into the senses, commonest
-  first; and WordNet's irregular forms as surface, then part of speech, then lemmas.
-  Entries keep the database's order, which is the order `entry` falls back to when no
-  part of speech is given.
+- `extension/public/vocab.json`: every synset once, as `[key, gloss, examples, synonyms]`;
+  every entry as lemma → part of speech → synset indexes, commonest first; and WordNet's
+  irregular forms as surface → part of speech → lemmas. Entries keep the database's
+  order, which is the order `entry` falls back to when no part of speech is given.
 - `tests/fixtures/lookups.json`: lines with what `lookup.py` finds in them — the senses
   of the tagged word, and the phrase, if any, at every word — which the TypeScript port
   is tested against. Each carries its part of the split and, where all five panel
@@ -44,7 +43,7 @@ def export(db, path):
         forms.setdefault(form["surface"], {}).setdefault(form["pos"], []).append(form["lemma"])
 
     with open(path, "w", encoding="utf-8") as out:
-        json.dump({"senses": senses, "entries": entries, "forms": forms}, out,
+        json.dump({"synsets": senses, "entries": entries, "forms": forms}, out,
                   separators=(",", ":"), ensure_ascii=False)
     return len(senses), len(entries)
 

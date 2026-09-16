@@ -1,17 +1,13 @@
 /**
- * NLTK's part-of-speech tagger: an averaged perceptron. Every tag gets a score, the sum of
- * the weights of the features that fire for the word — its suffix, its neighbours, the
- * tags just given to the words before it — and the highest score wins. The weights were
- * learned once, by NLTK, and ship in `tagger.json`; nothing is learned here.
- *
- * The model was measured on these tags. Without them it chooses among every sense of a
- * word rather than those of its part of speech, and loses ten points.
+ * A port of NLTK's averaged perceptron tagger. Each tag scores the sum of the weights of
+ * the features that fire for a word (its suffix, its neighbours, the previous tags), and
+ * the highest score wins. The weights come from NLTK in `tagger.json`.
  */
 
 export interface TaggerData {
-  /** Feature, then tag, then weight. */
+  /** Feature → tag → weight. */
   weights: Record<string, Record<string, number>>;
-  /** Words that took one tag nearly every time in training, tagged without a vote. */
+  /** Words that always take the same tag. */
   tagdict: Record<string, string>;
   classes: string[];
 }
@@ -66,7 +62,7 @@ function predict(data: TaggerData, fired: string[]): string {
     }
   }
 
-  // Ties go to the tag that sorts last, as they do in Python.
+  // Ties go to the tag that sorts last, as in NLTK.
   let best = "";
   let bestScore = -Infinity;
   for (const tag of data.classes) {

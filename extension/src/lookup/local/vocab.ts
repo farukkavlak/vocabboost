@@ -1,37 +1,41 @@
 /**
- * Turns a clicked word into the WordNet senses to put in front of the model. A port of
- * `research/scripts/lookup.py`, tested against its answers.
- *
- * Two things stand between a click and an answer. A word can be part of a phrase —
- * `club` in "club soda" carries none of its own meanings — so the words around it are
- * read first and the longest entry covering it wins. And a word can be inflected: `ran`
- * is not in the dictionary, `run` is.
+ * Finds the WordNet senses for a clicked word: the phrase it belongs to, or its own
+ * senses once inflections are undone. A port of `research/scripts/lookup.py`; the tests
+ * check both give the same answers.
  */
-
-type Sense = [
-  key: string,
-  gloss: string,
-  examples: string[],
-  synonyms: string[],
-];
-
-export interface VocabData {
-  senses: Sense[];
-  /** Lemma, then part of speech, then indexes into `senses`, commonest first. */
-  entries: Record<string, Record<string, number[]>>;
-  /** WordNet's irregular forms: surface, then part of speech, then lemmas. */
-  forms: Record<string, Record<string, string[]>>;
-}
 
 export type Pos = "n" | "v" | "a" | "r";
 
-export interface Entry {
-  lemma: string;
-  senses: Sense[];
+export interface Synset {
+  key: string;
+  gloss: string;
+  examples: string[];
+  synonyms: string[];
 }
 
-// NLTK's `_morphy` rules: the ones every labelled word was resolved with.
-const MORPHY: Record<Pos, [string, string][]> = {
+export interface Entry {
+  lemma: string;
+  synsets: Synset[];
+}
+
+/** The shape of `vocab.json`. Synsets are rows rather than objects to keep the file small. */
+export interface VocabData {
+  synsets: [
+    key: string,
+    gloss: string,
+    examples: string[],
+    synonyms: string[],
+  ][];
+  /** Lemma → part of speech → indexes into `synsets`, commonest first. */
+  entries: Record<string, Record<string, number[]>>;
+  /** WordNet's irregular forms: surface → part of speech → lemmas. */
+  forms: Record<string, Record<string, string[]>>;
+}
+
+type Rule = [suffix: string, replacement: string];
+
+/** NLTK's `morphy` rules, which resolved every labelled word. */
+const MORPHY: Record<Pos, Rule[]> = {
   n: [
     ["s", ""],
     ["ses", "s"],
@@ -62,8 +66,8 @@ const MORPHY: Record<Pos, [string, string][]> = {
   r: [],
 };
 
-// The rules phrases were matched with, which are not NLTK's. Longest first.
-const PHRASE_HEAD: [string, string][] = [
+/** The rules phrase heads were matched with in the research, which are not NLTK's. */
+const PHRASE_HEAD: Rule[] = [
   ["ies", "y"],
   ["ying", "ie"],
   ["ing", ""],
@@ -77,10 +81,7 @@ const PHRASE_HEAD: [string, string][] = [
 
 const LONGEST_PHRASE = 4;
 
-/**
- * Words that sit inside a separable phrasal verb: "check IT out". Only object pronouns;
- * "keep that pace" is not the idiom `keep pace`.
- */
+/** Object pronouns allowed inside a phrasal verb: "check it out" is `check out`. */
 const INFIX = new Set([
   "it",
   "them",
@@ -98,59 +99,69 @@ const INFIX = new Set([
   "itself",
 ]);
 
-/** WordNet's `the boot` and `the street` collide with the plain noun on nearly every line. */
+/** `the boot`, `the street`: WordNet idioms that clash with the plain noun. */
 const NOT_A_PHRASE_START = new Set(["the"]);
 
 export const WORD = /[A-Za-z']+/g;
 
-function strip(
-  word: string,
-  [ending, replacement]: [string, string],
-): string[] {
-  return word.endsWith(ending)
-    ? [word.slice(0, word.length - ending.length) + replacement]
-    : [];
+function synset(data: VocabData, index: number): Synset {
+  const [key, gloss, examples, synonyms] = data.synsets[index]!;
+  return { key, gloss, examples, synonyms };
+}
+
+function applyRules(word: string, rules: Rule[]): string[] {
+  return rules
+    .filter(([suffix]) => word.endsWith(suffix))
+    .map(
+      ([suffix, replacement]) => word.slice(0, -suffix.length) + replacement,
+    );
+}
+
+/** WordNet files some adjectives as satellites (`s`); NLTK counts them as `a`. */
+function parts(pos: Pos): string[] {
+  return pos === "a" ? ["a", "s"] : [pos];
 }
 
 function exists(data: VocabData, lemma: string, pos: Pos): boolean {
-  const entry = data.entries[lemma];
-  // WordNet files some adjectives as satellites, `s`; NLTK counts them as `a`.
-  return Boolean(entry?.[pos] ?? (pos === "a" ? entry?.s : undefined));
+  return parts(pos).some((part) => data.entries[lemma]?.[part]);
 }
 
-/** NLTK's `_morphy`: the irregular list or the rules, once, kept if WordNet has it. */
-function morphy(data: VocabData, form: string, pos: Pos): string[] {
-  const irregular = data.forms[form]?.[pos];
-  const forms = irregular ?? MORPHY[pos].flatMap((rule) => strip(form, rule));
-  return [...new Set([form, ...forms])].filter((f) => exists(data, f, pos));
+/** NLTK's `morphy`: the word and its base forms that WordNet has. */
+function baseForms(data: VocabData, word: string, pos: Pos): string[] {
+  const forms = data.forms[word]?.[pos] ?? applyRules(word, MORPHY[pos]);
+  return [...new Set([word, ...forms])].filter((form) =>
+    exists(data, form, pos),
+  );
 }
 
-/** A single word of a known part of speech, resolved the way NLTK resolved the labels. */
+/** A single word, resolved as NLTK's lemmatizer and `wn.synsets` resolve it. */
 export function sensesOf(data: VocabData, word: string, pos: Pos): Entry {
-  const forms = morphy(data, word.toLowerCase(), pos);
+  const lower = word.toLowerCase();
+  const forms = baseForms(data, lower, pos);
   const lemma = forms.reduce(
-    (short, form) => (form.length < short.length ? form : short),
-    forms[0] ?? word.toLowerCase(),
+    (shortest, form) => (form.length < shortest.length ? form : shortest),
+    forms[0] ?? lower,
   );
 
-  const found = new Set<number>();
-  for (const form of morphy(data, lemma, pos)) {
-    for (const part of pos === "a" ? ["a", "s"] : [pos]) {
-      data.entries[form]?.[part]?.forEach((index) => found.add(index));
+  const indexes = new Set<number>();
+  for (const form of baseForms(data, lemma, pos)) {
+    for (const part of parts(pos)) {
+      data.entries[form]?.[part]?.forEach((index) => indexes.add(index));
     }
   }
-  return { lemma, senses: [...found].map((index) => data.senses[index]!) };
+  return {
+    lemma,
+    synsets: [...indexes].map((index) => synset(data, index)),
+  };
 }
 
+/** Every span of up to four words around `index`, longest first. */
 function candidatePhrases(words: string[], index: number): string[][] {
   const found: string[][] = [];
-  for (
-    let start = Math.max(0, index - LONGEST_PHRASE + 1);
-    start <= index;
-    start++
-  ) {
-    const last = Math.min(words.length, start + LONGEST_PHRASE);
-    for (let end = index + 1; end <= last; end++) {
+  const firstStart = Math.max(0, index - LONGEST_PHRASE + 1);
+  for (let start = firstStart; start <= index; start++) {
+    const lastEnd = Math.min(words.length, start + LONGEST_PHRASE);
+    for (let end = index + 1; end <= lastEnd; end++) {
       const span = words.slice(start, end);
       if (span.length < 2) {
         continue;
@@ -158,36 +169,35 @@ function candidatePhrases(words: string[], index: number): string[][] {
       if (!NOT_A_PHRASE_START.has(span[0]!)) {
         found.push(span);
       }
-      // "check it out" is the entry `check out`.
       if (span.length === 3 && INFIX.has(span[1]!)) {
         found.push([span[0]!, span[2]!]);
       }
     }
   }
-  // A stable sort, as Python's is.
   return found.sort((a, b) => b.length - a.length);
 }
 
-/** The longest phrase entry covering the word at `index`, if there is one. */
+/** The longest phrase covering the word at `index`, if WordNet has one. */
 export function phraseAt(
   data: VocabData,
   words: string[],
   index: number,
 ): Entry | null {
   for (const [head, ...rest] of candidatePhrases(words, index)) {
-    // The first word carries the inflection: "ran into" is `run into`.
-    const irregular = data.forms[head!]?.v ?? [];
+    // Only the first word is inflected: "ran into" is `run into`.
     const heads = [
       head!,
-      ...irregular,
-      ...PHRASE_HEAD.flatMap((rule) => strip(head!, rule)),
-      head!,
+      ...(data.forms[head!]?.v ?? []),
+      ...applyRules(head!, PHRASE_HEAD),
     ];
     for (const lemma of heads.map((h) => [h, ...rest].join(" "))) {
       const entry = data.entries[lemma];
-      const first = entry && Object.values(entry)[0];
-      if (first) {
-        return { lemma, senses: first.map((i) => data.senses[i]!) };
+      const indexes = entry && Object.values(entry)[0];
+      if (indexes) {
+        return {
+          lemma,
+          synsets: indexes.map((index) => synset(data, index)),
+        };
       }
     }
   }

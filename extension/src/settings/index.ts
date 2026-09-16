@@ -1,5 +1,5 @@
-import { llmProviders, providerFor } from "../lookup/providers";
-import type { LlmProvider } from "../lookup/providers/llm";
+import { llmProviders, providerFor } from "../lookup/llm";
+import type { LlmProvider } from "../lookup/llm/provider";
 import { keyFor, preferences, save, saveLanguage } from "../lookup/settings";
 
 const providers = document.getElementById("providers") as HTMLElement;
@@ -61,7 +61,7 @@ async function onSave(): Promise<void> {
   }
 
   await save(provider.id, value);
-  tell(`Saved. ${provider.label} will answer "In this sentence".`);
+  tell(`Saved. "Ask your model" now asks ${provider.label}.`);
 }
 
 async function showShortcut(): Promise<void> {

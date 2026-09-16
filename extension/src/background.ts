@@ -1,5 +1,5 @@
 import { explainWord, lookupWord } from "./lookup";
-import { closePage } from "./lookup/providers/local";
+import { closePage } from "./lookup/local/client";
 import { configured } from "./lookup/settings";
 import { LookupError } from "./meaning";
 import type { LookupResult, Message } from "./messages";
@@ -27,9 +27,8 @@ chrome.commands.onCommand.addListener((command) => {
 });
 
 /**
- * Lookups run here rather than in the content script: the worker's requests carry the
- * extension's host permissions instead of answering to each provider's CORS policy, and
- * an API key never has to reach a script sharing a page with the site.
+ * Lookups run in the worker, not the content script: its requests carry the extension's
+ * host permissions, and an API key never reaches a script that shares the site's page.
  */
 chrome.runtime.onMessage.addListener(
   (
@@ -66,7 +65,6 @@ chrome.runtime.onMessage.addListener(
         ),
       );
 
-    // Keeps the channel open for the answer.
-    return true;
+    return true; // the answer is sent asynchronously
   },
 );
