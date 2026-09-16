@@ -1,19 +1,11 @@
-"""What the part of speech is worth to the model.
-
-Every labelled line was tagged with NLTK before anyone chose a sense, so the model was
-always choosing among the verb senses of `run` or the noun senses, never both. The
-browser has no tagger unless one is shipped. This scores the same lines twice: with the
-senses of the tagged part of speech, as measured so far, and with every sense of the
-lemma, as the extension would see it without one.
-"""
+"""Score the model with the tagged part of speech's senses, and with all of the lemma's."""
 
 import argparse
 
-from confidence import BAR, read, threshold, unanimous
+from common import sense_dict, unanimous
+from confidence import BAR, CONFIDENT_GAP, score_lines, threshold
 from nltk.corpus import wordnet as wn
 from sentence_transformers import SentenceTransformer
-
-THRESHOLD = 0.081
 
 
 def every_sense(row):
@@ -23,9 +15,7 @@ def every_sense(row):
     for synset in wn.synsets(row["lemma"].replace(" ", "_")):
         if synset.name() not in have:
             have.add(synset.name())
-            senses.append({"key": synset.name(), "gloss": synset.definition(),
-                           "examples": synset.examples()[:2],
-                           "synonyms": [n.replace("_", " ") for n in synset.lemma_names()]})
+            senses.append(sense_dict(synset))
     return {**row, "senses": senses}
 
 
@@ -42,8 +32,8 @@ def main():
     for part in ("validation", "test"):
         rows = [r for r in unanimous(args.labels, args.split, part) if r["label"]]
         for name, given in [("tagged", rows), ("every sense", [every_sense(r) for r in rows])]:
-            lines = read(model, given)
-            above = [r for r in lines if r["gap"] >= THRESHOLD]
+            lines = score_lines(model, given)
+            above = [r for r in lines if r["gap"] >= CONFIDENT_GAP]
             own = threshold(lines)
             print(f"{part + ', ' + name:<24}"
                   f"{sum(len(r['senses']) for r in given) / len(given):>7.1f}"

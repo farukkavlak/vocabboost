@@ -1,14 +1,14 @@
-"""Count how often each word appears in the pool.
+"""Count how often each word appears in the subtitle pool.
 
-We need this to tell an everyday word from one a learner would stop and look up.
-Counting our own subtitle pool beats a general English frequency list, because the
-words that are common in films are what matters here.
+The counts decide which frequency band a word falls in.
 """
 
 import argparse
 import collections
 import json
 import re
+
+from common import read_jsonl
 
 WORD = re.compile(r"[a-z]+")
 
@@ -20,8 +20,8 @@ def main():
     args = parser.parse_args()
 
     counts = collections.Counter()
-    for line in open(args.pool, encoding="utf-8"):
-        counts.update(WORD.findall(json.loads(line)["text"].lower()))
+    for row in read_jsonl(args.pool):
+        counts.update(WORD.findall(row["text"].lower()))
 
     json.dump(counts, open(args.out, "w", encoding="utf-8"))
     print(f"counted  {sum(counts.values()):,} words, {len(counts):,} distinct -> {args.out}")

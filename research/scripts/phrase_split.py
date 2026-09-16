@@ -1,13 +1,8 @@
-"""Separate what the dictionary fixed from what the model does.
-
-Phrase matching lifted the baseline nine points on its own, which muddies every later
-comparison: a gain could be the model learning or it could be these lines. Keeping them
-apart keeps the two readable.
-"""
+"""Score phrase lines and single-word lines separately."""
 
 import argparse
-import json
 
+from common import read_jsonl
 from sentence_transformers import SentenceTransformer
 from zero_shot import hits, rank
 
@@ -18,7 +13,7 @@ def main():
     parser.add_argument("--model", default="data/model")
     args = parser.parse_args()
 
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
     ordered = rank(SentenceTransformer(args.model), rows, "all", "prefixed")
 
     print(f"\n{args.model}\n")

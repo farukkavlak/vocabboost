@@ -1,18 +1,7 @@
-"""Ask several models which sense a line uses, independently.
+"""Ask a panel of five models, independently, which sense each line uses.
 
-The student can never be better than its labels, and one model is wrong more often
-than it sounds — published evaluations put GPT-4 between 56% and 77% on this task. So
-the teacher is a panel: each model answers alone, and where they agree the label is
-worth more than any one of them.
-
-Each model sees the senses in its own shuffled order — the seed is the line and the
-model together. Models anchor on the first option the same way people do, and WordNet
-lists senses commonest first, so an unshuffled list would quietly hand them the answer
-we are trying to measure. One shared order would leave five models anchoring the same
-way, which would make agreement easier than it should be.
-
-Answers are cached by line and model, so a rerun costs nothing and a crash loses
-nothing.
+Each model sees the senses in its own shuffled order. Answers are cached per line and
+model, so reruns are free.
 """
 
 import argparse
@@ -23,10 +12,11 @@ import random
 import re
 
 import fal_client
+from common import read_jsonl
 from env import require
 
-# Five families. Mistral, Cohere, Phi and DeepSeek are missing because they answer with
-# prose where a number was asked for — DeepSeek on 57 of 200 lines.
+# Five model families. Others tried (Mistral, Cohere, Phi, DeepSeek) often answered
+# with prose instead of a number.
 MODELS = ["anthropic/claude-haiku-4.5",
           "google/gemini-2.5-flash",
           "openai/gpt-4o-mini",
@@ -78,17 +68,12 @@ def main():
     args = parser.parse_args()
 
     require("FAL_KEY")
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
-    rows = [r for r in rows if not r.get("broken")]
+    rows = [r for r in read_jsonl(args.file) if not r.get("broken")]
     if args.limit:
         rows = rows[: args.limit]
 
-    cache = {}
     path = pathlib.Path(args.out)
-    if path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            entry = json.loads(line)
-            cache[(entry["id"], entry["model"])] = entry
+    cache = {(e["id"], e["model"]) for e in read_jsonl(path)} if path.exists() else set()
 
     todo = [(row, model) for row in rows for model in args.models
             if (row["id"], model) not in cache]

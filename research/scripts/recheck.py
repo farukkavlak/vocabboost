@@ -1,10 +1,6 @@
-"""Label a sample a second time, blind, and see how often you agree with yourself.
+"""Label a sample again, blind, and report how often you agree with your earlier answers.
 
-This is the ceiling. If you agree with your own earlier answers eight times in ten, no
-model can be judged past eight in ten either — the other two lines have no answer
-everyone would accept. A model's score means little without this number beside it.
-
-Wait a few days after labelling. The point is not to remember what you said.
+That agreement is the ceiling for any model scored on these labels. Wait a few days first.
 """
 
 import argparse
@@ -12,6 +8,7 @@ import json
 import random
 
 import label as labeller
+from common import percent, read_jsonl
 
 
 def main():
@@ -22,7 +19,7 @@ def main():
     parser.add_argument("--seed", type=int, default=99)
     args = parser.parse_args()
 
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
     labelled = [row for row in rows if row.get("label") is not None]
     sample = random.Random(args.seed).sample(labelled, min(args.count, len(labelled)))
 
@@ -37,8 +34,7 @@ def main():
             continue
         answers[row["id"]] = answer
 
-    # `n` is an empty list, so two of them intersect to nothing. Saying "no sense
-    # fits" twice is perfect agreement, not a disagreement.
+    # Two "no sense fits" answers are empty lists, and they agree.
     def agrees(first, again):
         return bool(set(first) & set(again)) or (not first and not again)
 
@@ -52,7 +48,7 @@ def main():
         for row_id, answer in answers.items():
             handle.write(json.dumps({"id": row_id, "second_label": answer}) + "\n")
 
-    print(f"\nagreed with yourself on {agreed}/{done} = {100 * agreed / done:.0f}%")
+    print(f"\nagreed with yourself on {agreed}/{done} = {percent(agreed, done):.0f}%")
     print("No model measured on these labels can honestly claim to beat that.\n")
 
 

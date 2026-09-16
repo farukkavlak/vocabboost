@@ -1,16 +1,9 @@
-"""Does the panel agree with a person, and does agreeing mean being right?
-
-This is the gate before phase 13 spends money on ten thousand lines. If a unanimous
-panel matches the hand labels almost always, the rest can be labelled without reading
-it. If it does not, the labels would carry the panel's errors into the student.
-
-The number that matters is not how often the panel is right overall. It is how often
-it is right *when it agrees*, because that is the subset we would keep.
-"""
+"""Score the panel against the hand labels, by how many of its models agreed."""
 
 import argparse
 import collections
-import json
+
+from common import panel_answers, read_jsonl
 
 
 def main():
@@ -21,12 +14,8 @@ def main():
                         help="score a subset of the answers on file")
     args = parser.parse_args()
 
-    rows = {r["id"]: r for r in (json.loads(line)
-                                 for line in open(args.file, encoding="utf-8"))}
-    answers = collections.defaultdict(dict)
-    for line in open(args.panel, encoding="utf-8"):
-        entry = json.loads(line)
-        answers[entry["id"]][entry["model"]] = entry["answer"]
+    rows = {r["id"]: r for r in read_jsonl(args.file)}
+    answers = panel_answers(args.panel)
 
     models = args.models or sorted({m for per in answers.values() for m in per})
     answers = {i: {m: a for m, a in per.items() if m in models}

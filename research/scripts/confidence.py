@@ -1,46 +1,24 @@
-"""When the card leads with one sense, and when it says the line does not settle it.
+"""Choose the confidence threshold on the validation words and report it on the test words.
 
-The model always has a nearest sense, even when nothing fits. Its confidence is read as the
-gap between its first and second choice, not the first score alone: a line can sit close
-to every sense at once, and a high score then says nothing about which one it means.
-
-The bar is set before looking: a sense the card leads with must be right at least 85% of
-the time, which is how often the labeller agreed with themselves days later. Asking more
-claims a certainty the labels do not have; asking less shows a wrong meaning as the
-answer. The threshold is the lowest gap that clears it on the validation words, and the
-test words are read once, with that threshold, to report it.
+Confidence is the gap between the first and second sense's scores. The threshold is the
+lowest gap at which the answers above it are right at least `BAR` of the time.
 """
 
 import argparse
-import json
 
-from nltk.corpus import wordnet as wn
+from common import unanimous
 from sentence_transformers import SentenceTransformer, util
 from zero_shot import line_text, sense_text
 
+# A leading sense must be right this often: the labeller's agreement with themselves.
 BAR = 0.85
 
-
-def unanimous(labels, split, part):
-    """Lines of one part's words where all five models agreed, on a sense or on none."""
-    where = {w: p for p, words in json.load(open(split)).items() for w in words}
-    rows = []
-    for line in open(labels, encoding="utf-8"):
-        r = json.loads(line)
-        if where[r["lemma"]] != part or r.get("agreed") != 5:
-            continue
-        senses = []
-        for key in r["candidates"]:
-            s = wn.synset(key)
-            senses.append({"key": key, "gloss": s.definition(), "examples": s.examples()[:2],
-                           "synonyms": [n.replace("_", " ") for n in s.lemma_names()]})
-        rows.append({"lemma": r["lemma"], "text": r["text"], "senses": senses,
-                     "label": [r["key"]] if "key" in r else []})
-    return rows
+# The threshold this script chose; the other scripts check against it.
+CONFIDENT_GAP = 0.081
 
 
-def read(model, rows):
-    """Each line as (gap, first choice right, a right sense in the top three, senses)."""
+def score_lines(model, rows):
+    """Per line: the confidence gap, the first choice, and whether each is right."""
     lines = model.encode([line_text(r, "prefixed") for r in rows], convert_to_tensor=True,
                          normalize_embeddings=True, show_progress_bar=False)
     out = []
@@ -108,7 +86,7 @@ def main():
     model = SentenceTransformer(args.model)
     parts = {}
     for part in ("validation", "test"):
-        lines = read(model, unanimous(args.labels, args.split, part))
+        lines = score_lines(model, unanimous(args.labels, args.split, part, keep_none=True))
         parts[part] = ([r for r in lines if not r["none"]], [r for r in lines if r["none"]])
 
     valid, nothing = parts["validation"]

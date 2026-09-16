@@ -1,25 +1,15 @@
-"""Mark the right sense for each line by hand.
+"""Label lines by hand: pick the sense (or senses) the line uses.
 
-Senses are shuffled: WordNet lists them commonest first, and how often the first one
-is right is what we are measuring. Several can be accepted at once, because WordNet
-splits meanings more finely than anyone can tell apart. An answer can be marked
-uncertain, so accuracy is reportable with and without the shaky ones.
-
-The model sees the same single line you do. If the line does not say which meaning it
-is, neither of you can know, and `n` is the honest answer.
-
-`n` and `x` differ. `n` means no sense fits a fine line — `club` in `club soda` — and
-is what phase 15 learns from. `x` means the line is garbled and leaves the set.
-
-Progress is written after every answer. `--redo 4,9` reopens those lines.
+Senses are shown shuffled, since how often the first one is right is what gets measured.
+`n` means no sense fits; `x` drops a garbled line. Progress is saved after each answer,
+and `--redo 4,9` reopens lines.
 """
 
 import argparse
-import json
 import random
 import textwrap
 
-BOLD, DIM, OFF = "\033[1m", "\033[2m", "\033[0m"
+from common import BOLD, DIM, OFF, read_jsonl, write_jsonl
 
 HELP = """
   1        this sense
@@ -30,12 +20,6 @@ HELP = """
   s        skip for now
   q        save and quit
 """
-
-
-def save(path, rows):
-    with open(path, "w", encoding="utf-8") as handle:
-        for row in rows:
-            handle.write(json.dumps(row) + "\n")
 
 
 def show(row, done, total):
@@ -87,7 +71,7 @@ def main():
     parser.add_argument("--redo", default="", help="comma separated ids to label again")
     args = parser.parse_args()
 
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
     total = len(rows)
     redo = {int(i) for i in args.redo.replace(",", " ").split()}
     print(HELP)
@@ -108,7 +92,7 @@ def main():
             row["label"], row["broken"] = [], True
         else:
             row["label"], row["unsure"] = answer, unsure
-        save(args.file, rows)
+        write_jsonl(args.file, rows)
 
     done = sum(1 for r in rows if r.get("label") is not None)
     unsure = sum(1 for r in rows if r.get("unsure"))

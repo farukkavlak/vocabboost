@@ -1,23 +1,9 @@
-"""How often does the clicked word turn out to belong to a phrase?
-
-The test set was built one word at a time, so its labels answer the question "which
-sense of `club`". Where the line actually says `club soda`, that question was the
-wrong one, and the honest answer during labelling was `n` — no sense fits. Those are
-the lines phrase detection turns from a shrug into an answer.
-"""
+"""Count the hand-labelled lines whose target word turns out to belong to a phrase."""
 
 import argparse
-import json
 
-from lookup import WORD, Vocab
-
-
-def index_of(words, target):
-    target = target.lower()
-    for i, word in enumerate(words):
-        if word == target:
-            return i
-    return None
+from common import read_jsonl
+from lookup import WORD, Vocab, index_of
 
 
 def main():
@@ -27,12 +13,11 @@ def main():
     args = parser.parse_args()
 
     vocab = Vocab(args.db)
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
 
     fired, rescued, examples = 0, 0, []
     for row in rows:
-        # Lines already switched to their phrase count too, or the figure would drop
-        # to zero the moment `apply_phrases` had run.
+        # Lines `apply_phrases` already switched count too.
         if row.get("phrase"):
             fired += 1
             examples.append((row, row["lemma"]))

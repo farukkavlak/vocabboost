@@ -1,33 +1,14 @@
-"""Does WordNet know which of its own senses a person cannot tell apart?
+"""Check whether WordNet separates senses a labeller accepted together from ones kept apart.
 
-Labelling allows more than one answer, so a line where two senses were accepted is a
-person saying "these read the same to me". If WordNet's structure separates those pairs
-from the rejected ones, senses can be merged automatically. If it does not, merging
-needs another approach.
-
-Five signals, all free and offline:
-
-  lexname   the file WordNet files a sense under, like `noun.time` or `verb.motion`.
-            A coarse subject area.
-  path      1 / (distance between the two senses through the is-a hierarchy).
-  wup       Wu-Palmer: how deep their nearest common ancestor sits. Two senses that
-            meet only at "entity" score low; two that meet at "timekeeping" score high.
-  synonym   how much their synonym lists overlap. `change, alter, modify` against
-            `change, alter, vary` share two of three.
-  gloss     how much their definitions overlap, word for word.
-
-The last two matter most: they are what a person reads. Nobody labelling compares
-positions in an is-a hierarchy.
-
-Only nouns and verbs have that hierarchy, so adjectives and adverbs get the lexname
-signal alone and are reported separately.
+Five signals: lexicographer file, path and Wu-Palmer similarity, synonym overlap and gloss
+overlap. The hierarchy measures exist for nouns and verbs only.
 """
 
 import argparse
 import collections
-import json
 import statistics
 
+from common import read_jsonl
 from nltk.corpus import wordnet as wn
 
 
@@ -79,8 +60,7 @@ def main():
     parser.add_argument("--file", default="data/candidates.jsonl")
     args = parser.parse_args()
 
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
-    rows = [r for r in rows if r.get("label") and len(r["label"]) > 1]
+    rows = [r for r in read_jsonl(args.file) if r.get("label") and len(r["label"]) > 1]
 
     groups = collections.defaultdict(lambda: ([], []))
     for row in rows:

@@ -1,4 +1,4 @@
-"""Download the NLTK data files the scripts need. Run once."""
+"""Download the NLTK data the scripts need. Run once."""
 
 import nltk
 

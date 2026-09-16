@@ -1,25 +1,7 @@
-"""Turn the trained model into files a browser can run.
+"""Export `data/model` to ONNX in three precisions, and copy the 8-bit one into the extension.
 
-The extension runs JavaScript, and PyTorch's format means nothing there. ONNX is a model
-written down as a graph of plain operations, which any runtime can execute — here
-`onnxruntime` in Python to check it, and `transformers.js` in the extension.
-
-Only the encoder is exported. Mean pooling and normalising are a few lines of arithmetic
-done after it, in whichever language runs it; baking them into the graph would hide them.
-
-Three copies are written, and `make check-onnx` measures what each one costs:
-
-- `model.onnx`, every weight a 32-bit float, the same numbers as `data/model`
-- `model_fp16.onnx`, every weight a 16-bit float: half the size
-- `model_quantized.onnx`, every weight an 8-bit integer: a quarter of the size
-
-The 8-bit copy is rounded per channel — each row of a weight matrix gets its own scale.
-One scale for a whole matrix cost 4.2 points; one a row costs about one. A matrix mixes
-rows of very different sizes, and a single scale spends its 256 steps on the largest.
-
-The folder layout is the one `transformers.js` loads from: config and tokenizer at the
-top, the graphs under `onnx/`. The 8-bit copy and the files beside it are also written to
-`extension/public/models/vocabboost`, which is what the extension ships.
+Only the encoder is exported; pooling and normalising happen in the caller. The 8-bit copy
+is quantized per channel, which loses far less than one scale per matrix.
 """
 
 import argparse

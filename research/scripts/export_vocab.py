@@ -1,25 +1,10 @@
-"""Hand `vocab.db` to the extension as JSON, and the answers its lookup has to match.
-
-A browser cannot open SQLite without shipping a build of it. As JSON the vocabulary is
-19 MB against 27, holds about 120 MB of memory against 150, and needs no library.
-
-Two files are written:
-
-- `extension/public/vocab.json`: every synset once, as `[key, gloss, examples, synonyms]`;
-  every entry as lemma → part of speech → synset indexes, commonest first; and WordNet's
-  irregular forms as surface → part of speech → lemmas. Entries keep the database's
-  order, which is the order `entry` falls back to when no part of speech is given.
-- `tests/fixtures/lookups.json`: lines with what `lookup.py` finds in them — the senses
-  of the tagged word, and the phrase, if any, at every word — which the TypeScript port
-  is tested against. Each carries its part of the split and, where all five panel
-  models agreed, the right sense, so the whole chain can be scored the way the research
-  scored the model.
-"""
+"""Export `vocab.db` as `vocab.json`, and a fixture of lookups the port must match."""
 
 import argparse
 import json
 import sqlite3
 
+from common import load_split, read_jsonl
 from lookup import WORD, Vocab
 
 
@@ -61,11 +46,10 @@ def main():
     vocab.db.row_factory = sqlite3.Row
     senses, lemmas = export(vocab.db, args.out)
 
-    # The lines of the validation and test words, and every line that is a phrase.
-    where = {w: part for part, ws in json.load(open(args.split)).items() for w in ws}
+    # Lines of the validation and test words, and every phrase line.
+    where = load_split(args.split)
     lines = []
-    for line in open(args.labels, encoding="utf-8"):
-        row = json.loads(line)
+    for row in read_jsonl(args.labels):
         phrase = " " in row["lemma"]
         if where[row["lemma"]] == "train" and not phrase:
             continue
@@ -75,7 +59,7 @@ def main():
                 "phrases": [p["lemma"] if p else None for p in found],
                 "label": row.get("key") if row.get("agreed") == 5 else None}
         if phrase:
-            # Which word was clicked is not recorded; the first the phrase covers will do.
+            # The clicked word is not recorded; use the first word the phrase covers.
             first = next(i for i, p in enumerate(found) if p and p["lemma"] == row["lemma"])
             case.update(word=WORD.findall(row["text"])[first], lemma=row["lemma"],
                          senses=row["candidates"])

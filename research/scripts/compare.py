@@ -1,12 +1,8 @@
-"""Every model we have tried, on the same lines, by the same code.
-
-A number only means something next to the numbers it is competing with. The baseline
-is what the extension does today; everything else has to beat it to be worth shipping.
-"""
+"""Score every model side by side on the hand-labelled lines."""
 
 import argparse
-import json
 
+from common import read_jsonl
 from sentence_transformers import SentenceTransformer
 from zero_shot import hits, rank
 
@@ -22,7 +18,7 @@ def main():
     parser.add_argument("--file", default="data/working.jsonl")
     args = parser.parse_args()
 
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
     base = sum(1 for r in rows if r["senses"][0]["key"] in r["label"])
 
     print(f"\n{len(rows)} hand-labelled lines\n")

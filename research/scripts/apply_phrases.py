@@ -1,23 +1,14 @@
-"""Point the test lines that are really phrases at the phrase, and clear their labels.
+"""Point lines whose target word belongs to a phrase at the phrase, and clear their labels.
 
-The set was built one word at a time, so a line saying `check it out` was labelled as
-though the question were "which of the 25 senses of check". It is not. The right answer
-is the entry `check out`, and the old label answers a question we will not ask.
-
-This rewrites those lines to carry the phrase and its senses, and empties their labels
-so they can be marked again. Nothing else in the file is touched. Run it with
-`--write` once the listing looks right.
-
-`--min-senses 2` then drops the lines left with one sense and renumbers what remains.
-A choice of one is not a question, and for a set nobody will label by hand there is no
-reason to keep it. The hand-labelled set keeps them, so its ids never move.
+Prints what would change; `--write` applies it. `--min-senses 2` also drops lines left
+with a single sense and renumbers the rest.
 """
 
 import argparse
 import json
 
-from lookup import WORD, Vocab
-from phrase_impact import index_of
+from common import read_jsonl, write_jsonl
+from lookup import WORD, Vocab, index_of
 
 
 def main():
@@ -29,7 +20,7 @@ def main():
     args = parser.parse_args()
 
     vocab = Vocab(args.db)
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
 
     changed = 0
     for row in rows:
@@ -69,9 +60,7 @@ def main():
         rows = kept
 
     if args.write:
-        with open(args.file, "w", encoding="utf-8") as handle:
-            for row in rows:
-                handle.write(json.dumps(row) + "\n")
+        write_jsonl(args.file, rows)
         print(f"rewritten, {changed} lines need labelling again")
     else:
         print("nothing written, pass --write to apply")

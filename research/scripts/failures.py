@@ -1,23 +1,10 @@
-"""Look at what the model got wrong.
-
-An accuracy figure says how often, never how. Whether a miss still leaves the reader
-with the right idea has no honest automatic measure. WordNet's hierarchy will not do
-it: its verbs are three levels deep against nine for nouns, so `buy` as trade and `buy`
-as purchase score further apart than `hand` the body part and `hand` the card game —
-the same lesson the clustering attempt gave.
-
-So this prints the misses and leaves reading them to a person. The one well-defined
-thing it counts is how often the right sense was on screen anyway, since the card lists
-three.
-"""
+"""Print the model's misses, and how many still have a right sense in the top three."""
 
 import argparse
-import json
 
+from common import BOLD, DIM, OFF, percent, read_jsonl
 from sentence_transformers import SentenceTransformer
 from zero_shot import rank
-
-BOLD, DIM, OFF = "\033[1m", "\033[2m", "\033[0m"
 
 
 def main():
@@ -28,7 +15,7 @@ def main():
     parser.add_argument("--band", default="")
     args = parser.parse_args()
 
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
     ordered = rank(SentenceTransformer(args.model), rows, "all", "prefixed")
 
     misses = [(r, k) for r, k in zip(rows, ordered, strict=True)
@@ -37,7 +24,7 @@ def main():
     recovered = sum(1 for r, k in misses if set(k[:3]) & set(r["label"]))
 
     print(f"\n{len(misses)} misses out of {len(rows)}")
-    print(f"{recovered} of them ({100 * recovered / len(misses):.0f}%) still had a "
+    print(f"{recovered} of them ({percent(recovered, len(misses)):.0f}%) still had a "
           f"right sense in the top three\n")
 
     for row, keys in misses[: args.show]:

@@ -1,25 +1,13 @@
-"""Turn SemCor into training examples shaped like the question we ask at run time.
+"""Turn SemCor into training examples: a sentence, a word, its candidate senses, the right one.
 
-SemCor is 37,000 sentences where a person marked which sense each content word carries.
-It ships with NLTK, it is what the published bi-encoder was trained on, and it costs
-nothing. What it is not is film: books and journalism teach the task but not the
-register, which is what phase 13's second half covers.
-
-Each example has the same shape as a line in the test set — a sentence, a target word,
-its candidate senses, and which one is right — so training and evaluation ask the same
-question.
-
-Words with one sense are dropped: nothing to learn from a choice of one, and keeping
-them would flatter every number that follows.
+Words with a single sense are dropped; there is nothing to choose.
 """
 
 import argparse
-import collections
-import json
 import random
 
+from common import candidate_synsets, describe_examples, write_jsonl
 from nltk.corpus import semcor
-from nltk.corpus import wordnet as wn
 
 MIN_SENSES = 2
 MIN_WORDS = 4
@@ -47,8 +35,7 @@ def examples():
                 continue
             if not lemma or synset.pos() not in "nvar":
                 continue
-            candidates = [s for s in wn.synsets(lemma, synset.pos())
-                          if any(one.name() == lemma for one in s.lemmas())]
+            candidates = candidate_synsets(lemma, synset.pos())
             if len(candidates) < MIN_SENSES or synset not in candidates:
                 continue
             yield {
@@ -69,17 +56,8 @@ def main():
 
     rows = list(examples())
     random.Random(args.seed).shuffle(rows)
-    with open(args.out, "w", encoding="utf-8") as handle:
-        for row in rows:
-            handle.write(json.dumps(row) + "\n")
-
-    senses = sum(len(r["candidates"]) for r in rows) / len(rows)
-    ranks = collections.Counter(r["candidates"].index(r["key"]) for r in rows)
-    first = 100 * ranks[0] / len(rows)
-    print(f"examples  {len(rows):,}")
-    print(f"words     {len({r['lemma'] for r in rows}):,} distinct")
-    print(f"senses    {senses:.1f} on average")
-    print(f"first     {first:.1f}% of them are the commonest sense")
+    write_jsonl(args.out, rows)
+    describe_examples(rows)
 
 
 if __name__ == "__main__":

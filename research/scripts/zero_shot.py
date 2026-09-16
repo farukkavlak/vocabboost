@@ -1,29 +1,17 @@
-"""Pick the sense whose gloss sits nearest the subtitle line, with no training at all.
+"""Rank each line's senses by embedding similarity, and score the ranking.
 
-An embedding model turns text into a list of numbers, arranged so that close meanings
-land close together. Nothing here is trained on sense picking — the model only knows how
-English sentences relate, and the question is whether that alone beats showing the first
-sense in the dictionary.
-
-Closeness is cosine similarity: the angle between two of those lists, ignoring their
-length.
-
-Scores are reported at one, three and five, because the card shows more than one sense
-and a right answer in second place still reaches the reader.
+Also holds `rank` and `hits`, which the other scoring scripts use.
 """
 
 import argparse
 import collections
-import json
 
+from common import BANDS, BOLD, DIM, OFF, read_jsonl
 from sentence_transformers import SentenceTransformer, util
-
-BOLD, DIM, OFF = "\033[1m", "\033[2m", "\033[0m"
-BANDS = ["everyday", "common", "uncommon"]
 
 
 def sense_text(sense, style):
-    """What we hand the model to stand for a sense."""
+    """The text the model encodes for a sense."""
     if style == "gloss":
         return sense["gloss"]
     if style == "synonyms":
@@ -35,12 +23,7 @@ def sense_text(sense, style):
 
 
 def line_text(row, focus):
-    """The line as the model sees it.
-
-    Pooling a whole sentence into one vector buries the word we are asking about:
-    in "Wall safes went out with vaudeville" most of the signal is vaudeville.
-    Naming the target word gives the vector something to lean on.
-    """
+    """The text the model encodes for a line. `prefixed` names the word, which helps most."""
     if focus == "plain":
         return row["text"]
     if focus == "named":
@@ -49,7 +32,7 @@ def line_text(row, focus):
 
 
 def rank(model, rows, style, focus):
-    """For each line, the sense keys ordered from nearest to furthest."""
+    """For each line, its sense keys ordered by similarity, best first."""
     lines = model.encode([line_text(r, focus) for r in rows], convert_to_tensor=True,
                          normalize_embeddings=True)
     ordered = []
@@ -79,7 +62,7 @@ def main():
     parser.add_argument("--baseline", type=float, default=55.0)
     args = parser.parse_args()
 
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
     model = SentenceTransformer(args.model)
     ordered = rank(model, rows, args.style, args.focus)
 

@@ -1,38 +1,13 @@
-"""Train the small encoder on prepared examples and score it. One run, start to finish.
-
-One script rather than notebook cells: a runtime that recycles between cells takes the
-trained model with it.
-
-Reads the `.jsonl` files `scripts/build_*.py` produce, so the data is prepared on a
-laptop where it can be looked at. More than one file trains on them together. Needs
-`working.jsonl` beside it — the hand-labelled subtitle lines.
+"""Train the encoder on prepared examples and score it on the hand-labelled lines.
 
     python run.py --data semcor.jsonl --out model-semcor
     python run.py --data teacher-labels.jsonl --from model-semcor --out model-tuned \
       --split label-split.json
 
-`--from` continues from a model already trained rather than starting fresh. Mixing
-3,708 subtitle lines into 177,665 SemCor ones makes them 2% of the data and one pass
-will not weight them; training on them second is what domain adaptation means.
-
-Three terms, since this is the first training code in the repo. A **batch** is how many
-examples the model sees before adjusting itself. An **epoch** is one pass over the
-training set. The **loss** is how wrong the model is now; training drives it down.
-
-Loss on the training data alone tells you nothing — a memorising model shows a falling
-loss and a test score that stops moving. So the subtitle lines are scored after every
-epoch, not only at the end.
-
-`--split` reads the word split `scripts/split_labels.py` wrote. Without it the words are
-divided here and the division moves with `--seed`, so two settings compared at two seeds
-were also being validated on two different sets of words. SemCor has no split file and
-falls back to that; the panel labels have one and should use it.
-
-One score is not a result. Training is random — batch order, dropout — so the same job
-twice gives two numbers, and the gap between them was four points before the seeding
-below was fixed. `--seed` now fixes the training as well as the data, which makes a run
-repeatable; it does not make one run informative. Comparing two settings means running
-each at several seeds and reading the spread.
+`--from` continues from a trained model. `--split` reads the word split written by
+`scripts/split_labels.py`; without it the words are split here by `--seed`. The best
+epoch is chosen on the validation words when there is a split, and `--seed` fixes both
+the data and the training order.
 """
 
 import argparse
@@ -42,8 +17,7 @@ import random
 
 import nltk
 
-# The data has to be on disk before nltk.corpus is imported, which is why the imports
-# below are not at the top of the file.
+# WordNet must be downloaded before `nltk.corpus` is imported.
 for package in ["wordnet", "omw-1.4"]:
     nltk.download(package, quiet=True)
 
@@ -58,18 +32,14 @@ from sentence_transformers import (
 )
 from torch.utils.data import DataLoader
 
-MODEL = "sentence-transformers/all-MiniLM-L6-v2"   # 22M, the one that fits a browser
+MODEL = "sentence-transformers/all-MiniLM-L6-v2"   # 22M parameters, small enough for a browser
 
 
 def load(paths, agreed=0):
-    """Read the prepared examples, keeping only the ones worth training on.
+    """Read the prepared examples.
 
-    The panel-labelled file carries every line it was asked, with `agreed` saying how
-    many of the five models gave the answer. `agreed` gates it: the labels are 97% right
-    at five and 80% at four. Lines the panel answered with "no sense fits" carry no key
-    and are dropped here — phase 15 is what they are for.
-
-    SemCor rows have no `agreed` and are always kept: a person marked them.
+    Panel rows are kept when at least `agreed` of five models gave the label; rows with no
+    fitting sense are dropped. SemCor rows have no `agreed` and are always kept.
     """
     rows = []
     for path in paths:
@@ -88,12 +58,7 @@ def load(paths, agreed=0):
 
 
 def sense_text(key):
-    """How a sense is written down.
-
-    Phase 12 measured this: synonyms, definition and examples together beat the
-    definition alone by seven points. WordNet's definitions are abstract, its examples
-    are how people speak, and the question is a line somebody spoke.
-    """
+    """Synonyms, definition and two examples: the form that scored best untrained."""
     s = wn.synset(key)
     return " ".join([", ".join(lemma.name().replace("_", " ") for lemma in s.lemmas()) + ":",
                      s.definition(), *s.examples()[:2]])
@@ -104,11 +69,9 @@ def line_text(row):
 
 
 def pairs(rows, rng):
-    """Anchor, the right sense, and one wrong sense of the same word.
+    """(line, right sense, another sense of the same word) triplets.
 
-    The wrong answers are other senses of the same word, not random sentences. Telling
-    `safe` the strongbox from `safe` the contraceptive is the job; telling it from "the
-    weather is nice" is not, and easy negatives teach nothing.
+    The negative is a sibling sense, since telling a word's senses apart is the task.
     """
     made = []
     for row in rows:
@@ -120,7 +83,7 @@ def pairs(rows, rng):
 
 
 def as_test(row):
-    """A training row in the shape `score` reads, so both test sets go through one path."""
+    """A training row in the shape `score` reads."""
     return {"lemma": row["lemma"], "text": row["text"],
             "senses": [{"key": key} for key in row["candidates"]], "label": [row["key"]]}
 
@@ -143,7 +106,7 @@ def score(encoder, test):
 
 
 def held_out_score(checker, model):
-    """TripletEvaluator returns a dict of metrics; we want the accuracy out of it."""
+    """The accuracy from TripletEvaluator's result."""
     result = checker(model)
     if isinstance(result, dict):
         for name, value in result.items():
@@ -170,11 +133,8 @@ def main():
     parser.add_argument("--seed", type=int, default=17)
     args = parser.parse_args()
 
+    # `random` fixes the data; torch fixes batch order and dropout.
     rng = random.Random(args.seed)
-    # Python's `random` covers the data: which rows, which wrong answers, which words
-    # are held out. Torch covers the training: batch order and dropout. Seeding only the
-    # first left the second free, and the same job scored 64.4% and 68.5% on two runs —
-    # four points of movement mistaken for a result.
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
     print()
@@ -182,8 +142,7 @@ def main():
     rng.shuffle(rows)
     print()
 
-    # Split by word, not by row. The same word in both halves would let the model
-    # recognise it rather than read the sentence.
+    # Split by word, so no word is on both sides.
     if args.split:
         split = json.load(open(args.split, encoding="utf-8"))
         where = {word: part for part, words in split.items() for word in words}
@@ -232,14 +191,8 @@ def main():
         print(f"epoch {epoch}  held-out {held_out_score(checker, model):.3f}  "
               f"subtitles {subtitles}", end="", flush=True)
 
-        # The last epoch is not the best one. The three-epoch run went 66.4, 67.1, 65.8
-        # on subtitles while the held-out triplet score kept climbing — the model
-        # learning its 3,322 examples rather than the task, so the triplet score cannot
-        # choose the epoch either: it would pick the worst of the three.
-        #
-        # So the epoch is chosen by ranking accuracy on the validation words, which are
-        # panel-labelled and in the split file. It used to be chosen on the subtitle
-        # score, which flattered the subtitle score by however much the epochs differ.
+        # The best epoch is chosen on the validation words when there are any. The
+        # triplet score keeps rising while the model overfits, so it cannot choose.
         if chooser:
             picked = score(model, chooser)
             print(f"  validation {picked}", end="")
@@ -254,9 +207,7 @@ def main():
     print(f"\nsaved epoch {best[1]} to {args.out}/, "
           f"the best of {args.epochs} at {best[0]}% on {where}", flush=True)
 
-    # Scored once, on the model that was saved, and never used to choose anything. The
-    # panel labelled these words too, so this carries the panel's own error rate; it is a
-    # second opinion with tighter error bars, not a replacement for the sealed 51.
+    # Scored once, on the saved model; never used to choose anything.
     if panel:
         print(f"panel test    {score(SentenceTransformer(args.out), panel)}", flush=True)
 

@@ -1,25 +1,13 @@
-"""Turn the panel's answers into one file: a label where they agreed, a count where not.
+"""Join the lines and the panel's answers into `teacher-labels.jsonl`.
 
-Two files went into the panel — the lines and the answers — and neither is useful
-alone. This writes what is left when they are joined, in the shape `build_semcor.py`
-produces, so training reads subtitle labels and SemCor the same way.
-
-Every line is kept, not just the unanimous ones, and every line carries the panel's
-commonest answer together with `agreed`, the number of models that gave it. Hand-checking
-showed `agreed` is a quality score: 58 of 60 right at five, 32 of 40 at four. So the
-caller sets the bar — `run.py --agreed 5` trains on the clean labels, `--agreed 4` trades
-six points of label error for half again as much data.
-
-`none` marks the lines where the panel's answer was that no sense fits — `club` in `club
-soda`. Those carry no key, since there is nothing to point at.
-
-The id is kept so `teacher-panel.jsonl` still joins on, for anything that needs to know
-which model dissented rather than only how many did.
+Each line keeps the panel's commonest answer as `key` (or `none` when no sense fits) and
+`agreed`, how many models gave it. Callers choose the agreement they train on.
 """
 
 import argparse
 import collections
-import json
+
+from common import panel_answers, percent, read_jsonl, write_jsonl
 
 
 def main():
@@ -29,14 +17,10 @@ def main():
     parser.add_argument("--out", default="data/teacher-labels.jsonl")
     args = parser.parse_args()
 
-    answers = collections.defaultdict(dict)
-    for line in open(args.panel, encoding="utf-8"):
-        entry = json.loads(line)
-        answers[entry["id"]][entry["model"]] = entry["answer"]
+    answers = panel_answers(args.panel)
 
     rows = []
-    for line in open(args.file, encoding="utf-8"):
-        row = json.loads(line)
+    for row in read_jsonl(args.file):
         given = answers.get(row["id"], {})
         if len(given) < 5 or None in given.values():
             continue
@@ -57,9 +41,7 @@ def main():
             out["key"] = answer
         rows.append(out)
 
-    with open(args.out, "w", encoding="utf-8") as handle:
-        for row in rows:
-            handle.write(json.dumps(row) + "\n")
+    write_jsonl(args.out, rows)
 
     labels = [r for r in rows if "key" in r and r["agreed"] == 5]
     counts = collections.Counter(r["agreed"] for r in rows)
@@ -73,7 +55,7 @@ def main():
     print(f"none      {sum(1 for r in rows if r.get('none')):,} say no sense fits")
     print(f"words     {len({r['lemma'] for r in labels}):,} distinct in the labels")
     ranks = collections.Counter(r["candidates"].index(r["key"]) for r in labels)
-    print(f"first     {100 * ranks[0] / len(labels):.1f}% of the labels "
+    print(f"first     {percent(ranks[0], len(labels)):.1f}% of the labels "
           f"are the commonest sense")
 
 

@@ -1,21 +1,7 @@
-"""Build vocab.db, the dictionary the extension ships with.
+"""Build `vocab.db` from WordNet: senses, the entries that point at them, and irregular forms.
 
-WordNet is the sense inventory, measured in phase 11 as covering 95% of the words
-people actually use and splitting meanings less finely than Wiktionary. Wiktionary
-fills the words it lacks, which are interjections and function words rather than slang.
-
-A sense belongs to more than one word: `run` and `go` share one. Storing it under each
-of them copies the same definition twice, so senses are stored once and the words
-point at them. That alone is most of the file size.
-
-A third of WordNet's lemmas are phrases — `club soda`, `check out`, `pull together` —
-and a phrase is where looking the word up alone fails.
-
-Senses keep WordNet's order, which is by how common the sense is for that word: `safe`
-the strongbox before `safe` the contraceptive. That order differs per word and is not
-the order synsets are stored in, so it has to be asked for per lemma. It is also the
-baseline every later phase is measured against, so getting it wrong invalidates every
-number that follows.
+Senses are stored once and shared by every lemma that lists them. Each entry keeps
+WordNet's per-lemma order, commonest sense first, which the first-sense baseline relies on.
 """
 
 import argparse
@@ -73,11 +59,9 @@ def write_entries(connection, ids):
         for lemma in synset.lemmas():
             names.add((lemma.name(), synset.pos()))
 
-    # Asked for per lemma, so the senses come back commonest first for that word.
-    # `synsets` also resolves inflections, and `axes` resolves to both `axe` and
-    # `axis`, so anything that does not actually list this lemma is dropped.
-    # Lookups are lowercase, and `Confederacy` and `confederacy` are separate lemmas
-    # in WordNet. They share one entry here, the common noun's senses first.
+    # Asked per lemma so the senses come back commonest first. `wn.synsets` also
+    # resolves inflections (`axes` → `axe`, `axis`), so synsets that do not list the
+    # lemma itself are dropped. Case variants (`Confederacy`) share one lowercase entry.
     grouped = {}
     for raw, pos in sorted(names, key=lambda n: (n[0].lower(), n[0], n[1])):
         keys = [s.name() for s in wn.synsets(raw, pos)

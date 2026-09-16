@@ -1,24 +1,8 @@
-"""Turn a click on a word into the entry to show. The reference for phase 16.
+"""Turn a clicked word into WordNet entries from `vocab.db`; the reference for the extension.
 
-Two things stand between a click and an answer.
-
-**Phrases.** In "instead of club soda, make it champagne" the word `club` carries none
-of its own meanings, and seven senses about golf and nightclubs are worse than no
-answer. So the words around the click are read first and the longest entry covering it
-wins.
-
-**Inflections.** `ran` is not in the dictionary, `run` is. WordNet lists the irregular
-forms; the regular ones fall to a handful of suffix rules.
-
-A single word is resolved the way NLTK resolved every labelled line — its lemmatizer, then
-`wn.synsets` on the lemma — so the extension offers the model the senses it was measured
-on. `senses_of` does that from this database; over the 8,163 single-word panel lines it
-gives the same senses on all but three, where NLTK's own index and this one disagree on a
-capitalised lemma (`gas` finds `Ga`, gallium).
-
-Phrases also move: "check it out" is `check out` with a pronoun inside, "I ran into
-him" is `run into` inflected. So each position is tried in its dictionary form, and one
-pronoun is allowed inside a two-word phrase.
+`phrase_at` finds the longest phrase around the word; `senses_of` resolves a single word
+the way NLTK's lemmatizer and `wn.synsets` do, so the extension offers the senses the
+labels were chosen from.
 """
 
 import re
@@ -26,7 +10,7 @@ import sqlite3
 
 WORD = re.compile(r"[A-Za-z']+")
 
-# The regular endings, longest first so `-ies` is tried before `-s`.
+# Suffix rules for phrase heads, longest first so `-ies` is tried before `-s`.
 RULES = {
     "n": [("ies", "y"), ("ses", "s"), ("xes", "x"), ("zes", "z"), ("ches", "ch"),
           ("shes", "sh"), ("men", "man"), ("s", "")],
@@ -37,8 +21,7 @@ RULES = {
     "r": [],
 }
 
-# NLTK's `_morphy` rules, which differ from the ones above: those only serve phrases,
-# and phrases were matched with them.
+# NLTK's `morphy` rules, used for single words.
 MORPHY = {
     "n": [("s", ""), ("ses", "s"), ("ves", "f"), ("xes", "x"), ("zes", "z"), ("ches", "ch"),
           ("shes", "sh"), ("men", "man"), ("ies", "y")],
@@ -50,17 +33,18 @@ MORPHY = {
 
 LONGEST_PHRASE = 4
 
-# Words that sit inside a separable phrasal verb: "check IT out", "pull YOURSELF
-# together". Only object pronouns. `that` and `this` point at something in the world,
-# so "keep that pace" is not the idiom `keep pace`.
+# Object pronouns allowed inside a phrasal verb: "check it out" is `check out`.
 INFIX = {"it", "them", "him", "her", "me", "us", "you", "myself", "yourself",
          "himself", "herself", "ourselves", "themselves", "itself"}
 
-# WordNet files a few slang idioms under `the something` — `the boot` for dismissal,
-# `the street` for the financial district. They collide with the plain noun on almost
-# every line that contains it, so they are not matched as phrases. `a lot`, `in front`
-# and `at a loss` carry no such clash and stay.
+# `the boot`, `the street`: WordNet idioms that clash with the plain noun.
 NOT_A_PHRASE_START = {"the"}
+
+
+def index_of(words, target):
+    """The first position of `target` in `words`, ignoring case, or None."""
+    target = target.lower()
+    return next((i for i, word in enumerate(words) if word == target), None)
 
 
 class Vocab:
@@ -92,13 +76,13 @@ class Vocab:
         return [surface, *found]
 
     def exists(self, lemma, pos):
-        # WordNet files some adjectives as satellites, `s`; NLTK counts them as `a`.
+        # WordNet files some adjectives as satellites (`s`); NLTK counts them as `a`.
         return self.db.execute(
             "SELECT 1 FROM entry WHERE lemma = ? AND pos IN (?, ?)",
             (lemma, pos, "s" if pos == "a" else pos)).fetchone() is not None
 
     def morphy(self, form, pos):
-        """NLTK's `_morphy`: the irregular list or the rules, once, kept if WordNet has it."""
+        """NLTK's `morphy`: the word and its base forms that WordNet has."""
         forms = [r["lemma"] for r in self.db.execute(
             "SELECT lemma FROM form WHERE surface = ? AND pos = ?", (form, pos))]
         if not forms:
@@ -111,7 +95,7 @@ class Vocab:
         return found
 
     def senses_of(self, word, pos):
-        """The lemma and sense keys NLTK gives a single word of this part of speech."""
+        """The lemma and sense keys NLTK gives a word of this part of speech."""
         forms = self.morphy(word.lower(), pos)
         lemma = min(forms, key=len) if forms else word.lower()
         keys = []
@@ -124,7 +108,7 @@ class Vocab:
         return lemma, keys
 
     def candidate_phrases(self, words, index):
-        """Every phrase the click could belong to, longest first."""
+        """Every span of up to four words around `index`, longest first."""
         found = []
         for start in range(max(0, index - LONGEST_PHRASE + 1), index + 1):
             for end in range(index + 1, min(len(words), start + LONGEST_PHRASE) + 1):
@@ -133,15 +117,14 @@ class Vocab:
                     continue
                 if span[0] not in NOT_A_PHRASE_START:
                     found.append(span)
-                # "check it out" is the entry `check out`.
                 if len(span) == 3 and span[1] in INFIX:
                     found.append([span[0], span[2]])
         return sorted(found, key=len, reverse=True)
 
     def phrase_at(self, words, index):
-        """The longest phrase entry covering the clicked word, if there is one."""
+        """The longest phrase entry covering the word at `index`, if there is one."""
         for span in self.candidate_phrases(words, index):
-            # The first word carries the inflection: "ran into" is `run into`.
+            # Only the first word is inflected: "ran into" is `run into`.
             for head in [*self.lemmas_of(span[0], "v"), span[0]]:
                 row = self.entry(" ".join([head, *span[1:]]))
                 if row:

@@ -57,8 +57,7 @@ recheck:
 TEACHER ?= data/teacher.jsonl
 PANEL   ?= data/teacher-panel.jsonl
 
-# Draws lines the test set never saw, points the phrases at their phrase, and drops
-# the single-sense rows — one option is not a question.
+# Lines the test set never saw, with phrases resolved and single-sense lines dropped.
 teacher:
 	$(PY) scripts/pick_candidates.py --count 10000 --per-word 10 \
 	  --exclude data/candidates.jsonl --out $(TEACHER) --seed 41
@@ -67,34 +66,26 @@ teacher:
 panel:
 	$(PY) scripts/panel.py --file $(TEACHER) --out $(PANEL) --workers 12
 
-# Scores the panel against the 200 lines marked by hand. Needs data/panel.jsonl.
+# Needs data/panel.jsonl: the panel's answers on the hand-labelled lines.
 panel-check:
 	$(PY) scripts/panel_check.py
 
-# Joins the lines and the answers into one file training can read.
 labels:
 	$(PY) scripts/take_labels.py
 
-# Hand-labels a sample of the panel's own lines, blind, to measure its error rate.
 check-teacher:
 	$(PY) scripts/check_teacher.py
 
-# Decides once which words train, which choose the epoch, and which report.
 label-split:
 	$(PY) scripts/split_labels.py
 
 # --- training ----------------------------------------------------------------
 
-# Stages the prepared data as a Kaggle dataset and pushes the script that trains on it.
-# `kaggle datasets create` the first time; after that every push is a new version.
-#
-# CORPORA is what gets uploaded. OMSTI and MASC are left out by default — half a
-# gigabyte for corpora no current job reads, and `make ufsac` rebuilds them in ten
-# minutes. Add them back with `make kaggle CORPORA="... data/omsti.jsonl"`.
+# Uploads the data as a new Kaggle dataset version, then pushes the training script.
+# OMSTI and MASC are left out unless added: `make kaggle CORPORA="... data/omsti.jsonl"`.
 CORPORA ?= data/semcor.jsonl data/teacher-labels.jsonl
 
-# `uv tool install kaggle` puts 2.x in ~/.local/bin. An older pip-installed 1.6 may sit
-# earlier on PATH and fail on the new token format, so the path is spelled out.
+# The uv-installed CLI; an older pip install on PATH fails on the current token format.
 KAGGLE ?= $(HOME)/.local/bin/kaggle
 DATASET ?= ofarukkavlak/vocabboost-wsd
 
@@ -106,9 +97,7 @@ kaggle:
 	$(MAKE) wait-dataset
 	$(KAGGLE) kernels push -p kaggle
 
-# A new dataset version takes a minute or two to process, and a kernel pushed before it
-# is ready mounts the *previous* version instead — silently, with the old files. One run
-# died two minutes in for a file that was uploaded and not yet visible.
+# A kernel pushed before the new dataset version is ready silently mounts the old one.
 wait-dataset:
 	@for i in $$(seq 60); do \
 	  $(KAGGLE) datasets status $(DATASET) | grep -q ready && \
@@ -127,11 +116,36 @@ evaluate:
 compare:
 	$(PY) scripts/compare.py
 
-lookup:
-	$(PY) scripts/lookup.py
-
 failures:
 	$(PY) scripts/failures.py
+
+sense-split:
+	$(PY) scripts/sense_split.py
+
+confidence:
+	$(PY) scripts/confidence.py
+
+pos-effect:
+	$(PY) scripts/pos_effect.py
+
+# --- files the extension ships -------------------------------------------------
+
+extension: onnx tagger vocab-json
+
+onnx:
+	$(PY) scripts/export_onnx.py
+
+check-onnx:
+	$(PY) scripts/check_onnx.py
+
+tagger:
+	$(PY) scripts/export_tagger.py
+
+vocab-json:
+	$(PY) scripts/export_vocab.py
+
+lookup:
+	$(PY) scripts/lookup.py
 
 # --- one-off measurements, kept so their numbers can be reproduced ------------
 
@@ -141,32 +155,11 @@ lexicons:
 phrase-split:
 	$(PY) scripts/phrase_split.py
 
-sense-split:
-	$(PY) scripts/sense_split.py
-
-confidence:
-	$(PY) scripts/confidence.py
-
-onnx:
-	$(PY) scripts/export_onnx.py
-
-check-onnx:
-	$(PY) scripts/check_onnx.py
-
-pos-effect:
-	$(PY) scripts/pos_effect.py
-
-tagger:
-	$(PY) scripts/export_tagger.py
-
-vocab-json:
-	$(PY) scripts/export_vocab.py
+phrase-impact:
+	$(PY) scripts/phrase_impact.py
 
 sense-distance:
 	$(PY) scripts/sense_distance.py
-
-phrase-impact:
-	$(PY) scripts/phrase_impact.py
 
 # --- housekeeping ------------------------------------------------------------
 
@@ -176,10 +169,14 @@ lint:
 clean:
 	rm -rf .venv __pycache__ scripts/__pycache__
 	rm -rf data/raw data/vocab.db data/semcor.jsonl data/omsti.jsonl \
-	  data/masc.jsonl data/model data/kaggle
-	rm -f data/working.jsonl data/sealed.jsonl data/model-full.zip
-	rm -f data/teacher.jsonl
+	  data/masc.jsonl data/model data/kaggle data/onnx
+	rm -f data/working.jsonl data/sealed.jsonl data/teacher.jsonl
 
-.PHONY: setup pool wiktionary vocab semcor ufsac candidates phrases label split \
-        recheck teacher panel panel-check labels check-teacher kaggle baseline evaluate compare lookup failures lexicons \
-        phrase-split sense-split confidence onnx check-onnx pos-effect tagger vocab-json sense-distance phrase-impact lint clean
+.PHONY: setup pool wiktionary vocab semcor ufsac \
+	candidates phrases label split recheck \
+	teacher panel panel-check labels check-teacher label-split \
+	kaggle wait-dataset \
+	baseline evaluate compare failures sense-split confidence pos-effect \
+	extension onnx check-onnx tagger vocab-json lookup \
+	lexicons phrase-split phrase-impact sense-distance \
+	lint clean

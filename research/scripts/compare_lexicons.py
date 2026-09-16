@@ -1,15 +1,4 @@
-"""Measure WordNet and Wiktionary against the same subtitle lines.
-
-Two questions decide which one the extension ships with.
-
-Coverage: of the words someone might click, how many does the source even have an
-entry for? Counted twice — once per distinct word, and once weighted by how often the
-word occurs, because missing `gonna` costs more than missing `zeugma`.
-
-Granularity: how many senses does it offer for a word? Annotators agree around 70% of
-the time on WordNet's fine distinctions and around 90% on coarser ones, so a source that
-splits `feel` thirteen ways sets a ceiling before any model is trained.
-"""
+"""Compare WordNet and Wiktionary on the same subtitle lines: coverage and senses per word."""
 
 import argparse
 import collections
@@ -18,16 +7,15 @@ import json
 import random
 
 import nltk
+from common import PENN_TO_WORDNET, read_jsonl
 from fetch_corpus import usable
 from nltk.corpus import wordnet as wn
 from nltk.stem import WordNetLemmatizer
-from pick_candidates import TAGS
 
 # Wiktionary names parts of speech in words; WordNet uses letters.
 WIKI_POS = {"noun": wn.NOUN, "verb": wn.VERB, "adj": wn.ADJ, "adv": wn.ADV}
 
-# Senses a person watching a film will never need, and which we would not ship.
-# `alt-of` and `alternative` are spelling variants pointing elsewhere, not meanings.
+# Senses a film viewer will not need; `alt-of` and `alternative` are spellings, not meanings.
 SKIP = {"alt-of", "alternative", "abbreviation", "initialism", "obsolete", "archaic",
         "rare", "historical", "dated"}
 
@@ -56,7 +44,7 @@ def targets(lines):
     counts = collections.Counter()
     for line in lines:
         for word, tag in nltk.pos_tag(nltk.word_tokenize(line)):
-            pos = TAGS.get(tag)
+            pos = PENN_TO_WORDNET.get(tag)
             if pos is None or len(word) < 3 or not word.isalpha():
                 continue
             counts[(lemmatizer.lemmatize(word.lower(), pos), pos)] += 1
@@ -83,7 +71,7 @@ def main():
     parser.add_argument("--seed", type=int, default=17)
     args = parser.parse_args()
 
-    pool = [json.loads(line)["text"] for line in open(args.pool, encoding="utf-8")]
+    pool = [row["text"] for row in read_jsonl(args.pool)]
     pool = [t for t in pool if usable(t)]
     random.Random(args.seed).shuffle(pool)
     occurrences = targets(pool[: args.lines])

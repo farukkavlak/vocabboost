@@ -1,8 +1,4 @@
-"""Read the repository's .env so scripts can find the API key.
-
-The key lives outside this folder and outside git. Nothing here writes it anywhere,
-and no key is ever needed to run the extension — only to label training data.
-"""
+"""Read the repository's `.env`, where the labelling API key lives."""
 
 import os
 import pathlib

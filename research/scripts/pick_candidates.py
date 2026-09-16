@@ -1,37 +1,20 @@
-"""Choose lines worth labelling, one target word each.
-
-Two things make a word worth labelling. It has to be ambiguous, or there is nothing
-to disambiguate: we keep words with three or more senses for the part of speech they
-are used in. And it has to be a word someone would plausibly click.
-
-Who clicks depends on their level. A beginner stops at `play` and `run`; someone
-further along only stops at `vaudeville`. So the set is split into three frequency
-bands of roughly equal size and accuracy is reported for each. One overall number
-would hide the fact that the everyday words are the hardest ones, because a word
-stays common by carrying many meanings.
-"""
+"""Pick subtitle lines to label, one ambiguous word each, balanced across frequency bands."""
 
 import argparse
 import json
 import random
 
 import nltk
+from common import PENN_TO_WORDNET, read_jsonl, sense_dict, write_jsonl
 from fetch_corpus import usable
 from nltk.corpus import wordnet as wn
 from nltk.stem import WordNetLemmatizer
 
-# WordNet groups senses by part of speech, so we need the tag to ask the right question.
-TAGS = {"NN": wn.NOUN, "NNS": wn.NOUN, "VB": wn.VERB, "VBD": wn.VERB, "VBG": wn.VERB,
-        "VBN": wn.VERB, "VBP": wn.VERB, "VBZ": wn.VERB, "JJ": wn.ADJ, "JJR": wn.ADJ,
-        "JJS": wn.ADJ, "RB": wn.ADV, "RBR": wn.ADV, "RBS": wn.ADV}
-
 MIN_SENSES = 3
 MAX_PER_WORD = 3
 
-# Occurrences in the 200k line pool, which holds about two million words. Below the
-# floor a word is usually a typo or a name that slipped past the tagger. Above the
-# ceiling it is `do`, `get`, `have` — tagged as verbs, but doing grammatical work
-# rather than carrying a meaning anyone would look up.
+# Occurrences in the 200k-line pool. Below the floor are typos and names; above the
+# ceiling are words like `do` and `have`, which mostly do grammatical work.
 MIN_FREQUENCY = 15
 MAX_FREQUENCY = 5000
 BANDS = [("everyday", 400, MAX_FREQUENCY), ("common", 100, 400),
@@ -51,7 +34,7 @@ def candidates(line, frequency):
     """Every word in the line that is ambiguous enough to be worth a label."""
     found = []
     for word, tag in nltk.pos_tag(nltk.word_tokenize(line)):
-        pos = TAGS.get(tag)
+        pos = PENN_TO_WORDNET.get(tag)
         if pos is None or len(word) < 3 or not word.isalpha():
             continue
         lemma = lemmatizer.lemmatize(word.lower(), pos)
@@ -67,16 +50,6 @@ def candidates(line, frequency):
     return found
 
 
-def sense_list(senses):
-    # The synonyms are the fastest way to recognise a sense. "strongbox" says more
-    # in one word than the gloss does in a line.
-    return [{"key": s.name(),
-             "synonyms": [lemma.name().replace("_", " ") for lemma in s.lemmas()],
-             "gloss": s.definition(),
-             "examples": s.examples()[:2]}
-            for s in senses]
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--pool", default="data/raw/pool.jsonl")
@@ -89,12 +62,9 @@ def main():
                         help="files whose lines must not be picked again")
     args = parser.parse_args()
 
-    # The test set was drawn from this same pool. A line in both would be a model
-    # trained on its own exam, and the whole comparison would mean nothing.
-    taken = {json.loads(line)["text"]
-             for path in args.exclude
-             for line in open(path, encoding="utf-8")}
-    pool = [json.loads(line)["text"] for line in open(args.pool, encoding="utf-8")]
+    # Lines already used elsewhere (the test set) must not be picked again.
+    taken = {row["text"] for path in args.exclude for row in read_jsonl(path)}
+    pool = [row["text"] for row in read_jsonl(args.pool)]
     pool = [text for text in pool if text not in taken]
     if taken:
         print(f"{len(taken)} lines held out, {len(pool):,} left in the pool")
@@ -120,14 +90,12 @@ def main():
             picked.append({"id": len(picked) + 1, "text": text, "word": choice["word"],
                            "lemma": choice["lemma"], "pos": choice["pos"],
                            "frequency": choice["frequency"], "band": choice["band"],
-                           "senses": sense_list(choice["senses"]), "label": None})
+                           "senses": [sense_dict(s) for s in choice["senses"]], "label": None})
             break
         if not any(quota.values()):
             break
 
-    with open(args.out, "w", encoding="utf-8") as handle:
-        for row in picked:
-            handle.write(json.dumps(row) + "\n")
+    write_jsonl(args.out, picked)
 
     print(f"picked   {len(picked)} lines -> {args.out}")
     print(f"words    {len(used)} distinct")

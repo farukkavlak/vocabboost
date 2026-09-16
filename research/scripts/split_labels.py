@@ -1,33 +1,15 @@
-"""Decide once which words are for training, which for choosing, which for reporting.
+"""Split the panel-labelled words into train, validation and test, stratified by band.
 
-Until now the split lived inside `run.py` and moved with `--seed`. Two settings compared
-at two seeds were validating on two different sets of words, so part of the difference
-between them was the split rather than the setting. Writing it down fixes that, and phase
-15 needs a validation set that does not move between the run that picks a threshold and
-the run that reports it.
-
-Split by word, not by line. A word in training that reappears in validation lets the
-model recognise the word instead of reading the sentence, and every lemma here has 2.4
-lines on average, so splitting by line would leak nearly all of them.
-
-Stratified by frequency band, because the bands are not equally hard — the baseline is
-52% on everyday words and 43% on uncommon ones — and an unstratified draw would let the
-mix differ between the parts.
-
-Every line of a word goes with it, whatever the panel answered: the unanimous ones, the
-split ones, and the ones the panel said no sense fits. That is deliberate. Phase 15
-calibrates on how often the model is right at a given confidence, and it can only do that
-on a validation set that still contains the hard lines.
-
-The test part is not the sealed 51. It is forty times larger and labelled by the panel,
-so it carries the panel's own error — 3% where five models agreed, 20% where four did.
-It narrows an error bar; it does not settle a comparison. The 51 stay sealed for phase 17.
+Split by word, not by line, so a word never appears on both sides. Written to a file so
+every run uses the same split.
 """
 
 import argparse
 import collections
 import json
 import random
+
+from common import percent, read_jsonl
 
 
 def main():
@@ -39,7 +21,7 @@ def main():
     parser.add_argument("--seed", type=int, default=3)
     args = parser.parse_args()
 
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
 
     words = collections.defaultdict(set)
     for row in rows:
@@ -80,7 +62,7 @@ def report(rows, split):
         first = sum(1 for r in clean if r["candidates"][0] == r["key"])
         print(f"{part:<12}{len(split[part]):>7,}{len(got):>8,}{len(clean):>9,}"
               f"{sum(1 for r in got if r.get('none')):>10,}"
-              f"{100 * first / len(clean):>10.1f}%")
+              f"{percent(first, len(clean)):>10.1f}%")
 
 
 if __name__ == "__main__":

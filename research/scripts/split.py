@@ -1,23 +1,13 @@
-"""Split the labelled lines into a working set and a sealed set.
+"""Split the hand-labelled lines into a working set and a sealed set, even across bands.
 
-The sealed lines are not opened until phase 17; every number quoted before then comes
-from the working set. Anything tuned against a set looks better on that set than in the
-wild, and the only defence is a set nothing was tuned against.
-
-Which lines are sealed is decided once, from the full file, before any labelling. Decide
-it from whatever is labelled today and a line could sit in the working set this week and
-the sealed set next, after we had read it.
-
-The split keeps the three frequency bands even, since rare words carry fewer meanings
-and an all-rare sealed set would flatter us.
+Sealed ids are chosen from the whole file, labelled or not, so the split never moves.
 """
 
 import argparse
 import collections
-import json
 import random
 
-BANDS = ["everyday", "common", "uncommon"]
+from common import BANDS, read_jsonl, write_jsonl
 
 
 def sealed_ids(rows, per_band, seed):
@@ -40,7 +30,7 @@ def main():
     parser.add_argument("--seed", type=int, default=17)
     args = parser.parse_args()
 
-    rows = [json.loads(line) for line in open(args.file, encoding="utf-8")]
+    rows = read_jsonl(args.file)
     sealed_set = sealed_ids(rows, args.sealed_per_band, args.seed)
 
     labelled = [row for row in rows
@@ -60,9 +50,7 @@ def main():
     for path, part in [("data/working.jsonl", working), ("data/sealed.jsonl", sealed)]:
         counts = collections.Counter(row["band"] for row in part)
         spread = ", ".join(f"{counts[b]} {b}" for b in BANDS)
-        with open(path, "w", encoding="utf-8") as handle:
-            for row in part:
-                handle.write(json.dumps(row) + "\n")
+        write_jsonl(path, part)
         print(f"{len(part):>4} lines -> {path:<20} ({spread})")
 
 

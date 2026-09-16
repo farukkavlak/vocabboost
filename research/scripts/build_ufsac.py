@@ -1,23 +1,14 @@
-"""Turn a UFSAC corpus into training examples, shaped exactly like the SemCor ones.
+"""Turn a UFSAC corpus (OMSTI or MASC) into examples shaped like `build_semcor.py`'s.
 
-UFSAC bundles fifteen sense-annotated corpora in one XML format with WordNet 3.0 keys.
-Two are worth training on. OMSTI is aligned automatically from parallel text, so it is
-large and possibly noisy. MASC is smaller but includes transcribed speech, the register
-the extension actually sees.
-
-SemCor was marked by people; these were not. Same shape and same evaluation, so the
-only difference is the data, which is what `make ufsac` sets up for the training run.
-
-A word carrying two sense keys is dropped rather than resolved to the first: a label
-nobody was sure of teaches the wrong thing.
+A word tagged with more than one sense key is dropped rather than guessed.
 """
 
 import argparse
 import collections
-import json
 import random
 import xml.etree.ElementTree as ET
 
+from common import candidate_synsets, describe_examples, write_jsonl
 from nltk.corpus import wordnet as wn
 
 MIN_SENSES = 2
@@ -25,7 +16,7 @@ MIN_WORDS = 4
 
 
 def sentences(path):
-    """Stream <sentence> elements, freeing each one so a 2.2 GB file fits in memory."""
+    """Stream <sentence> elements, freeing each one; OMSTI is 2.2 GB."""
     for _, element in ET.iterparse(path, events=("end",)):
         if element.tag == "sentence":
             yield element
@@ -56,8 +47,7 @@ def examples(path, counts):
             if not lemma or synset.pos() not in "nvar":
                 continue
 
-            candidates = [s for s in wn.synsets(lemma, synset.pos())
-                          if any(one.name() == lemma for one in s.lemmas())]
+            candidates = candidate_synsets(lemma, synset.pos())
             if len(candidates) < MIN_SENSES or synset not in candidates:
                 counts["one sense or missing"] += 1
                 continue
@@ -83,16 +73,8 @@ def main():
     counts = collections.Counter()
     rows = list(examples(args.corpus, counts))
     random.Random(args.seed).shuffle(rows)
-    with open(args.out, "w", encoding="utf-8") as handle:
-        for row in rows:
-            handle.write(json.dumps(row) + "\n")
-
-    senses = sum(len(r["candidates"]) for r in rows) / len(rows)
-    ranks = collections.Counter(r["candidates"].index(r["key"]) for r in rows)
-    print(f"examples  {len(rows):,}")
-    print(f"words     {len({r['lemma'] for r in rows}):,} distinct")
-    print(f"senses    {senses:.1f} on average")
-    print(f"first     {100 * ranks[0] / len(rows):.1f}% of them are the commonest sense")
+    write_jsonl(args.out, rows)
+    describe_examples(rows)
     for name, count in counts.most_common():
         if name != "kept":
             print(f"dropped   {count:,} {name}")

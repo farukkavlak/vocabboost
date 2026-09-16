@@ -1,17 +1,16 @@
-"""Pull a sample of English subtitle lines from the OPUS OpenSubtitles corpus.
+"""Sample English subtitle lines from the OPUS OpenSubtitles corpus.
 
-The corpus is a 3.6 GB gzip file, one sentence per line. We do not download it.
-We read the stream from the start, keep the lines that look usable, and stop at a
-byte budget. Reservoir sampling spreads the sample across everything we read
-instead of taking the first N, which would all come from the same few films.
+The 3.6 GB file is streamed up to a byte budget, and reservoir sampling spreads the
+sample over everything read rather than the first few films.
 """
 
 import argparse
 import gzip
-import json
 import random
 import re
 import urllib.request
+
+from common import write_jsonl
 
 URL = "https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2018/mono/en.txt.gz"
 
@@ -84,9 +83,7 @@ def main():
     args = parser.parse_args()
 
     lines, seen, read = fetch(args.count, args.budget_mb, args.seed)
-    with open(args.out, "w", encoding="utf-8") as handle:
-        for line in lines:
-            handle.write(json.dumps({"text": line}) + "\n")
+    write_jsonl(args.out, [{"text": line} for line in lines])
 
     print(f"read     {read / 1024 / 1024:.0f} MB off the wire")
     print(f"usable   {seen:,} lines")
