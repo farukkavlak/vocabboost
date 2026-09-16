@@ -98,6 +98,7 @@ make sense-split # accuracy when the right sense is the commonest, and when not
 make confidence  # when the card leads with one sense, and when it does not
 make onnx        # export data/model for the browser, full, half and 8-bit
 make check-onnx  # do the exported copies answer like data/model?
+make pos-effect  # the model with the tagged part of speech, and without it
 make lookup      # check phrase matching on a few known cases
 ```
 
@@ -744,3 +745,41 @@ its own offscreen page, opened on the first lookup and closed after a couple of 
 minutes, which hands every byte back. The first lookup after that waits the 0.6-second
 load again, which is the right trade for a reader who looks up a few words and then
 watches for a while.
+
+### The part of speech
+
+Every labelled line went through NLTK's tagger before a sense was chosen, so the model was
+always picking among the verb senses of `run` or its noun senses, never both. A browser has
+no tagger unless one ships. Given every sense of the lemma instead:
+
+|                   | senses | first | leads | right |
+| ----------------- | -----: | ----: | ----: | ----: |
+| test, tagged      |    5.8 | 69.2% | 43.5% | 88.2% |
+| test, every sense |    8.7 | 59.7% | 33.7% | 83.3% |
+
+Ten points, and what the card leads with falls under the 85% bar. A tagger has to ship.
+
+Three that already run in JavaScript were tried on the validation lines:
+
+| tagger     | agrees with NLTK | first | leads, right |
+| ---------- | ---------------: | ----: | -----------: |
+| NLTK       |                — | 64.7% |        85.6% |
+| en-pos     |            89.4% | 61.6% |        81.3% |
+| wink       |            91.2% | 61.3% |        81.6% |
+| compromise |            87.5% | 60.5% |        80.9% |
+| none       |                — | 55.4% |        80.8% |
+
+Every one of them lands under the bar. Where a tagger names the wrong part of speech, the
+right sense is not on the list at all.
+
+The comparison is also not fair, and cannot be made fair with these labels. The panel chose
+among the senses of the part of speech NLTK named; where NLTK was wrong, it answered "no
+sense fits", and the line never reached the unanimous set. So the test lines are the ones
+NLTK tagged right, and a tagger that disagrees with it is scored wrong even where it is
+the one that is right.
+
+So NLTK's own tagger ships. It is an averaged perceptron — a weighted vote over a dozen
+features of the word and its neighbours — about a hundred lines of code and 5.7 MB of
+weights. Ported, it gives the tags every number here was measured with, and "the same tag
+on every test line" is a check that can be run. The JavaScript taggers were measured once
+with a throwaway script and are not reproduced by a target.

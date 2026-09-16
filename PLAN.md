@@ -357,14 +357,16 @@ automatically is the open question, and the cheap attempt at it failed.
       entries pointing at them, 27 MB
 - [ ] Fill the words WordNet lacks from Wiktionary. Two of the 25 phrase lines needed
       it: WordNet knows `at a loss` only as "below cost" and `go back` only as "date
-      back", and Wiktionary has the everyday reading of both.
+      back", and Wiktionary has the everyday reading of both. Not needed to ship: a word
+      WordNet lacks gets a card saying it was not found.
 - [x] Try to find the senses nobody can tell apart from WordNet's own structure, its
       synonyms and its definitions. None of the five signals separate the pairs a
       labeller merged from the pairs they kept apart, so this is parked until phase 12
       can ask a gloss encoder the same question.
 - [x] Add a lemmatizer so `ran` finds `run`. WordNet's irregular list plus a handful
       of suffix rules.
-- [ ] Add CMUdict for pronunciation and a CEFR word list for level
+- [ ] Add a CEFR word list for level. Pronunciation (CMUdict) is dropped for now: it
+      goes with the free dictionary, and nobody has asked for it.
 - [x] Match phrases, so `run into` is not looked up as `run`. A third of WordNet's
       lemmas are already phrases, so this was never missing data. Matching needs the
       first word lemmatised and one object pronoun allowed inside — `check it out` is
@@ -645,6 +647,23 @@ worker cannot hold a model.
 - [x] Export to ONNX and quantize to int8. Roughly a quarter of the size for a small
       accuracy cost, which gets measured rather than assumed. 23 MB. One scale a matrix
       lost 4.2 points; one a row loses one test line in 409.
+- [x] Measure the model without the part of speech. Every test line was tagged in Python
+      before the model saw it, so it chose among the verb senses of `run`, not all 57.
+      The browser has no tagger. Given every sense of the lemma, 5.8 senses a line become
+      8.7, first place falls from 69.2% to 59.7%, and what the card leads with is right
+      83.3% of the time — under the bar. A tagger has to ship.
+- [x] Pick a part-of-speech tagger that runs in the browser. Three JavaScript taggers —
+      compromise, wink and en-pos — agree with NLTK on 87 to 91% of the lines, and the
+      model given their tags scores 60.5 to 61.6% on validation against 64.7%, under the
+      bar every time. And the labels cannot judge them fairly: a line NLTK tagged wrong
+      got "no sense fits" from the panel and never reached the test set, so a tagger that
+      disagrees with NLTK is scored wrong even where it is right. So NLTK's own tagger
+      ships: an averaged perceptron, about a hundred lines, with 5.7 MB of weights.
+- [ ] Port NLTK's tokenizer and perceptron tagger to TypeScript, and check they give the
+      same tag for the looked-up word as Python does on every test line.
+- [ ] Port the lemmatizer and phrase matching to TypeScript, and check they find the
+      same entries as the Python ones on the test lines. `ran` finds `run` through
+      WordNet's irregular list, `boxes` through suffix rules, `ran into` through both.
 - [ ] If it is still too heavy, look at distilling the encoder to static embeddings
       (Model2Vec and the like). Far smaller and far faster, at a cost in accuracy that,
       again, gets measured.
@@ -659,14 +678,23 @@ worker cannot hold a model.
       minutes so the memory goes back. A reader who is not looking anything up pays
       nothing; the first lookup after a pause waits 0.6 seconds for the load.
 - [ ] Only for readers who chose the local provider. Someone using a key never loads it.
-- [ ] Store each sense's vector in `vocab.db` rather than encoding the definitions on
-      every lookup. They never change, and only the line then goes through the model.
-      Measure what it saves in time and in peak memory.
+- [x] Decide whether to store each sense's vector in `vocab.db` rather than encoding the
+      definitions on every lookup. Not now: encoding them takes about 0.1 seconds a word,
+      which nobody waits on, and storing them is 117,659 senses of 384 numbers — 45 MB
+      even at 8 bits, twice the model. Revisit only if the idle close makes the peak
+      memory matter.
+- [ ] Read `vocab.db` in the browser. It is SQLite, which a browser cannot open on its
+      own: either ship a SQLite build or convert the file to something it can read.
+      Measure both on size and lookup time.
 - [ ] Run it with `transformers.js` inside a `chrome.offscreen` document. The worker is
       killed after about 30 seconds idle, so a model loaded there would reload constantly.
       The offscreen document stays alive and the worker messages it.
 - [ ] `providers/local.ts`, same interface as `anthropic.ts` and `openai.ts`, no key, no
       host permission, and the default choice
+- [ ] Remove the free dictionary. Every card then reads from WordNet, the senses the
+      research measured, and the network is only for readers who add a key. Its
+      pronunciation and audio go with it, for now.
+- [ ] A word WordNet does not have gets a card that says so, rather than a guess
 - [ ] Ship `vocab.db` and the weights as data. Manifest V3 bans remote code, but weights
       are data. The runtime `.wasm` is code and has to be bundled.
 
