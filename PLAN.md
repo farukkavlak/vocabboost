@@ -174,16 +174,6 @@ Ours 64.7%, GPT-4o mini 74.5%, Claude Haiku 80.4% on the sealed lines.
 - [x] Write down where ours loses
 - [x] Add the table to the README
 
-### 18 — writing explanations (only if phase 17 calls for it)
-
-A picked sense may be enough. If not, the model would have to write, which needs a much
-larger generative model.
-
-- [ ] Read up on definition modelling
-- [ ] Distil written explanations from Claude
-- [ ] Train a 200M–500M model
-- [ ] Find a way to judge free-text answers
-
 ## Data sources
 
 - OpenSubtitles: subtitle lines
@@ -198,6 +188,6 @@ relicense, so the Kaggle dataset is marked "other".
 
 ## Limits
 
-- It picks a dictionary sense; it does not write an explanation.
+- The local model picks a dictionary sense; a written explanation needs a provider key.
 - It cannot use world knowledge ("he pulled a Houdini").
 - Irony and wordplay have no right sense to pick.
