@@ -17,14 +17,17 @@ which is what the card shows.
 | ------------------------------ | -----: | --------: | ------: | ------: |
 | first sense in the dictionary  |      0 |     45.6% |       - |       - |
 | + phrase matching              |      0 |     55.0% |       - |       - |
-| untrained 22M encoder          |  23 MB |     47.7% |   75.2% |   88.6% |
-| untrained 110M encoder         | 110 MB |     55.7% |   80.5% |   89.3% |
-| trained on SemCor              |  23 MB |     64.4% |   86.6% |   90.6% |
-| **+ tuned on subtitle labels** |  23 MB | **65.8%** |   87.2% |   91.9% |
+| untrained 22M encoder          |  87 MB |     47.7% |   75.2% |   88.6% |
+| untrained 110M encoder         | 438 MB |     55.7% |   80.5% |   89.3% |
+| trained on SemCor              |  87 MB |     64.4% |   86.6% |   90.6% |
+| **+ tuned on subtitle labels** |  87 MB | **65.8%** |   87.2% |   91.9% |
 | the labeller, relabelling      |      — |     93.0% |       - |       - |
 
 The extension today shows the first sense the dictionary lists, and is wrong more often
-than right. The trained 22M model is the best here and the only one small enough to ship.
+than right. The trained 22M model is the best here and the only one small enough to ship: 23 MB
+once its weights are rounded to 8 bits, at a cost of one test line in 409. Sizes here
+were once written as 23 MB for the 22M models; that was the rounded size, claimed before
+anything was rounded.
 
 The two trained rows are seed 17, the model every other table here is measured on. On
 149 lines one line is 0.7 points, so the gap between them is two lines. The fairer
@@ -93,6 +96,8 @@ make compare     # every model side by side
 make failures    # the lines the model gets wrong
 make sense-split # accuracy when the right sense is the commonest, and when not
 make confidence  # when the card leads with one sense, and when it does not
+make onnx        # export data/model for the browser, full, half and 8-bit
+make check-onnx  # do the exported copies answer like data/model?
 make lookup      # check phrase matching on a few known cases
 ```
 
@@ -708,3 +713,34 @@ and a count of "+1 more" is sillier than the sense itself, so a lone fourth is s
   right on the validation words and 86.7% on the test words, on about fifty lines each.
   The two disagree, so it is noise until more lines say otherwise. A threshold per
   sense count would fit fifty lines, not the words.
+
+## In the browser
+
+The model is exported to ONNX, a format any runtime can execute, and run in Chrome with
+`transformers.js` on the 409 unanimous test lines. Three copies, differing in how
+precisely each weight is stored:
+
+| copy         |  file | same first choice | first | leads, right | memory in use |
+| ------------ | ----: | ----------------: | ----: | -----------: | ------------: |
+| 32-bit float | 91 MB |           409/409 | 69.2% |        88.2% |       ~730 MB |
+| 16-bit float | 46 MB |           409/409 | 69.2% |        88.2% |       ~700 MB |
+| **8-bit**    | 23 MB |           381/409 | 68.9% |        87.7% |   **~450 MB** |
+
+Every copy answers in about 0.1 seconds a word (0.25 at the slowest tenth) and loads in
+0.6. Speed is not what separates them.
+
+The first 8-bit try gave one scale to each whole weight matrix and lost 4.2 points. A
+matrix mixes rows of very different sizes, and one scale spends its 256 steps on the
+largest; a scale a row brings the loss down to one line.
+
+**8-bit ships.** The download was never the cost that mattered — a reader downloads once.
+Memory is paid every time the model is up, and the 16-bit copy saves none of it: the
+browser widens its weights back to 32 bits to compute with them. One line in 409 is not
+worth 250 MB. Memory is the operating system's resident size for the page, less an empty
+page's 100 MB, so read it as rough; the gap between the copies is not.
+
+Even 450 MB is too much to hold while nobody is looking anything up. So the model runs in
+its own offscreen page, opened on the first lookup and closed after a couple of idle
+minutes, which hands every byte back. The first lookup after that waits the 0.6-second
+load again, which is the right trade for a reader who looks up a few words and then
+watches for a while.

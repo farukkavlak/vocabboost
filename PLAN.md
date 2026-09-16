@@ -610,6 +610,9 @@ say so.
       deliberately. On the test words, with the threshold chosen on validation: leads
       with one sense on 43.5% of lines, right on 88.2%; on the rest the right sense is in
       the top three 90.5% of the time.
+      The two card items below wait until phase 16 has the model in the extension: the card
+      reads the gap, and before then it would be designed against invented numbers.
+
 - [ ] Below the threshold the card stops claiming. It shows the senses that fit, side
       by side and unranked, and says plainly that the line does not settle it.
 - [ ] Above the threshold the card leads with one sense and folds the rest away behind
@@ -639,13 +642,26 @@ for everyone else it is an advert in the middle of an answer.
 **Learn:** quantization, what an inference runtime does, and why a Manifest V3 service
 worker cannot hold a model.
 
-- [ ] Export to ONNX and quantize to int8. Roughly a quarter of the size for a small
-      accuracy cost, which gets measured rather than assumed.
+- [x] Export to ONNX and quantize to int8. Roughly a quarter of the size for a small
+      accuracy cost, which gets measured rather than assumed. 23 MB. One scale a matrix
+      lost 4.2 points; one a row loses one test line in 409.
 - [ ] If it is still too heavy, look at distilling the encoder to static embeddings
       (Model2Vec and the like). Far smaller and far faster, at a cost in accuracy that,
       again, gets measured.
-- [ ] Confirm the quantized model gives the same answers as the Python one on the test set.
-      This step is skipped often and is where silent breakage lives.
+- [x] Confirm the quantized model gives the same answers as the Python one on the test set.
+      This step is skipped often and is where silent breakage lives. In Chrome, with
+      `transformers.js`: the 32- and 16-bit copies pick the same sense on all 409 lines,
+      the 8-bit copy on 381, and 68.9% against 69.2% overall.
+- [x] Measure memory, not only the download. In use, about 450 MB for the 8-bit copy and
+      700 for the 16-bit one — the browser widens half-size weights back to full to
+      compute. That settles it for 8-bit: one line in 409 is not worth 250 MB.
+- [ ] Load the model only when a lookup needs it, and close it after about two idle
+      minutes so the memory goes back. A reader who is not looking anything up pays
+      nothing; the first lookup after a pause waits 0.6 seconds for the load.
+- [ ] Only for readers who chose the local provider. Someone using a key never loads it.
+- [ ] Store each sense's vector in `vocab.db` rather than encoding the definitions on
+      every lookup. They never change, and only the line then goes through the model.
+      Measure what it saves in time and in peak memory.
 - [ ] Run it with `transformers.js` inside a `chrome.offscreen` document. The worker is
       killed after about 30 seconds idle, so a model loaded there would reload constantly.
       The offscreen document stays alive and the worker messages it.
@@ -654,7 +670,8 @@ worker cannot hold a model.
 - [ ] Ship `vocab.db` and the weights as data. Manifest V3 bans remote code, but weights
       are data. The runtime `.wasm` is code and has to be bundled.
 
-**Exit:** the extension answers with the network off.
+**Exit:** the extension answers with the network off, and memory goes back to where it
+was once the model has been idle.
 
 ### 17 — `docs/comparison`
 
