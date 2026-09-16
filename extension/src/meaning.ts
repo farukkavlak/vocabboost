@@ -12,8 +12,8 @@ export interface Meaning {
   phrase?: string;
   /** Local model only: false when the line does not settle which sense it is. */
   confident?: boolean;
-  /** Local model only: how many senses were left out of `senses`. */
-  hidden?: number;
+  /** Local model only: the remaining senses, folded away on the card. */
+  others?: Sense[];
   /** Provider models only. */
   cefr?: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
   /** Provider models only, when the reader chose a language. */

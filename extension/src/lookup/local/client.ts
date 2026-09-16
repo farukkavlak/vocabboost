@@ -3,14 +3,19 @@
  * Chrome stops an idle service worker and the model would reload on every lookup.
  */
 
-import { LookupError, type Meaning, type MeaningProvider } from "../../meaning";
+import {
+  LookupError,
+  type Meaning,
+  type MeaningProvider,
+  type Sense,
+} from "../../meaning";
 import type { ChooseResult, ChooseSense } from "../../messages";
 import type { Choice, Ranked } from "./choose";
 
 const PAGE = "offscreen.html";
 
-/** Senses shown before the rest are folded away. */
-const SHOWN = 3;
+/** Senses shown when the model is unsure; the rest are folded away. */
+const UNSURE_SHOWN = 3;
 
 const POS_NAMES = {
   n: "noun",
@@ -44,20 +49,30 @@ export async function closePage(): Promise<void> {
   }
 }
 
-/** The first three, or all four when folding would hide a single sense. */
-function shown(ranked: Ranked[]): Ranked[] {
-  return ranked.length <= SHOWN + 1 ? ranked : ranked.slice(0, SHOWN);
+/**
+ * One sense when the model is confident. Otherwise the first three, or all four when
+ * folding would hide a single sense.
+ */
+function shownCount({ confident, ranked }: Choice): number {
+  if (confident) {
+    return 1;
+  }
+  return ranked.length <= UNSURE_SHOWN + 1 ? ranked.length : UNSURE_SHOWN;
+}
+
+function toSense({ gloss, examples }: Ranked): Sense {
+  return {
+    definition: gloss,
+    ...(examples[0] ? { example: examples[0] } : {}),
+  };
 }
 
 function toMeaning(choice: Choice): Meaning {
-  const senses = shown(choice.ranked);
+  const count = shownCount(choice);
   return {
-    senses: senses.map(({ gloss, examples }) => ({
-      definition: gloss,
-      ...(examples[0] ? { example: examples[0] } : {}),
-    })),
+    senses: choice.ranked.slice(0, count).map(toSense),
+    others: choice.ranked.slice(count).map(toSense),
     confident: choice.confident,
-    hidden: choice.ranked.length - senses.length,
     ...(choice.pos ? { partOfSpeech: POS_NAMES[choice.pos] } : {}),
     ...(choice.lemma.includes(" ") ? { phrase: choice.lemma } : {}),
   };

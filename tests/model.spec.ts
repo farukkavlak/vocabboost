@@ -47,7 +47,7 @@ test("offers the model as a second step, once the local answer is in", async ({
 }) => {
   await setKey(worker, "anthropic", "sk-ant-test");
   const page = await openCard(context, worker);
-  await expect(page.locator(ASK)).toHaveText("Ask your model →");
+  await expect(page.locator(ASK)).toHaveText("Ask your model");
 });
 
 test("leaves the step out when no key has been added", async ({
@@ -84,7 +84,8 @@ test("asks the chosen provider with the whole line and shows what it answers", a
 
   const card = page.locator("#vocab-meaning");
   await expect(card.locator(".definition")).toHaveText([ANSWER.definition]);
-  await expect(card.locator(".badge")).toHaveText(["verb", "B2"]);
+  await expect(card.locator(".pos")).toHaveText("verb");
+  await expect(card.locator(".level")).toHaveText("B2");
 
   // The line is the whole point: the word alone does not say which meaning.
   const sent = JSON.parse(bodies[0] ?? "{}") as {

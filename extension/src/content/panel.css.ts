@@ -82,26 +82,34 @@ export const panelStyles = `
 
   .meaning {
     position: fixed;
+    display: flex;
+    flex-direction: column;
     box-sizing: border-box;
     min-width: 220px;
-    max-width: min(360px, 80vw);
-    padding: 10px 13px 11px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 12px;
-    background: rgba(22, 22, 26, 0.98);
+    max-width: min(400px, 80vw);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgb(22, 22, 26);
     color: #f2f2f5;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     font-size: var(--meaning-size);
     line-height: 1.45;
     text-align: left;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
     z-index: 2147483647;
+  }
+
+  /* The card's height is capped to the room beside the panel; the body scrolls. */
+  .body {
+    padding: 10px 14px 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* Added once placed: an element measured mid-animation reports where the animation
      has it, not where it was put. */
   .appear {
-    animation: appear 140ms ease-out;
+    animation: appear 120ms ease-out;
   }
 
   /* Points back at the word, so the card is never mistaken for a page element. */
@@ -109,8 +117,8 @@ export const panelStyles = `
     position: absolute;
     width: 10px;
     height: 10px;
-    background: rgba(22, 22, 26, 0.98);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgb(22, 22, 26);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     transform: rotate(45deg);
   }
 
@@ -126,40 +134,46 @@ export const panelStyles = `
     border-top: 0;
   }
 
+  /* Headword, then part of speech in italics, as a printed dictionary sets them. */
   .head {
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 4px;
+    column-gap: 0.5em;
+    margin-bottom: 6px;
   }
 
   .head h1 {
     margin: 0;
-    font-size: 1.08em;
-    font-weight: 600;
+    font-size: 1.12em;
+    font-weight: 650;
   }
 
-  .badge {
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.78em;
-    text-transform: lowercase;
+  .pos {
+    color: rgba(255, 255, 255, 0.62);
+    font-style: italic;
   }
 
-  .badge.cefr {
-    background: rgba(208, 69, 27, 0.22);
-    color: #ffb59b;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+  .level {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 0.86em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lead {
+    margin: 0 0 6px;
+    color: rgba(255, 255, 255, 0.62);
+  }
+
+  .senses,
+  .others {
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
   .sense + .sense {
-    margin-top: 6px;
-    padding-top: 6px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 8px;
   }
 
   .definition {
@@ -168,52 +182,102 @@ export const panelStyles = `
 
   .example {
     margin: 2px 0 0;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.58);
     font-style: italic;
   }
 
-  .phrase {
-    margin: 0 0 4px;
-    color: #ffb59b;
-    font-size: 0.92em;
+  /* Several candidates: each keeps to a short block so they can be compared. */
+  .compact .sense {
+    padding-left: 10px;
+    border-left: 2px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .compact .example {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Indented to start where the toggle's text does. */
+  .others {
+    margin-top: 6px;
+    padding-left: 1em;
+    color: rgba(255, 255, 255, 0.62);
+  }
+
+  .others .sense + .sense {
+    margin-top: 4px;
   }
 
   .translation {
-    margin: 5px 0 0;
-    padding-top: 5px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 8px 0 0;
     color: rgba(255, 255, 255, 0.72);
   }
 
+  /* Errors from a provider; shown under the answer they failed to replace. */
+  .note {
+    margin: 8px 0 0;
+    color: #f0b4a4;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .more,
   .ask {
-    display: block;
-    margin-top: 8px;
-    padding: 4px 8px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 7px;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.75);
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    color: rgba(255, 255, 255, 0.62);
     font: inherit;
-    font-size: 0.88em;
     cursor: pointer;
-    transition: background-color 100ms ease-out;
+  }
+
+  .more::before {
+    content: "";
+    display: inline-block;
+    width: 0.4em;
+    height: 0.4em;
+    margin: 0 0.5em 0.15em 0.1em;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 120ms ease-out;
+  }
+
+  .more[aria-expanded="true"]::before {
+    transform: rotate(45deg);
+  }
+
+  .ask {
+    margin-left: auto;
+    color: #f2f2f5;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.3);
+    text-underline-offset: 3px;
+  }
+
+  .more:hover,
+  .ask:not(:disabled):hover {
+    color: #fff;
+  }
+
+  .more:focus-visible,
+  .ask:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 2px;
+    border-radius: 3px;
   }
 
   .ask:disabled {
-    opacity: 0.45;
+    color: rgba(255, 255, 255, 0.45);
+    text-decoration: none;
     cursor: default;
-  }
-
-  .note {
-    margin: 6px 0 0;
-    color: #ffb59b;
-    font-size: 0.92em;
-  }
-
-  .ask:not(:disabled):hover,
-  .ask:focus-visible {
-    background: rgba(255, 255, 255, 0.12);
-    outline: none;
   }
 
   .pending {

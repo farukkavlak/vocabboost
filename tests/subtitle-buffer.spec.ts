@@ -89,8 +89,8 @@ test("keeps punctuation on screen but looks up the bare word", async ({
     '"Wait," he said — 42 times, a lot.',
   );
 
-  await page.locator("#vocab-panel .word").last().click();
-  await expect(page.locator("#vocab-meaning h1")).toHaveText("lot");
+  await page.locator("#vocab-panel .word").first().click();
+  await expect(page.locator("#vocab-meaning h1")).toHaveText("Wait");
 });
 
 test("Escape closes the panel and resumes the video", async ({

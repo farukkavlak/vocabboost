@@ -142,8 +142,9 @@ The research lives in `research/`, in Python. Only phase 16 touches the extensio
 - [x] Confidence = the gap between the first and second score
 - [x] Threshold 0.081, chosen on validation: leads on 44% of test lines, 88% right
 - [x] When unsure, show three senses (the right one is among them 91% of the time)
-- [ ] Card: when confident, lead with one sense and fold the rest behind a count
-- [ ] Card: when unsure, show the likeliest senses side by side and say so
+- [x] Card: when confident, lead with one sense and fold the rest behind a count
+- [x] Card: when unsure, show the likeliest senses side by side and say so
+- [x] The card never covers the subtitle line; long lists scroll inside it
 - [ ] Detect lines where no sense fits (the gap does not)
 
 ### 16 — local model in the extension
