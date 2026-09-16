@@ -548,27 +548,28 @@ this register.
       scored 64.4% twice and then 68.5%: `run.py` seeded Python's `random` and never
       seeded torch, so batch order and dropout moved freely. Four points of movement,
       wider than every difference being claimed. Torch is seeded now.
-- [x] Rerun both settings at three seeds and report the spread. With torch seeded the
-      control lands on 63.1% at all three, where it had drawn 64.4, 64.4 and 68.5. Paired
-      by seed, two stages are worth +2.7, +1.3 and +3.3 — small, and positive every time.
-      The top-three gap does not survive: +2.7, 0.0 and +0.7, where two unseeded runs had
-      both said +4.0.
-- [ ] Settle the 4-of-5 question. One unseeded run put it 1.3 points behind, which is
-      inside what the seed alone was moving, so it is not settled. Needs the same three
-      seeds.
+- [x] Rerun both settings at three seeds and report the spread. Paired by seed on the
+      409 unanimous test lines, two stages are worth +2.7, +3.2 and +3.2 — positive every
+      time. The top-three gap is under a point, where two unseeded runs had both said
+      +4.0. The same seed now gives the same model: the session ran twice with identical
+      scores.
+- [x] Settle the 4-of-5 question. A tie on the same 409 lines: +0.7, −2.7 and −0.2. The
+      extra data and the extra error cancel out, so the 5-of-5 labels stay.
 - [x] Watch training loss and validation loss together. Seen, on the tuned run: the
       held-out triplet score climbs through every epoch (0.852, 0.855, 0.855, 0.865)
       while the subtitle score turns at epoch 2 (64.4, 66.4, 67.1, 65.8). Still learning
       the 3,322 examples, already losing everything else. `run.py` now keeps the best
       epoch rather than the last, which it had been overwriting.
-- [ ] Measure on the phase 13 test split
+- [x] Measure on the phase 13 test split. 69.2%, 93.4% in the top three, on its 409
+      unanimous lines. The labels are about 3% wrong, so it compares models rather than
+      grading one.
 - [ ] Report it split by how common the sense is, not as one average. A model at 94 on
       commonest senses and 53 on the rest averages to something respectable and is still
       wrong exactly when it is asked.
 - [x] Report it split by frequency band, against the baseline as it stands after phrase
-      matching: 56.0% against 52.0% on everyday words, 78.0% against 70.0% on common,
-      63.3% against 42.9% on uncommon. It is ahead everywhere now, but the gain is
-      lopsided — 20 points on uncommon words against 8 and 4 on the rest, because a
+      matching: 58.0% against 52.0% on everyday words, 74.0% against 70.0% on common,
+      65.3% against 42.9% on uncommon. It is ahead everywhere now, but the gain is
+      lopsided — 22 points on uncommon words against 6 and 4 on the rest, because a
       common word's commonest sense usually is the right one. Fifty lines a band and one
       seed, so read it as a direction.
 - [x] Try one smaller and one larger model and record accuracy, size and speed for
@@ -577,7 +578,7 @@ this register.
       browser.
 
 **Exit:** a trained model that beats phase 12, and it does: 65.8% against 55.7% for the
-untrained 110M and 55.0% for the baseline, and 85.9% in the top three against 80.5%.
+untrained 110M and 55.0% for the baseline, and 87.2% in the top three against 80.5%.
 Eighteen minutes on a free GPU, plus five for the pass on the subtitle labels.
 
 Two runs, one changing only the amount of data: 50,000 examples gave 59.1%, all 177,665

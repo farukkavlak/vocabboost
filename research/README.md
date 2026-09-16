@@ -19,16 +19,17 @@ which is what the card shows.
 | + phrase matching              |      0 |     55.0% |       - |       - |
 | untrained 22M encoder          |  23 MB |     47.7% |   75.2% |   88.6% |
 | untrained 110M encoder         | 110 MB |     55.7% |   80.5% |   89.3% |
-| trained on SemCor              |  23 MB |     63.1% |   83.2% |   91.3% |
-| **+ tuned on subtitle labels** |  23 MB | **65.8%** |   85.9% |   91.3% |
+| trained on SemCor              |  23 MB |     64.4% |   86.6% |   90.6% |
+| **+ tuned on subtitle labels** |  23 MB | **65.8%** |   87.2% |   91.9% |
 | the labeller, relabelling      |      — |     93.0% |       - |       - |
 
 The extension today shows the first sense the dictionary lists, and is wrong more often
 than right. The trained 22M model is the best here and the only one small enough to ship.
 
-The two trained rows are one seed, the one every other table here is measured on. Both
-settings were run at three seeds; the section on seeds gives the spread and the paired
-difference, which is the honest way to read the gap between them.
+The two trained rows are seed 17, the model every other table here is measured on. On
+149 lines one line is 0.7 points, so the gap between them is two lines. The fairer
+comparison is 409 panel-labelled test lines at three seeds, where tuning is worth +3.0;
+the section on seeds has it.
 
 The last row is the ceiling: 30 lines relabelled blind days later, agreeing with the
 first answer 28 times. No model measured against these labels can honestly claim much
@@ -38,16 +39,16 @@ By frequency band, both measured after phrase matching:
 
 | band     | senses a word | baseline | trained |
 | -------- | ------------: | -------: | ------: |
-| everyday |           9.3 |    52.0% |   56.0% |
-| common   |           5.8 |    70.0% |   78.0% |
-| uncommon |           6.0 |    42.9% |   63.3% |
+| everyday |           9.3 |    52.0% |   58.0% |
+| common   |           5.8 |    70.0% |   74.0% |
+| uncommon |           6.0 |    42.9% |   65.3% |
 
-The model is ahead in every band, but the gain is lopsided: 20 points on uncommon words
-against 8 and 4 on the others. A common word's commonest sense usually is the right one,
+The model is ahead in every band, but the gain is lopsided: 22 points on uncommon words
+against 6 and 4 on the others. A common word's commonest sense usually is the right one,
 so the dictionary's ordering is hard to beat there. A reader who clicks `vaudeville` is
 served much better than one who clicks `play`. Fifty lines a band and one seed, and the
-uncommon figure was 71.4% on an earlier unseeded run, so the split is a direction, not a
-measurement.
+uncommon figure has read 71.4% and 63.3% on earlier models, so the split is a direction,
+not a measurement.
 
 ## Running it
 
@@ -211,20 +212,20 @@ Split by whether the line is a phrase, both models measured the same way:
 
 |              | lines | senses | baseline | untrained 110M | trained 22M |
 | ------------ | ----: | -----: | -------: | -------------: | ----------: |
-| phrases      |    18 |    2.0 |    88.9% |          83.3% |       88.9% |
-| single words |   131 |    7.7 |    50.4% |          51.9% |       62.6% |
+| phrases      |    18 |    2.0 |    88.9% |          83.3% |       94.4% |
+| single words |   131 |    7.7 |    50.4% |          51.9% |       61.8% |
 | all          |   149 |    7.0 |    55.0% |          55.7% |       65.8% |
 
-On single words the trained model is 12.2 points ahead of the baseline where the
-untrained one managed 1.5. On phrases it only matches the baseline — but the baseline is
-88.9% there, against 2.0 senses to choose from, so there is almost nothing to win. An
+On single words the trained model is 11.4 points ahead of the baseline where the
+untrained one managed 1.5. On phrases it is one line ahead — the baseline is 88.9% there,
+against 2.0 senses to choose from, so there is almost nothing to win. An
 earlier run came out behind, which is what suggested skipping the model below three
 senses. That rule is off the table: on 18 lines one either way is noise, and the model is
 no longer the risk.
 
 ### Where it goes wrong
 
-51 of 149 lines get the wrong sense first; 30 of those still have a right sense in the
+51 of 149 lines get the wrong sense first; 32 of those still have a right sense in the
 top three. How badly wrong the rest are is not measured — WordNet's verbs are three
 levels deep against nine for nouns, so `buy` as trade scores further from `buy` as
 purchase than `hand` the body part does from `hand` the card game.
@@ -325,33 +326,34 @@ which wrong answers, which words are held out — and never seeded torch, which 
 training: batch order and dropout. So every run drew a different training order, and four
 points moved with it. That is wider than every difference the table above claims.
 
-`run.py` now seeds torch too, and both settings were rerun at three seeds. Control and
-tuned share a seed inside each pair, so the difference is read pair by pair rather than
-between averages.
+`run.py` now seeds torch too, and both settings run at three seeds. Control and tuned
+share a seed inside each pair, so the difference is read pair by pair rather than between
+averages. The epoch is chosen on the validation words, and every model is scored on the
+409 unanimous lines of the test words, which nothing was trained or chosen on.
 
 | seed | control | tuned | first | first 3 |
 | ---- | ------: | ----: | ----: | ------: |
-| 17   |   63.1% | 65.8% |  +2.7 |    +2.7 |
-| 23   |   63.1% | 64.4% |  +1.3 |     0.0 |
-| 41   |   63.1% | 66.4% |  +3.3 |    +0.7 |
+| 17   |   66.5% | 69.2% |  +2.7 |    +0.7 |
+| 23   |   65.3% | 68.5% |  +3.2 |     0.0 |
+| 41   |   66.7% | 69.9% |  +3.2 |    +0.2 |
 
-Three things come out of it.
+**Two stages help.** +3.0 at first place on average, positive at every seed: about twelve
+lines of 409. The top three barely moves. The control already has the right sense near
+the top, and tuning moves it to first.
 
-**The four points were the seed.** The control landed on 63.1% at all three, where the
-unseeded runs had drawn 64.4, 64.4 and 68.5. Exactly equal is luck — 149 lines means a
-point is a line and a half — but the spread collapsed, which is the point.
+**The same seed gives the same model.** This session ran twice and produced identical
+scores both times. An earlier seeded run had put the control at 63.1% on the 149 lines at
+every seed, where these give 64.4, 64.4 and 61.7; the code changed between the two, and
+that earlier +2.4 was chosen and reported on the same lines. It is replaced by the table
+above.
 
-**Two stages help, a little.** +2.7, +1.3 and +3.3 at first place: positive at every
-seed, mean +2.4. That is four lines out of 149, so it is small. It is also the same
-direction three times, which is more than any earlier number here could say.
+**Two draws that agree are not a measurement.** Two unseeded runs had both shown +4.0 in
+the top three, and that was read as the effect the card would feel. It is under one
+point.
 
-**The top-three claim does not survive.** Two unseeded runs had both shown +4.0 and that
-was read as the effect the card would feel. At three seeds it is +2.7, 0.0 and +0.7. Two
-draws that agreed are not a measurement, and this is what it costs to find that out.
-
-One caveat the sealed lines exist for: the best epoch is picked by first-place accuracy
-on the same 149 lines the table reports, so +2.4 is the flattering reading of it. Phase
-17 opens the 51 sealed lines once and says what it is worth where nothing was chosen.
+The test lines are panel-labelled, so about 3% of their labels are wrong. That error hits
+both sides of a pair, so the difference holds; the absolute 69% does not. Phase 17 opens
+the 51 sealed lines once for that.
 
 ### The first run
 
@@ -515,8 +517,8 @@ phase 15 needs, and five models saying it together is worth more than one saying
 sense does not fit, so a set that was 68% obvious would be teaching the wrong habit.
 
 3,708 is small next to SemCor's 177,665, and deliberately so — the measured gap was
-register, not volume. The bet paid, modestly: +2.4 points at first place, positive at all
-three seeds. The section on seeds has the pairs.
+register, not volume. The bet paid, modestly: +3.0 points at first place on the test words,
+positive at all three seeds. The section on seeds has the pairs.
 
 `make labels` joins the lines and the answers into `teacher-labels.jsonl`, in the shape
 `build_semcor.py` produces, so training reads both the same way. Every line is kept, not
@@ -557,10 +559,20 @@ That leaves a choice worth measuring rather than arguing:
 | 5 of 5 only | 3,708 |           97% |
 | plus 4 of 5 | 5,640 |          ~91% |
 
-Half again as much data for six points of label error. One unseeded run put 4-of-5 1.3
-points behind, which is inside what the seed alone was moving at the time, so the
-question is still open. It needs the same three-seed treatment the two-stage question
-got.
+Half again as much data for six points of label error. Measured at three seeds, on the
+same 409 unanimous test lines:
+
+| seed | 5 of 5 | plus 4 of 5 | first | first 3 |
+| ---- | -----: | ----------: | ----: | ------: |
+| 17   |  69.2% |       69.9% |  +0.7 |    +0.2 |
+| 23   |  68.5% |       65.8% |  −2.7 |    +1.2 |
+| 41   |  69.9% |       69.7% |  −0.2 |    −0.7 |
+
+A tie. The extra lines and the extra error cancel out, so the cleaner labels stay.
+
+The run's own log says otherwise, and is wrong to: each model reports on the test lines
+at its own bar, so the 4-of-5 models were scored on 592 lines including the ones five
+models could not agree on. Comparing two models means scoring them on the same lines.
 
 ### Train, choose, report
 
@@ -593,8 +605,8 @@ the 352 where all five said no sense fits. Phase 15 calibrates on how often the 
 right at a given confidence, and it can only do that where the hard lines are still in.
 
 The test part is not the sealed 51. It is panel-labelled, so it carries the panel's own
-error: 3% where five models agreed, 20% where four did. It narrows an error bar; it
-cannot settle a comparison. The 51 stay sealed for phase 17.
+error: 3% where five models agreed, 20% where four did. It can compare two models scored
+on the same lines; it cannot say how good either one is. The 51 stay sealed for phase 17.
 
 ### Now worth spending
 
