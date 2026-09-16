@@ -13,35 +13,40 @@ Each number is the share of 149 hand-labelled lines where the right sense came f
 `first 3` and `first 5` are the share where it was somewhere in the top three or five,
 which is what the card shows.
 
-|                               |   size |     first |   first 3 |   first 5 |
-| ----------------------------- | -----: | --------: | --------: | --------: |
-| first sense in the dictionary |      0 |     45.6% |         - |         - |
-| + phrase matching             |      0 |     55.0% |         - |         - |
-| untrained 22M encoder         |  23 MB |     47.7% |     75.2% |     88.6% |
-| untrained 110M encoder        | 110 MB |     55.7% |     80.5% |     89.3% |
-| **trained 22M encoder**       |  23 MB | **64.4%** | **85.2%** | **90.6%** |
-| the labeller, relabelling     |      — |     93.0% |         - |         - |
+|                                |   size | first |   first 3 | first 5 |
+| ------------------------------ | -----: | ----: | --------: | ------: |
+| first sense in the dictionary  |      0 | 45.6% |         - |       - |
+| + phrase matching              |      0 | 55.0% |         - |       - |
+| untrained 22M encoder          |  23 MB | 47.7% |     75.2% |   88.6% |
+| untrained 110M encoder         | 110 MB | 55.7% |     80.5% |   89.3% |
+| trained on SemCor              |  23 MB | 68.5% |     83.2% |   91.3% |
+| **+ tuned on subtitle labels** |  23 MB | 67.8% | **87.2%** |   90.6% |
+| the labeller, relabelling      |      — | 93.0% |         - |       - |
 
 The extension today shows the first sense the dictionary lists, and is wrong more often
-than right. The trained 22M model is both the best here and the only one small enough
-to ship.
+than right. The trained 22M model is the best here and the only one small enough to ship.
+
+The two trained rows are one run each and the first column moves about four points
+between runs, so read the difference between them in the top three, not at first place.
+The section on seeds below is why.
 
 The last row is the ceiling: 30 lines relabelled blind days later, agreeing with the
 first answer 28 times. No model measured against these labels can honestly claim much
-past it — and the model is 29 points below, so the gap is real work, not noise.
+past it — and the model is 25 points below, so the gap is real work, not noise.
 
 By frequency band, both measured after phrase matching:
 
 | band     | senses a word | baseline | trained |
 | -------- | ------------: | -------: | ------: |
 | everyday |           9.3 |    52.0% |   56.0% |
-| common   |           5.8 |    70.0% |   72.0% |
-| uncommon |           6.0 |    42.9% |   65.3% |
+| common   |           5.8 |    70.0% |   76.0% |
+| uncommon |           6.0 |    42.9% |   71.4% |
 
-The model is ahead in every band, but the gain is lopsided: 22 points on uncommon words
-against 4 and 2 on the others. A common word's commonest sense usually is the right one,
+The model is ahead in every band, but the gain is lopsided: 28 points on uncommon words
+against 6 and 4 on the others. A common word's commonest sense usually is the right one,
 so the dictionary's ordering is hard to beat there. A reader who clicks `vaudeville` is
-served much better than one who clicks `play`.
+served much better than one who clicks `play`. Fifty lines a band and one run each, so
+the split is a direction, not a measurement.
 
 ## Running it
 
@@ -204,15 +209,16 @@ Split by whether the line is a phrase, both models measured the same way:
 
 |              | lines | senses | baseline | untrained 110M | trained 22M |
 | ------------ | ----: | -----: | -------: | -------------: | ----------: |
-| phrases      |    18 |    2.0 |    88.9% |          83.3% |       94.4% |
-| single words |   131 |    7.7 |    50.4% |          51.9% |       60.3% |
-| all          |   149 |    7.0 |    55.0% |          55.7% |       64.4% |
+| phrases      |    18 |    2.0 |    88.9% |          83.3% |       88.9% |
+| single words |   131 |    7.7 |    50.4% |          51.9% |       64.9% |
+| all          |   149 |    7.0 |    55.0% |          55.7% |       67.8% |
 
-On single words the trained model is 9.9 points ahead of the baseline where the
-untrained one managed 1.5. On phrases it is ahead too, by 5.6 — the earlier run was
-behind the baseline there, which is what suggested skipping the model below three
-senses. That rule is off the table: on 18 lines one either way is noise, but the model
-is no longer the risk.
+On single words the trained model is 14.5 points ahead of the baseline where the
+untrained one managed 1.5. On phrases it only matches the baseline — but the baseline is
+88.9% there, against 2.0 senses to choose from, so there is almost nothing to win. An
+earlier run came out behind, which is what suggested skipping the model below three
+senses. That rule is off the table: on 18 lines one either way is noise, and the model is
+no longer the risk.
 
 ### Where it goes wrong
 
@@ -242,7 +248,7 @@ the two. And the test is lenient: `1,3` first and `3` second counts as agreement
 lines the interval is roughly ±9 points, so the honest reading is a ceiling somewhere
 above 84%.
 
-Even at 84% the model is twenty points short, which is what makes the next phase worth
+Even at 84% the model is sixteen points short, which is what makes the next phase worth
 paying for. The two lines that disagreed are the expected kind:
 
 - _"At night he becomes the night-walker"_ — `become` as entering a state, or as
@@ -277,31 +283,62 @@ phone-verified or Kaggle quietly hands out a CPU instead of a GPU, which is why
 ```sh
 make ufsac                      # once: download the corpora and build the examples
 make kaggle M="what changed"    # upload the data, push the script
-kaggle kernels status ofarukkavlak/vocabboost-wsd-train
-kaggle kernels output ofarukkavlak/vocabboost-wsd-train -p data/
+kaggle kernels status ofarukkavlak/vocabboost-wsd-training
+kaggle kernels output ofarukkavlak/vocabboost-wsd-training -p data/
 ```
 
 Then unzip a model into `data/model` and run `make evaluate` here. It uses the same
 code that scored the untrained models, so the comparison is like for like.
 
-### The runs
+### Where the subtitle labels go
 
-Four jobs in one session. SemCor alone is trained again rather than compared against the
-64.4% already on file, because that number came from a session with one T4 and Kaggle
-sometimes gives two, which doubles the effective batch. Rerunning it costs eighteen
-minutes and removes the doubt.
+Four jobs in one session, one question: is 3,708 lines of the right register worth
+anything on top of 177,665 lines of the wrong one?
 
-| job              | data                       | examples | epochs |
-| ---------------- | -------------------------- | -------: | -----: |
-| model-semcor     | semcor                     |  177,665 |      1 |
-| model-mixed      | semcor + panel labels      |  181,373 |      1 |
-| model-tuned      | panel labels, from semcor  |    3,708 |      3 |
-| model-tuned-4of5 | panel labels 4 of 5, ditto |    5,563 |      3 |
+| job              | data                      | examples | epochs | first | first 3 |
+| ---------------- | ------------------------- | -------: | -----: | ----: | ------: |
+| model-semcor     | semcor, the control       |  177,665 |      1 | 64.4% |   83.9% |
+| model-mixed      | semcor + labels, one pile |  181,373 |      1 | 61.7% |   83.9% |
+| model-tuned      | labels, from model-semcor |    3,708 |      3 | 67.1% |   87.9% |
+| model-tuned-4of5 | same, including 4 of 5    |    5,563 |      3 | 65.8% |   86.6% |
 
-The last two are the point. Mixed into SemCor the subtitle labels are 2% of the data and
-one pass will not weight them; trained second, on top of the finished SemCor model, they
-are the whole of the second pass. That is what domain adaptation means, and `model-mixed`
-is there because mixing is the obvious thing to try and the contrast is worth having.
+**Mixing them made it worse**, by 2.7 points. The expectation was that nothing would
+happen — 3,708 examples is 2% of the pile and one pass cannot weight them. Instead the
+2% was enough to disturb and not enough to teach.
+
+**Two stages read as better**, and the 4-of-5 labels as worse. Both readings are 1.3 to
+2.7 points, which the next section shows is inside the noise. The honest version of this
+table is the first-3 column, and the paragraph after it.
+
+### One score is not a result
+
+The tuned run was repeated to save a model the first session had overwritten. Same code,
+same data, same `--seed 17`. The control came back **68.5%** where it had twice been
+**64.4%**.
+
+Nothing had changed. `run.py` seeded Python's `random`, which fixes the data — which rows,
+which wrong answers, which words are held out — and never seeded torch, which fixes the
+training: batch order and dropout. So every run drew a different training order, and four
+points moved with it.
+
+That is wider than every difference in the table above. The +2.7 for two-stage training
+is not a result; it is one draw from a distribution nobody had measured.
+
+One thing does survive:
+
+| run   | control | tuned |  gap |
+| ----- | ------: | ----: | ---: |
+| first |   83.9% | 87.9% | +4.0 |
+| again |   83.2% | 87.2% | +4.0 |
+
+Two independent runs, the same gap to the decimal, in the top three. That is the column
+the card shows, and the reading is consistent with what a short second pass would do:
+3,708 examples move the right sense from the top five into the top three, and are not
+enough to put it first.
+
+`run.py` now seeds torch as well. That makes a run repeatable; it does not make one run
+informative, so the next session runs both settings at three seeds and reports the
+spread.
 
 ### The first run
 
@@ -334,6 +371,10 @@ so it is not junk.
 
 **More data has stopped buying anything.** 50k to 177k was worth 5.3 points; 177k to
 1.03M is worth zero. The curve flattened between those two runs.
+
+These are one run each, and the section below puts the run-to-run spread at four points,
+so a real gain smaller than that would be hidden here. It does not rescue OMSTI: a gain
+this table cannot see is a gain not worth six times the data.
 
 The held-out column is the interesting part. The combined run scores highest there —
 0.805, above either corpus alone — while its subtitle score does not move. The model

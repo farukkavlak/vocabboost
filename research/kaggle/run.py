@@ -21,6 +21,12 @@ training set. The **loss** is how wrong the model is now; training drives it dow
 Loss on the training data alone tells you nothing — a memorising model shows a falling
 loss and a test score that stops moving. So the subtitle lines are scored after every
 epoch, not only at the end.
+
+One score is not a result. Training is random — batch order, dropout — so the same job
+twice gives two numbers, and the gap between them was four points before the seeding
+below was fixed. `--seed` now fixes the training as well as the data, which makes a run
+repeatable; it does not make one run informative. Comparing two settings means running
+each at several seeds and reading the spread.
 """
 
 import argparse
@@ -35,6 +41,7 @@ import nltk
 for package in ["wordnet", "omw-1.4"]:
     nltk.download(package, quiet=True)
 
+import torch
 from nltk.corpus import wordnet as wn
 from sentence_transformers import (
     InputExample,
@@ -150,6 +157,12 @@ def main():
     args = parser.parse_args()
 
     rng = random.Random(args.seed)
+    # Python's `random` covers the data: which rows, which wrong answers, which words
+    # are held out. Torch covers the training: batch order and dropout. Seeding only the
+    # first left the second free, and the same job scored 64.4% and 68.5% on two runs —
+    # four points of movement mistaken for a result.
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
     print()
     rows = load(args.data, args.agreed)
     rng.shuffle(rows)
@@ -181,14 +194,30 @@ def main():
 
     loader = DataLoader(pairs(train, rng), shuffle=True, batch_size=args.batch)
     loss = losses.MultipleNegativesRankingLoss(model)
+    best = (0, None)
     for epoch in range(1, args.epochs + 1):
         model.fit(train_objectives=[(loader, loss)], epochs=1,
                   warmup_steps=int(0.1 * len(train) / args.batch) if epoch == 1 else 0,
-                  output_path=args.out, show_progress_bar=True)
+                  show_progress_bar=True)
+        subtitles = score(model, test)
         print(f"epoch {epoch}  held-out {held_out_score(checker, model):.3f}  "
-              f"subtitles {score(model, test)}", flush=True)
+              f"subtitles {subtitles}", flush=True)
 
-    print(f"\nsaved to {args.out}/", flush=True)
+        # The last epoch is not the best one. The three-epoch run went 66.4, 67.1, 65.8
+        # on subtitles while the held-out score kept climbing — the model learning the
+        # 3,322 examples rather than the task. So the epoch is chosen on the subtitle
+        # score, and the held-out score cannot do it: it would pick the worst of the
+        # three.
+        #
+        # That is a choice made on the working set, which flatters the working set by
+        # however much the epochs differ. It is why 51 lines were sealed in phase 10 and
+        # are opened once, in phase 17.
+        if subtitles[1] > best[0]:
+            best = (subtitles[1], epoch)
+            model.save(args.out)
+
+    print(f"\nsaved epoch {best[1]} to {args.out}/, "
+          f"the best of {args.epochs} at {best[0]}%", flush=True)
 
 
 if __name__ == "__main__":

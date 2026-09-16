@@ -23,27 +23,28 @@ import sys
 INPUT = pathlib.Path("/kaggle/input")
 OUT = pathlib.Path("/kaggle/working")
 
-# Four runs. The first is the control: SemCor alone, trained again rather than compared
-# against the 64.4% already on file, because that number came from a session with one T4
-# and Kaggle sometimes gives two, which doubles the effective batch.
+# Three seeds of each, because one score is not a result. The same control job scored
+# 64.4% and 68.5% on two runs of identical code — torch was never seeded, so batch order
+# and dropout moved freely. That is fixed, but a fixed seed only makes one run
+# repeatable; it says nothing about how much the setting matters. Running both settings
+# at three seeds gives a spread to read the difference against.
 #
-# The rest ask whether the subtitle labels buy anything, two ways. Mixed in, they are 2%
-# of the data and one pass will not weight them. Trained second, on top of the control,
-# they are the whole of the second pass — which is what domain adaptation means. The
-# mixed run is kept because it is the obvious thing to try, and the contrast is the
-# point. `model-semcor` has to finish first: the tuned runs start from it.
-CONTROL = "model-semcor"
-JOBS = [
-    (CONTROL, ["semcor.jsonl"], []),
-    ("model-mixed", ["semcor.jsonl", "teacher-labels.jsonl"], ["--agreed", "5"]),
-    # Three epochs, not one: 3,708 examples is 58 steps at batch 64, and a single pass
-    # over that is barely training. `run.py` scores after each one, so the epoch the
-    # model starts overfitting shows up in the log rather than having to be guessed.
-    ("model-tuned", ["teacher-labels.jsonl"],
-     ["--agreed", "5", "--from", CONTROL, "--epochs", "3"]),
-    ("model-tuned-4of5", ["teacher-labels.jsonl"],
-     ["--agreed", "4", "--from", CONTROL, "--epochs", "3"]),
-]
+# The seed moves the held-out word split as well as the batch order, so a seed is a
+# whole different draw of the experiment. Control and tuned share the seed within each
+# pair, which is the point: the difference is read pair by pair, not across pairs.
+#
+# Six jobs, about ninety minutes. Two questions the last session settled — mixing the
+# corpora and the 4-of-5 labels — are not repeated.
+SEEDS = [17, 23, 41]
+JOBS = []
+for seed in SEEDS:
+    control = f"model-semcor-{seed}"
+    JOBS.append((control, ["semcor.jsonl"], ["--seed", str(seed)]))
+    # Three epochs: 3,708 examples is 58 steps at batch 64, and `run.py` keeps whichever
+    # epoch scored best rather than the last one.
+    JOBS.append((f"model-tuned-{seed}", ["teacher-labels.jsonl"],
+                 ["--agreed", "5", "--from", control, "--seed", str(seed),
+                  "--epochs", "3"]))
 
 NEEDED = ["run.py", "working.jsonl", "semcor.jsonl", "teacher-labels.jsonl"]
 
@@ -86,8 +87,12 @@ def main():
                         "--out", str(OUT / name), *options], check=True)
         built.add(name)
 
+    # Six models is half a gigabyte of output to download for numbers that are already
+    # in the log. Only the tuned ones are kept; the controls exist to be trained on top
+    # of, and one is already on the laptop.
     for name in sorted(built):
-        shutil.make_archive(str(OUT / name), "zip", OUT / name)
+        if name.startswith("model-tuned"):
+            shutil.make_archive(str(OUT / name), "zip", OUT / name)
         shutil.rmtree(OUT / name)
 
 

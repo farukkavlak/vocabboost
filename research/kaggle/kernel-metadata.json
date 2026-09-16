@@ -1,5 +1,5 @@
 {
-  "id": "ofarukkavlak/vocabboost-wsd-train",
+  "id": "ofarukkavlak/vocabboost-wsd-training",
   "title": "VocabBoost WSD training",
   "code_file": "kernel.py",
   "language": "python",

@@ -302,7 +302,7 @@ measured, and why the model must never see the test set while it is being traine
 - [x] Relabel 30 of them blind, days later, and measure how often you agree with
       yourself: 28 of 30. It flatters us — same person twice where the published 70-78%
       is two people, and a lenient test where `1,3` then `3` counts as agreement — so
-      read it as a ceiling somewhere above 84%. The model is at 64.4%, twenty points
+      read it as a ceiling somewhere above 84%. The model is at 67.8%, sixteen points
       short, which is what makes phase 13's second half worth paying for. Both
       disagreements were WordNet distinctions the line does not settle: `become` as
       entering a state against undergoing a change, `captain` as a leader against a rank.
@@ -535,13 +535,24 @@ this register.
       is why there is no local training script. Colab's free session ends around fifty
       minutes and killed an overnight run, so training moved to Kaggle: twelve hours a
       session, detached.
-- [ ] Train in two stages and compare against mixing. Four jobs in one session:
-      SemCor alone as the control, SemCor with the labels mixed in, and two runs that
-      continue from the control on the labels alone — one at 5 of 5, one including
-      4 of 5. Three epochs on the short runs, since 3,708 examples is 58 steps.
-- [ ] Watch training loss and validation loss together. Training loss falling while
-      validation loss rises is overfitting, and it is the single most useful thing to learn
-      to recognize.
+- [x] Train in two stages rather than mixing. Mixing gives 61.7% against the control's
+      64.4% — worse than not bothering, where the expectation was that nothing would
+      happen. 2% of a pile is enough to disturb and not enough to teach.
+- [x] Measure the run-to-run noise before believing any of it. The same control job
+      scored 64.4% twice and then 68.5%: `run.py` seeded Python's `random` and never
+      seeded torch, so batch order and dropout moved freely. Four points of movement,
+      wider than every difference being claimed. Torch is seeded now.
+- [ ] Rerun both settings at three seeds and report the spread. One score is not a
+      result, and the +2.7 for two stages was one draw from a distribution nobody had
+      measured. The top-three gap held at +4.0 across both runs, which is the one
+      reading that survived.
+- [ ] Settle the 4-of-5 question. One run put it 1.3 points behind, which is inside the
+      noise, so it is not settled.
+- [x] Watch training loss and validation loss together. Seen, on the tuned run: the
+      held-out triplet score climbs through every epoch (0.852, 0.855, 0.855, 0.865)
+      while the subtitle score turns at epoch 2 (64.4, 66.4, 67.1, 65.8). Still learning
+      the 3,322 examples, already losing everything else. `run.py` now keeps the best
+      epoch rather than the last, which it had been overwriting.
 - [ ] Measure on the phase 13 test split
 - [ ] Report it split by how common the sense is, not as one average. A model at 94 on
       commonest senses and 53 on the rest averages to something respectable and is still
@@ -556,8 +567,9 @@ this register.
       size, which is the only comparison that matters — the 110M was never going in a
       browser.
 
-**Exit:** a trained model that beats phase 12, and it does: 64.4% against 55.7% for the
-untrained 110M and 55.0% for the baseline. Eighteen minutes on a free GPU.
+**Exit:** a trained model that beats phase 12, and it does: 67.8% against 55.7% for the
+untrained 110M and 55.0% for the baseline, and 87.2% in the top three against 80.5%.
+Eighteen minutes on a free GPU, plus five for the pass on the subtitle labels.
 
 Two runs, one changing only the amount of data: 50,000 examples gave 59.1%, all 177,665
 gave 64.4%, and the held-out triplet score moved with it (0.766 to 0.793). So the gain
