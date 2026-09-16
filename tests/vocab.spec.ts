@@ -18,10 +18,14 @@ interface Line {
   text: string;
   /** The phrase `lookup.py` finds at each word of the line, or null. */
   phrases: (string | null)[];
-  word?: string;
+  part: "validation" | "test" | "train";
+  /** The right sense where all five panel models agreed. */
+  label: string | null;
+  word: string;
+  /** Unset on phrase lines. */
   pos?: Pos;
-  lemma?: string;
-  senses?: string[];
+  lemma: string;
+  senses: string[];
 }
 
 // Written by `make vocab-json` from `lookup.py`: the lines of the validation and test
@@ -31,12 +35,12 @@ const data = read<VocabData>("../extension/public/vocab.json");
 
 test("finds the senses lookup.py finds for every single word", () => {
   const wrong = lines
-    .filter((line) => line.word && line.pos)
+    .filter((line) => line.pos)
     .filter((line) => {
-      const found = sensesOf(data, line.word!, line.pos!);
+      const found = sensesOf(data, line.word, line.pos!);
       return (
         found.lemma !== line.lemma ||
-        found.senses.map(([key]) => key).join(" ") !== line.senses!.join(" ")
+        found.senses.map(([key]) => key).join(" ") !== line.senses.join(" ")
       );
     });
   expect(wrong.map((line) => `${line.word} in ${line.text}`)).toEqual([]);

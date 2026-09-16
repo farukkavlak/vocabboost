@@ -12,5 +12,8 @@
     "@types/node": "^26.5.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.7"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.0"
   }
 }

@@ -671,6 +671,11 @@ worker cannot hold a model.
       Single words resolve NLTK's way — its lemmatizer, then `wn.synsets` — and get the
       senses the panel chose from on 8,160 of 8,163 lines. Phrases match on every line.
       The port agrees with `lookup.py` on all 1,880 fixture lines.
+- [x] Chain the pieces — phrase, tag, senses, model, threshold — and score the chain on
+      the test lines. With the full-precision model it gets 283 of 409 right, 69.2%,
+      the research's own number. Three lines differ in the senses offered, all a word
+      that appears twice with different tags: only the word reaches the lookup, not
+      which occurrence was clicked.
 - [ ] If it is still too heavy, look at distilling the encoder to static embeddings
       (Model2Vec and the like). Far smaller and far faster, at a cost in accuracy that,
       again, gets measured.

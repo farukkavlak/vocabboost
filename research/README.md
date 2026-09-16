@@ -99,6 +99,8 @@ make confidence  # when the card leads with one sense, and when it does not
 make onnx        # export data/model for the browser, full, half and 8-bit
 make check-onnx  # do the exported copies answer like data/model?
 make pos-effect  # the model with the tagged part of speech, and without it
+make tagger      # NLTK's tagger for the extension, and the tags its port must match
+make vocab-json  # vocab.db as JSON for the extension, and the lookups its port must match
 make lookup      # check phrase matching on a few known cases
 ```
 
@@ -726,6 +728,11 @@ precisely each weight is stored:
 | 32-bit float | 91 MB |           409/409 | 69.2% |        88.2% |       ~730 MB |
 | 16-bit float | 46 MB |           409/409 | 69.2% |        88.2% |       ~700 MB |
 | **8-bit**    | 23 MB |           381/409 | 68.9% |        87.7% |   **~450 MB** |
+
+The 8-bit copy's score depends on the runtime as well as the rounding: 68.0% in
+Python's onnxruntime, 68.9% in Chrome, 66.5% in Node. Each does its integer arithmetic
+its own way, and a gap that small moves a few lines. Chrome is the runtime that ships,
+so Chrome is the number that counts.
 
 Every copy answers in about 0.1 seconds a word (0.25 at the slowest tenth) and loads in
 0.6. Speed is not what separates them.

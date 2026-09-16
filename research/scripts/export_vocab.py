@@ -12,7 +12,9 @@ Two files are written:
   part of speech is given.
 - `tests/fixtures/lookups.json`: lines with what `lookup.py` finds in them — the senses
   of the tagged word, and the phrase, if any, at every word — which the TypeScript port
-  is tested against.
+  is tested against. Each carries its part of the split and, where all five panel
+  models agreed, the right sense, so the whole chain can be scored the way the research
+  scored the model.
 """
 
 import argparse
@@ -70,8 +72,15 @@ def main():
             continue
         words = [w.lower() for w in WORD.findall(row["text"])]
         found = [vocab.phrase_at(words, i) for i in range(len(words))]
-        case = {"text": row["text"], "phrases": [p["lemma"] if p else None for p in found]}
-        if not phrase:
+        case = {"text": row["text"], "part": where[row["lemma"]],
+                "phrases": [p["lemma"] if p else None for p in found],
+                "label": row.get("key") if row.get("agreed") == 5 else None}
+        if phrase:
+            # Which word was clicked is not recorded; the first the phrase covers will do.
+            first = next(i for i, p in enumerate(found) if p and p["lemma"] == row["lemma"])
+            case.update(word=WORD.findall(row["text"])[first], lemma=row["lemma"],
+                         senses=row["candidates"])
+        else:
             lemma, keys = vocab.senses_of(row["word"], row["pos"])
             case.update(word=row["word"], pos=row["pos"], lemma=lemma, senses=keys)
         lines.append(case)
