@@ -147,6 +147,16 @@ vocab-json:
 lookup:
 	$(PY) scripts/lookup.py
 
+# --- the final comparison (phase 17) -----------------------------------------
+
+SET ?= working
+
+comparison-lines:
+	$(PY) scripts/comparison.py lines --set $(SET)
+
+comparison:
+	$(PY) scripts/comparison.py report --set $(SET)
+
 # --- one-off measurements, kept so their numbers can be reproduced ------------
 
 lexicons:
@@ -178,5 +188,6 @@ clean:
 	kaggle wait-dataset \
 	baseline evaluate compare failures sense-split confidence pos-effect \
 	extension onnx check-onnx tagger vocab-json lookup \
+	comparison-lines comparison \
 	lexicons phrase-split phrase-impact sense-distance \
 	lint clean

@@ -8,11 +8,13 @@ export default defineConfig({
   reporter: [["list"]],
   // Live tests hit youtube.com (`npm run test:live`), the shot spec only writes images
   // (`npm run shots`), and the memory spec is slow and machine-dependent
-  // (`npm run test:memory`). None belongs in the deterministic suite.
+  // (`npm run test:memory`), and the comparison spec writes research data
+  // (`npm run test:comparison`). None belongs in the deterministic suite.
   grepInvert: [
     ...(process.env.LIVE ? [] : [/@live/]),
     ...(process.env.SHOTS ? [] : [/@shots/]),
     ...(process.env.MEMORY ? [] : [/@memory/]),
+    ...(process.env.COMPARISON ? [] : [/@comparison/]),
   ],
   use: {
     trace: "retain-on-failure",

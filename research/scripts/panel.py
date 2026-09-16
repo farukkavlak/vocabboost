@@ -33,6 +33,12 @@ Answer with the number alone. If none of them fit, answer 0."""
 
 
 def ask(model, row, seed):
+    """The sense key the model picks, "none", or None for an answer that is not a number."""
+    return ask_with_usage(model, row, seed)[0]
+
+
+def ask_with_usage(model, row, seed):
+    """`ask`, plus the provider's usage report (tokens and cost)."""
     order = list(range(len(row["senses"])))
     random.Random(seed).shuffle(order)
     options = "\n".join(
@@ -45,15 +51,14 @@ def ask(model, row, seed):
         "max_tokens": 8,
         "temperature": 0,
     })
+    usage = result.get("usage") or {}
     found = re.search(r"\d+", str(result.get("output", "")))
-    if not found:
-        return None
-    picked = int(found.group())
+    picked = int(found.group()) if found else -1
     if picked == 0:
-        return "none"
+        return "none", usage
     if 1 <= picked <= len(order):
-        return row["senses"][order[picked - 1]]["key"]
-    return None
+        return row["senses"][order[picked - 1]]["key"], usage
+    return None, usage
 
 
 def main():
