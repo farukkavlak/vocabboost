@@ -602,18 +602,31 @@ between answering more often and answering correctly.
 The model always returns its nearest sense, even when nothing fits. It has to be able to
 say so.
 
-- [ ] Pick a threshold on the validation set, never the test set
-- [ ] Plot accuracy against how often the model answers, and choose the point deliberately
+- [x] Pick a threshold on the validation set, never the test set. The bar came first: a
+      sense the card leads with is right at least 85% of the time, the labeller's own
+      agreement. The gap between the first and second choice clears it at 0.081, and the
+      top score cannot — it reaches 73.6% even answering on the surest 30%.
+- [x] Plot accuracy against how often the model answers, and choose the point
+      deliberately. On the test words, with the threshold chosen on validation: leads
+      with one sense on 43.5% of lines, right on 88.2%; on the rest the right sense is in
+      the top three 90.5% of the time.
 - [ ] Below the threshold the card stops claiming. It shows the senses that fit, side
       by side and unranked, and says plainly that the line does not settle it.
 - [ ] Above the threshold the card leads with one sense and folds the rest away behind
       a count. The other meanings stay one click from the reader either way, because
       ranking second is not the same as being absent.
-- [ ] How many senses sit above the fold comes from the phase 12 numbers, not from
-      taste. Showing every sense is what the extension does today, and a wall of
-      thirteen definitions is the problem, not the fix. The ranking is what we add.
+- [x] How many senses sit above the fold comes from the numbers, not from taste.
+      Showing every sense is what the extension does today, and a wall of thirteen
+      definitions is the problem, not the fix. The ranking is what we add. Three: on
+      uncertain lines the right sense is in the first one, two, three 55, 78, 91% of the
+      time on test, and each after that adds three points. A lone fourth is shown rather
+      than folded behind "+1 more".
+- [ ] Catch lines where no sense fits. The gap does not: the card still leads with one
+      on 6 of 14 such lines. Too few to measure, and a different signal from which sense
+      is ahead.
 
-**Exit:** a threshold, with the accuracy and the answer rate that come with it.
+**Exit:** a threshold, with the accuracy and the answer rate that come with it. 0.081:
+leads with one sense on 43.5% of test lines and is right on 88.2% of them.
 
 The point is that a reader is never shown a confident wrong answer. That matters more than
 the headline number: a wrong meaning delivered with certainty is what gets learned.
