@@ -141,6 +141,9 @@ lexicons:
 phrase-split:
 	$(PY) scripts/phrase_split.py
 
+sense-split:
+	$(PY) scripts/sense_split.py
+
 sense-distance:
 	$(PY) scripts/sense_distance.py
 
@@ -161,4 +164,4 @@ clean:
 
 .PHONY: setup pool wiktionary vocab semcor ufsac candidates phrases label split \
         recheck teacher panel panel-check labels check-teacher kaggle baseline evaluate compare lookup failures lexicons \
-        phrase-split sense-distance phrase-impact lint clean
+        phrase-split sense-split sense-distance phrase-impact lint clean

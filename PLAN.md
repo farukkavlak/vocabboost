@@ -563,9 +563,11 @@ this register.
 - [x] Measure on the phase 13 test split. 69.2%, 93.4% in the top three, on its 409
       unanimous lines. The labels are about 3% wrong, so it compares models rather than
       grading one.
-- [ ] Report it split by how common the sense is, not as one average. A model at 94 on
+- [x] Report it split by how common the sense is, not as one average. A model at 94 on
       commonest senses and 53 on the rest averages to something respectable and is still
-      wrong exactly when it is asked.
+      wrong exactly when it is asked. Ours is 85.4 against 41.8 on the hand labels and
+      83.7 against 45.9 on the panel test lines: the same shape as the paper's, and wrong
+      more often than right on the lines a reader is likeliest to click.
 - [x] Report it split by frequency band, against the baseline as it stands after phrase
       matching: 58.0% against 52.0% on everyday words, 74.0% against 70.0% on common,
       65.3% against 42.9% on uncommon. It is ahead everywhere now, but the gain is
