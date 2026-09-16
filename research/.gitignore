@@ -10,5 +10,6 @@ data/semcor.jsonl
 data/omsti.jsonl
 data/masc.jsonl
 data/model*
+data/onnx/
 data/kaggle/
 data/teacher.jsonl

@@ -11,9 +11,9 @@ from sentence_transformers import SentenceTransformer
 from zero_shot import hits, rank
 
 RUNS = [
-    ("untrained 22M", "sentence-transformers/all-MiniLM-L6-v2", "23 MB"),
-    ("untrained 110M", "sentence-transformers/all-mpnet-base-v2", "110 MB"),
-    ("trained 22M", "data/model", "23 MB"),
+    ("untrained 22M", "sentence-transformers/all-MiniLM-L6-v2", "87 MB"),
+    ("untrained 110M", "sentence-transformers/all-mpnet-base-v2", "438 MB"),
+    ("trained 22M", "data/model", "87 MB"),
 ]
 
 
