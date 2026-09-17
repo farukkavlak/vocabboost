@@ -16,8 +16,8 @@ Next, in this order:
 4. CEFR level for each word (phase 11).
 5. Model work: more rare-sense data (phase 13), and detecting lines where no sense fits
    (phase 15).
-6. Probabilities and calibrated confidence like Jev's (phase 18); trying Jev once a key
-   arrives (phase 19), and adding it as a provider if it earns it (phase 20).
+6. Asking the reader's provider only when the local model is unsure (phase 21); trying
+   Jev once TypeSafe lets us in (phase 19, on the waitlist) and as a provider (phase 20).
 
 ## Why the rewrite
 
@@ -213,22 +213,22 @@ benchmarks are the vendor's own.
 
 ### 18 — probabilities and calibrated confidence
 
-The local model returns raw scores and a yes/no `confident`. Make it return a
-probability for each sense and a confidence that means what it says.
+Log loss of the right sense 1.52 → 0.90; confidence calibrated to ECE 0.059 on test; the
+card leads exactly where it did.
 
-- [ ] Turn scores into probabilities (softmax, temperature fitted on validation words)
-- [ ] Map the gap to a confidence (the top score alone barely separates right from
-      wrong, see phase 15); fit on validation words only
-- [ ] Reliability table: at each confidence, how often the sense is right
-- [ ] Keep the 85% bar: the card leads with one sense only above the confidence that
-      clears it; must not lead less often than the 0.081 gap on test
-- [ ] `Choice` carries `probability` per sense and a numeric `confidence`; `confident`
+- [x] Turn scores into probabilities (softmax, temperature 0.0614 fitted on validation)
+- [x] Map the gap to a confidence with a logistic curve, fitted on validation words;
+      the first sense's probability was tried too and fell just under the bar on test
+- [x] Reliability table: at each confidence, how often the sense is right
+- [x] Keep the 85% bar: gap 0.081 is confidence 0.685, so the card leads as before
+- [x] `Choice` carries `probability` per sense and a numeric `confidence`; `confident`
       is derived from it
-- [ ] Log keeps the confidence; decide whether the card shows it
+- [x] Log keeps the confidence
+- [x] The card shows it when it leads with one sense ("92% sure")
 
 ### 19 — trying Jev
 
-Needs a TypeSafe key (on the waitlist).
+Needs a TypeSafe key. Access is invite-only; on the waitlist since 2026-09-17.
 
 - [ ] `research/scripts/jev.py`: each line's WordNet senses as one `choice` question
 - [ ] Score on the working set; the sealed lines only as a footnote, since they were
@@ -246,6 +246,28 @@ Only if phase 19 says so. Like Claude and OpenAI: optional, the reader's own key
 - [ ] Host permission requested only when a key is entered; key in `storage.local`
 - [ ] Settings, PRIVACY.md and the store's permission reasons updated
 - [ ] Tests with a mocked API
+
+### 21 — ask a provider only when unsure
+
+For readers with a key: the local model answers when it is sure, and the provider picks
+among its candidates when it is not. Replayed from the phase 17 answers, this beat both
+on their own:
+
+| lines            | ours alone | provider alone | ours when sure, else provider |
+| ---------------- | ---------: | -------------: | ----------------------------: |
+| working, Haiku   |      65.1% |          68.5% |                         69.1% |
+| working, 4o mini |      65.1% |          65.1% |                         69.8% |
+| sealed, Haiku    |      64.7% |          80.4% |                         82.4% |
+| sealed, 4o mini  |      64.7% |          74.5% |                         76.5% |
+
+The provider was asked on 82 of 149 and 37 of 51 lines. The gains are 1 to 7 lines, and
+the sealed lines were already opened, so this shows a direction, not a result.
+
+- [ ] A replay script in `research/`, so the table can be rebuilt
+- [ ] Choose the confidence below which to ask, on the working set
+- [ ] Provider prompt: choose among the local candidates, as phase 17 did
+- [ ] Card: the local answer first, replaced when the provider answers
+- [ ] Jev as the provider here once phase 19 allows
 
 ## Data sources
 

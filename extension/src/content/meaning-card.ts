@@ -48,6 +48,17 @@ function place(card: HTMLElement, word: HTMLElement, panel: HTMLElement): void {
   }
 }
 
+/**
+ * "92% sure", when the model led with one sense out of several. Capped at 99: a model's
+ * answer is never certain.
+ */
+function sureness({ confident, confidence }: Meaning): string | null {
+  if (!confident || confidence === undefined || confidence >= 1) {
+    return null;
+  }
+  return `${Math.min(Math.round(confidence * 100), 99)}% sure`;
+}
+
 function head(word: string, meaning: Meaning): HTMLElement {
   const node = element("div", "head");
   const title = document.createElement("h1");
@@ -58,6 +69,10 @@ function head(word: string, meaning: Meaning): HTMLElement {
   }
   if (meaning.cefr) {
     node.append(element("span", "level", meaning.cefr));
+  }
+  const sure = sureness(meaning);
+  if (sure) {
+    node.append(element("span", "sure", sure));
   }
   return node;
 }

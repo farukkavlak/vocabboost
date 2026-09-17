@@ -31,6 +31,7 @@ test("shows the likeliest senses when the line does not settle it", async ({
   await expect(card.locator(".senses .definition")).toHaveCount(3);
   await expect(card.locator(".senses .definition").first()).toHaveText(RUN);
   await expect(card.locator(".pos")).toHaveText("verb");
+  await expect(card.locator(".sure")).toHaveCount(0);
 
   // "run" has 41 verb senses: three shown, the other 38 folded.
   const more = card.getByRole("button", { name: "38 other meanings" });
@@ -56,6 +57,7 @@ test("leads with one sense when the model is sure", async ({
     "without anybody else or anything else",
   ]);
   await expect(card.locator(".lead")).toHaveCount(0);
+  await expect(card.locator(".sure")).toHaveText(/^\d{2}% sure$/);
   await expect(
     card.getByRole("button", { name: "1 other meaning" }),
   ).toBeVisible();

@@ -18,7 +18,10 @@ CONFIDENT_GAP = 0.081
 
 
 def score_lines(model, rows):
-    """Per line: the confidence gap, the first choice, and whether each is right."""
+    """Per line: the confidence gap, the first choice, and whether each is right.
+
+    `scores` are the senses' scores best first; `hits` says which of them are right.
+    """
     lines = model.encode([line_text(r, "prefixed") for r in rows], convert_to_tensor=True,
                          normalize_embeddings=True, show_progress_bar=False)
     out = []
@@ -31,7 +34,9 @@ def score_lines(model, rows):
         gap = float(scores.values[0] - scores.values[1]) if len(keys) > 1 else 1.0
         out.append({"gap": gap, "first": keys[0], "right": keys[0] in row["label"],
                     "top3": bool(set(keys[:3]) & set(row["label"])),
-                    "senses": len(keys), "none": not row["label"]})
+                    "senses": len(keys), "none": not row["label"],
+                    "scores": scores.values.tolist(),
+                    "hits": [key in row["label"] for key in keys]})
     return out
 
 

@@ -154,7 +154,8 @@ export const panelStyles = `
     font-style: italic;
   }
 
-  .level {
+  .level,
+  .sure {
     color: rgba(255, 255, 255, 0.62);
     font-size: 0.86em;
     font-variant-numeric: tabular-nums;

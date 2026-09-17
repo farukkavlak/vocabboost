@@ -3,7 +3,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pipeline } from "@huggingface/transformers";
 import { test, expect } from "@playwright/test";
-import { choose, entryFor } from "../extension/src/lookup/local/choose";
+import {
+  CONFIDENT_GAP,
+  choose,
+  confidenceOf,
+  entryFor,
+  probabilities,
+} from "../extension/src/lookup/local/choose";
 import type { TaggerData } from "../extension/src/lookup/local/tagger";
 import type { Pos, VocabData } from "../extension/src/lookup/local/vocab";
 
@@ -52,6 +58,20 @@ test("puts the senses the research measured in front of the model", () => {
   expect(wrong.map((line) => `${line.word} in ${line.text}`)).toEqual(
     SPLIT_DIFFERS,
   );
+});
+
+test("turns scores into probabilities in the same order", () => {
+  const odds = probabilities([0.62, 0.55, 0.31]);
+  expect(odds.reduce((sum, p) => sum + p, 0)).toBeCloseTo(1, 10);
+  expect([...odds].sort((a, b) => b - a)).toEqual(odds);
+  // research/scripts/calibrate.py, temperature 0.0614
+  expect(odds[0]).toBeCloseTo(0.754, 3);
+});
+
+test("gives a higher confidence to a wider gap", () => {
+  expect(confidenceOf(0)).toBeCloseTo(0.3169, 3);
+  expect(confidenceOf(CONFIDENT_GAP)).toBeCloseTo(0.6846, 3);
+  expect(confidenceOf(0.2)).toBeGreaterThan(confidenceOf(CONFIDENT_GAP));
 });
 
 // The exported model is not in the repository; `make onnx` in research/ writes it.

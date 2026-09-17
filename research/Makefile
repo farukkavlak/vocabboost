@@ -125,6 +125,9 @@ sense-split:
 confidence:
 	$(PY) scripts/confidence.py
 
+calibrate:
+	$(PY) scripts/calibrate.py
+
 pos-effect:
 	$(PY) scripts/pos_effect.py
 
@@ -186,7 +189,7 @@ clean:
 	candidates phrases label split recheck \
 	teacher panel panel-check labels check-teacher label-split \
 	kaggle wait-dataset \
-	baseline evaluate compare failures sense-split confidence pos-effect \
+	baseline evaluate compare failures sense-split confidence calibrate pos-effect \
 	extension onnx check-onnx tagger vocab-json lookup \
 	comparison-lines comparison \
 	lexicons phrase-split phrase-impact sense-distance \

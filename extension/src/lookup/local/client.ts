@@ -15,7 +15,7 @@ import type { Choice, Ranked } from "./choose";
 const PAGE = "offscreen.html";
 
 /** Bump when the model or its data change, so cached answers from the old one go unused. */
-const MODEL_VERSION = 1;
+const MODEL_VERSION = 2;
 
 /** Senses shown when the model is unsure; the rest are folded away. */
 const UNSURE_SHOWN = 3;
@@ -76,6 +76,7 @@ function toMeaning(choice: Choice): Meaning {
     senses: choice.ranked.slice(0, count).map(toSense),
     others: choice.ranked.slice(count).map(toSense),
     confident: choice.confident,
+    confidence: choice.confidence,
     ...(choice.pos ? { partOfSpeech: POS_NAMES[choice.pos] } : {}),
     ...(choice.lemma.includes(" ") ? { phrase: choice.lemma } : {}),
   };

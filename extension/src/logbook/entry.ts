@@ -24,6 +24,8 @@ export interface LogEntry {
   senses: Sense[];
   /** False when the model could not tell which of `senses` the line uses. */
   confident: boolean;
+  /** How likely the first of `senses` is to be right; unset in older entries. */
+  confidence?: number;
   /** For an unsure entry: the sense the reader marked as right, by index. */
   chosen?: number;
   line: string;
@@ -47,6 +49,9 @@ export function newEntry(
     ...(meaning.partOfSpeech ? { partOfSpeech: meaning.partOfSpeech } : {}),
     senses: meaning.senses,
     confident: meaning.confident !== false,
+    ...(meaning.confidence !== undefined
+      ? { confidence: meaning.confidence }
+      : {}),
     line: target.sentence,
     ...(previous ? { previous } : {}),
     moment,
