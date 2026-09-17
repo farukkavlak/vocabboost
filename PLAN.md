@@ -75,6 +75,8 @@ The free dictionary built here was replaced by the local model in phase 16.
 - [x] For unsure answers, the reader picks the right meaning in the log, not mid-film
 - [ ] Review built from the reader's own lines
 - [ ] Export to CSV or Anki
+- [ ] Decide whether "Ask your model" answers go into the log too; only the local answer does now
+- [ ] Cap the answer cache in `storage.local`, which is never cleared (about 1 KB a lookup)
 
 ## Testing
 
