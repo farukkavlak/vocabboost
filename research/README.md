@@ -119,6 +119,23 @@ When the model is unsure, the card shows three senses: on test, the right one is
 in the top two and in the top three 55%, 78% and 91% of the time, and each further sense
 adds about three points.
 
+**Probabilities and a confidence that means what it says.** Scores are cosine
+similarities, not probabilities, and "confident" was only yes or no. Both are now fitted
+on the validation words and reported on the 409 test lines with more than one sense
+(`make calibrate`):
+
+- A softmax over a line's scores with temperature 0.0614 gives each sense a probability.
+  The right sense's log loss falls from 1.52 to 0.90.
+- The confidence is a logistic curve over the gap, the signal phase 15 found. It is
+  calibrated to within 6 points on average (ECE 0.059): of the answers it gives 90–100%,
+  98.6% are right; of those it gives 60–70%, 70.5%.
+- The curve rises with the gap, so the card leads with one sense exactly where it did:
+  gap 0.081 is confidence 0.685.
+- The first sense's softmax probability works as a confidence too (ECE 0.057), and would
+  lead more often (48.7%), but falls just under the bar on test (84.9%), so it is not used.
+
+With 409 lines, differences of a point or two in these numbers are noise.
+
 ## In the browser
 
 The model is exported to ONNX and run with `transformers.js` in an offscreen page.
@@ -199,6 +216,7 @@ make compare      # every model side by side
 make failures     # the lines the model gets wrong
 make sense-split  # commonest sense against the rest
 make confidence   # choose and report the confidence threshold
+make calibrate    # fit probabilities and a calibrated confidence
 make pos-effect   # with and without the part of speech
 ```
 

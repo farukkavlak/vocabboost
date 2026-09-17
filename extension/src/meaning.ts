@@ -19,6 +19,8 @@ export interface Meaning {
   phrase?: string;
   /** Local model only: false when the line does not settle which sense it is. */
   confident?: boolean;
+  /** Local model only: how likely the first sense is to be right. */
+  confidence?: number;
   /** Local model only: the remaining senses, folded away on the card. */
   others?: Sense[];
   /** Provider models only. */

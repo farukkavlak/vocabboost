@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- When the model is sure of a meaning, the card says how sure ("92% sure"). The number is
+  calibrated: of the answers given at about 90%, about 90% are right.
+- The word log keeps that number with each word.
+
 ## 2.0.0 (2026-09-17)
 
 A full rewrite. The extension now reads subtitles from the page and works without a key
