@@ -25,3 +25,6 @@ playwright-report/
 
 # Panel screenshots written by `npm run shots`
 shots/
+
+# Store packages built by `npm run package`
+release/

@@ -78,6 +78,15 @@ The free dictionary built here was replaced by the local model in phase 16.
 - [ ] Decide whether "Ask your model" answers go into the log too; only the local answer does now
 - [ ] Cap the answer cache in `storage.local`, which is never cleared (about 1 KB a lookup)
 
+## Release
+
+- [x] CI: lint, format, build and tests on every push and pull request
+- [x] Version 2.0.0, a changelog, and `npm run package` for the store zip
+- [x] Privacy policy, store listing, permission reasons and store screenshots
+- [ ] Check by hand before publishing: live captions on YouTube, Netflix and Prime, the
+      keyboard shortcut, and a real Claude and OpenAI call
+- [ ] Publish on the Chrome Web Store
+
 ## Testing
 
 Playwright runs a real Chromium with the built extension.

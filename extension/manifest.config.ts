@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { llmProviders } from "./src/lookup/llm";
 import { sources } from "./src/content/sources";
 
@@ -6,7 +7,10 @@ const matches = sources.flatMap((source) => [...source.hostPatterns]);
 
 export default {
   name: "VocabBoost",
-  version: "1.0",
+  // One version for the package and the manifest.
+  version: (
+    JSON.parse(readFileSync("package.json", "utf8")) as { version: string }
+  ).version,
   manifest_version: 3,
   // The default path is a model shipped inside the extension: no key, no network.
   description:
