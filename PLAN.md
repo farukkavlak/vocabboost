@@ -16,6 +16,8 @@ Next, in this order:
 4. CEFR level for each word (phase 11).
 5. Model work: more rare-sense data (phase 13), and detecting lines where no sense fits
    (phase 15).
+6. Probabilities and calibrated confidence like Jev's (phase 18); trying Jev once a key
+   arrives (phase 19), and adding it as a provider if it earns it (phase 20).
 
 ## Why the rewrite
 
@@ -201,6 +203,49 @@ Ours 64.7%, GPT-4o mini 74.5%, Claude Haiku 80.4% on the sealed lines.
 - [x] Put the self-agreement ceiling next to them
 - [x] Write down where ours loses
 - [x] Add the table to the README
+
+## Part three: decisions like Jev
+
+TypeSafe's Jev (released 2026-09-15) answers a question over a fixed set of options with
+a probability for each and a calibrated confidence, and writes no text. Picking a
+WordNet sense for a line is that kind of question. Cloud only, behind a waitlist, and its
+benchmarks are the vendor's own.
+
+### 18 — probabilities and calibrated confidence
+
+The local model returns raw scores and a yes/no `confident`. Make it return a
+probability for each sense and a confidence that means what it says.
+
+- [ ] Turn scores into probabilities (softmax, temperature fitted on validation words)
+- [ ] Map the gap to a confidence (the top score alone barely separates right from
+      wrong, see phase 15); fit on validation words only
+- [ ] Reliability table: at each confidence, how often the sense is right
+- [ ] Keep the 85% bar: the card leads with one sense only above the confidence that
+      clears it; must not lead less often than the 0.081 gap on test
+- [ ] `Choice` carries `probability` per sense and a numeric `confidence`; `confident`
+      is derived from it
+- [ ] Log keeps the confidence; decide whether the card shows it
+
+### 19 — trying Jev
+
+Needs a TypeSafe key (on the waitlist).
+
+- [ ] `research/scripts/jev.py`: each line's WordNet senses as one `choice` question
+- [ ] Score on the working set; the sealed lines only as a footnote, since they were
+      opened in phase 17
+- [ ] Accuracy, reliability of its confidence, speed and cost next to the phase 17 table
+- [ ] Where it wins and loses against ours: slang, idioms, common words
+- [ ] Decide on the numbers whether phase 20 is worth doing
+
+### 20 — Jev as a provider
+
+Only if phase 19 says so. Like Claude and OpenAI: optional, the reader's own key.
+
+- [ ] Jev picks the sense among the local model's candidates; it writes no explanation,
+      so it is a second opinion on the sense, not a replacement for the explain step
+- [ ] Host permission requested only when a key is entered; key in `storage.local`
+- [ ] Settings, PRIVACY.md and the store's permission reasons updated
+- [ ] Tests with a mocked API
 
 ## Data sources
 
