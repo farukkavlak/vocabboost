@@ -114,12 +114,16 @@
         border-top: 1px solid rgba(255, 255, 255, 0.1);
       }
 
-      .shortcut {
+      .setting {
         display: flex;
         align-items: center;
         justify-content: space-between;
         color: rgba(255, 255, 255, 0.55);
         font-size: 12px;
+      }
+
+      .setting + .setting {
+        margin-top: 8px;
       }
 
       kbd {
@@ -152,7 +156,7 @@
     <label class="field" for="key">Key</label>
     <input id="key" type="password" autocomplete="off" spellcheck="false" />
     <div class="row">
-      <a id="get-key" href="#" target="_blank" rel="noreferrer">Get a key →</a>
+      <a id="get-key" href="#" target="_blank" rel="noreferrer">Get a key</a>
       <button id="save" type="button">Save</button>
     </div>
     <p class="said" id="said"></p>
@@ -168,9 +172,14 @@
 
     <hr />
 
-    <div class="shortcut">
+    <div class="setting">
+      <span>Words you looked up</span>
+      <button class="link" id="open-log" type="button">open the log</button>
+    </div>
+
+    <div class="setting">
       <span>Shortcut <kbd id="shortcut">not set</kbd></span>
-      <button class="link" id="change-shortcut" type="button">change →</button>
+      <button class="link" id="change-shortcut" type="button">change</button>
     </div>
 
     <script type="module" src="settings.js"></script>

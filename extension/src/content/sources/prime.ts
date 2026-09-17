@@ -12,4 +12,5 @@ export const prime = domCaptionSource({
   segmentSelector: ".atvwebplayersdk-captions-text",
   hideSelector: ".atvwebplayersdk-captions-text",
   containerIsCaptionLayer: false,
+  titleNoise: /^Prime Video:\s*/,
 });

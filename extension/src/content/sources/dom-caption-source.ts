@@ -20,6 +20,8 @@ interface DomCaptionSourceOptions {
    * container is the whole player, where each of those would be wrong.
    */
   containerIsCaptionLayer?: boolean;
+  /** What the site adds to the page title around the video's own, to remove. */
+  titleNoise?: RegExp;
 }
 
 /**
@@ -130,6 +132,12 @@ export function domCaptionSource(
       const size = parseFloat(getComputedStyle(element).fontSize);
       return Number.isFinite(size) && size > 0 ? size : null;
     },
+
+    getTitle: () =>
+      (options.titleNoise
+        ? document.title.replace(options.titleNoise, "")
+        : document.title
+      ).trim(),
 
     matches: (url) => hostMatchers.some((matcher) => matcher.test(url)),
 

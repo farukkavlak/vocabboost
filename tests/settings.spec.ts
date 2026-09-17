@@ -130,3 +130,11 @@ test("shows the shortcut, which the browser may never have assigned", async ({
   const page = await openSettings(context, worker);
   await expect(page.locator("#shortcut")).not.toBeEmpty();
 });
+
+test("opens the word log", async ({ context, worker }) => {
+  const popup = await context.newPage();
+  await popup.goto(new URL("settings.html", worker.url()).href);
+  const opened = context.waitForEvent("page");
+  await popup.getByRole("button", { name: "open the log" }).click();
+  expect((await opened).url()).toContain("logbook.html");
+});

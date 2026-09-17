@@ -30,4 +30,6 @@ export interface CaptionSource {
   /** Players scale captions with the window and with fullscreen; the panel follows. */
   getCaptionFontSize(): number | null;
   getVideo(): HTMLVideoElement | null;
+  /** The video's title, without the site's name. */
+  getTitle(): string;
 }

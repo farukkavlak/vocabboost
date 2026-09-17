@@ -67,13 +67,16 @@ The free dictionary built here was replaced by the local model in phase 16.
 - [x] README rewritten; `npm run recording` regenerates `docs/flow.gif`
 - [x] GIF re-recorded with the phase 15 card
 
-### 9 — logbook
+### 9 — word log
 
-Not started; comes after part two.
-
-- [ ] Save each looked-up word with its line, video and timestamp
-- [ ] A page listing them, grouped by video
+- [x] Save each looked-up word with its line, video and timestamp, automatically
+- [x] A page listing them, grouped by video, with search and removal
+- [x] Link back to the moment, on YouTube only for now
+- [x] For unsure answers, the reader picks the right meaning in the log, not mid-film
 - [ ] Review built from the reader's own lines
+- [ ] Export to CSV or Anki
+- [ ] Decide whether "Ask your model" answers go into the log too; only the local answer does now
+- [ ] Cap the answer cache in `storage.local`, which is never cleared (about 1 KB a lookup)
 
 ## Testing
 

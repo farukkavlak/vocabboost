@@ -1,3 +1,4 @@
+import type { Moment } from "../logbook/entry";
 import type { Rect } from "./caption-source";
 import { clamp, EDGE } from "./layout";
 import { closeCard, isCardOpen, openCard } from "./meaning-card";
@@ -18,6 +19,8 @@ const MIN_WIDTH = 320;
 interface PanelOptions {
   text: string;
   previous?: string | undefined;
+  /** Where the line was, for the word log. */
+  moment: Moment;
   captionRect: Rect | null;
   /** Hidden while the panel stands in for them, so the words are not drawn twice. */
   captionElements: HTMLElement[];
@@ -52,7 +55,7 @@ function focusWord(
 function buildLine(
   root: ShadowRoot,
   panel: HTMLElement,
-  text: string,
+  { text, previous, moment }: PanelOptions,
 ): HTMLElement {
   const line = document.createElement("div");
   line.className = "line";
@@ -80,7 +83,13 @@ function buildLine(
     button.textContent = token;
     button.setAttribute("aria-expanded", "false");
     button.addEventListener("click", () =>
-      openCard(root, panel, button, { word, sentence: text, occurrence }),
+      openCard(
+        root,
+        panel,
+        button,
+        { word, sentence: text, occurrence },
+        { moment, ...(previous ? { previous } : {}) },
+      ),
     );
     button.addEventListener("keydown", (event) => {
       if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
@@ -118,7 +127,7 @@ function buildPanel(root: ShadowRoot, options: PanelOptions): HTMLElement {
     panel.appendChild(previous);
   }
 
-  panel.appendChild(buildLine(root, panel, options.text));
+  panel.appendChild(buildLine(root, panel, options));
 
   const hint = document.createElement("div");
   hint.className = "hint";

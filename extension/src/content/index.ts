@@ -69,6 +69,12 @@ if (source) {
 
     openPanel({
       ...lines,
+      moment: {
+        platform: source.id,
+        title: source.getTitle(),
+        url: location.href,
+        seconds: Math.floor(video?.currentTime ?? 0),
+      },
       captionRect: source.getCaptionRect(),
       captionElements: source.getCaptionElements(),
       captionFontSize: source.getCaptionFontSize(),

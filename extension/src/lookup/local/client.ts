@@ -14,6 +14,9 @@ import type { Choice, Ranked } from "./choose";
 
 const PAGE = "offscreen.html";
 
+/** Bump when the model or its data change, so cached answers from the old one go unused. */
+const MODEL_VERSION = 1;
+
 /** Senses shown when the model is unsure; the rest are folded away. */
 const UNSURE_SHOWN = 3;
 
@@ -78,18 +81,24 @@ function toMeaning(choice: Choice): Meaning {
   };
 }
 
+async function ask(question: ChooseSense): Promise<ChooseResult> {
+  await openPage();
+  const result: ChooseResult = await chrome.runtime.sendMessage(question);
+  return result;
+}
+
 export const local: MeaningProvider = {
-  id: "local",
+  id: `local ${MODEL_VERSION}`,
   usesSentence: true,
 
   async lookup(target) {
-    await openPage();
     const question: ChooseSense = {
       type: "CHOOSE_SENSE",
       to: "offscreen",
       ...target,
     };
-    const result: ChooseResult = await chrome.runtime.sendMessage(question);
+    // The page may have closed for idleness between opening it and asking.
+    const result = await ask(question).catch(() => ask(question));
     if (!result.ok) {
       console.error("The sense model failed:", result.error);
       throw new LookupError("The meaning could not be worked out. Try again.");

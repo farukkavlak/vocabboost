@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VocabBoost word log</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ground: #16161a;
+        --text: #f2f2f5;
+        --muted: rgba(255, 255, 255, 0.62);
+        --faint: rgba(255, 255, 255, 0.42);
+        --rule: rgba(255, 255, 255, 0.09);
+        --accent: #d0451b;
+      }
+
+      body {
+        margin: 0;
+        background: var(--ground);
+        color: var(--text);
+        font:
+          15px/1.5 system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+
+      main {
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 40px 20px 80px;
+      }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.6em;
+        font-weight: 650;
+      }
+
+      .count {
+        color: var(--muted);
+      }
+
+      input[type="search"] {
+        box-sizing: border-box;
+        width: 100%;
+        margin-top: 4px;
+        padding: 8px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        color: inherit;
+        font: inherit;
+      }
+
+      input[type="search"]:focus {
+        border-color: var(--accent);
+        outline: none;
+      }
+
+      .video {
+        margin-top: 36px;
+      }
+
+      .video h2 {
+        margin: 0;
+        font-size: 1.05em;
+        font-weight: 600;
+      }
+
+      .video .source {
+        margin: 2px 0 0;
+        color: var(--faint);
+        font-size: 0.87em;
+      }
+
+      .entries {
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .entry {
+        padding: 14px 0;
+        border-top: 1px solid var(--rule);
+      }
+
+      .entry-head {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5em;
+      }
+
+      .entry-head h3 {
+        margin: 0;
+        font-size: 1.05em;
+        font-weight: 650;
+      }
+
+      .pos {
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      .actions {
+        display: flex;
+        gap: 14px;
+        margin-left: auto;
+        font-size: 0.87em;
+      }
+
+      .definition {
+        margin: 4px 0 0;
+      }
+
+      .line {
+        margin: 6px 0 0;
+        color: var(--muted);
+      }
+
+      .line mark {
+        background: none;
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .question {
+        margin: 6px 0 4px;
+        color: var(--muted);
+      }
+
+      .choices {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .choices li {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 3px 0 3px 10px;
+        border-left: 2px solid rgba(255, 255, 255, 0.14);
+      }
+
+      .choices li + li {
+        margin-top: 6px;
+      }
+
+      a,
+      button {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        font: inherit;
+        text-decoration: underline;
+        text-decoration-color: rgba(255, 255, 255, 0.25);
+        text-underline-offset: 3px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      a:hover,
+      button:hover {
+        color: var(--text);
+      }
+
+      a:focus-visible,
+      button:focus-visible,
+      input:focus-visible {
+        outline: 2px solid rgba(255, 255, 255, 0.6);
+        outline-offset: 2px;
+      }
+
+      .more {
+        margin-top: 24px;
+      }
+
+      .empty {
+        margin-top: 48px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Word log</h1>
+        <span class="count" id="count"></span>
+        <input
+          id="search"
+          type="search"
+          placeholder="Find a word or a line"
+          aria-label="Find a word or a line"
+        />
+      </header>
+      <div id="log"></div>
+    </main>
+    <script type="module" src="logbook.js"></script>
+  </body>
+</html>
