@@ -1,9 +1,9 @@
 {
   "name": "vocabboost",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Vocabulary learning browser extension",
+  "description": "Look up a word from a film's subtitles without leaving the film",
   "license": "MIT",
   "workspaces": [
     "extension"
@@ -21,7 +21,8 @@
     "shots": "SHOTS=1 playwright test screenshots",
     "test:memory": "MEMORY=1 playwright test memory",
     "test:comparison": "COMPARISON=1 playwright test comparison",
-    "recording": "bash scripts/recording.sh"
+    "recording": "bash scripts/recording.sh",
+    "package": "bash scripts/package.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

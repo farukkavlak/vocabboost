@@ -32,6 +32,10 @@ npm run build
 Open `chrome://extensions`, turn on Developer mode, choose Load unpacked, pick
 `extension/dist`.
 
+Run the tests with `npm test`. `npm run package` builds the zip for the Chrome Web Store
+in `release/`. The store text, screenshots and permission reasons are in `docs/store/`.
+Changes between versions are in [CHANGELOG.md](CHANGELOG.md).
+
 The suggested shortcut is `Ctrl+Shift+H` (`⌘⇧H` on macOS). Chrome drops it without
 warning if something else already uses it, so check `chrome://extensions/shortcuts`. The
 popup links there and shows the one you actually have.
@@ -48,6 +52,8 @@ The provider's model is optional and uses your own key, Claude or OpenAI.
 - It is used in the background worker, so it never reaches the script running on the
   video page.
 - Access to a provider is requested only when you enter a key for it.
+
+Nothing else leaves your machine; see [PRIVACY.md](PRIVACY.md).
 
 ## Platforms
 
