@@ -1,15 +1,12 @@
+import { button, element } from "../dom";
 import { escapeRegExp } from "../text";
-import {
-  chooseSense,
-  readLog,
-  removeEntry,
-  type LogEntry,
-  type Moment,
-} from "./store";
+import { momentUrl, videoKey, type LogEntry, type Moment } from "./entry";
+import { chooseSense, readLog, removeEntry } from "./store";
 
-const log = document.getElementById("log") as HTMLElement;
-const count = document.getElementById("count") as HTMLElement;
-const search = document.getElementById("search") as HTMLInputElement;
+/** Entries drawn at once; the rest wait behind "Show more". */
+const PAGE = 100;
+/** Pause after typing before the search runs. */
+const SEARCH_DELAY_MS = 150;
 
 const PLATFORMS: Record<string, string> = {
   youtube: "YouTube",
@@ -17,30 +14,16 @@ const PLATFORMS: Record<string, string> = {
   prime: "Prime Video",
 };
 
-function element<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) {
-    node.className = className;
-  }
-  if (text !== undefined) {
-    node.textContent = text;
-  }
-  return node;
-}
+const log = document.getElementById("log") as HTMLElement;
+const count = document.getElementById("count") as HTMLElement;
+const search = document.getElementById("search") as HTMLInputElement;
 
-function youtubeId(url: string): string | null {
-  return new URL(url).searchParams.get("v");
-}
+/** The whole log, newest first; read once and kept in step with every change. */
+let entries: LogEntry[] = [];
+let shown = PAGE;
 
-/** Entries of one video share this, whatever time was in their URL. */
-function videoKey({ platform, url }: Moment): string {
-  const id = platform === "youtube" ? youtubeId(url) : null;
-  return id ? `youtube ${id}` : `${platform} ${url.split(/[?#]/)[0]}`;
-}
+const plural = (n: number, noun: string): string =>
+  n === 1 ? `1 ${noun}` : `${n.toLocaleString()} ${noun}s`;
 
 function clock(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -49,14 +32,13 @@ function clock(seconds: number): string {
   return h ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 }
 
-/** A link back to the moment; only YouTube takes a start time in the URL. */
-function watchAgain({ platform, url, seconds }: Moment): HTMLElement | null {
-  const id = platform === "youtube" ? youtubeId(url) : null;
-  if (!id) {
+function watchAgain(moment: Moment): HTMLElement | null {
+  const url = momentUrl(moment);
+  if (!url) {
     return null;
   }
-  const link = element("a", "", `Watch at ${clock(seconds)}`);
-  link.href = `https://www.youtube.com/watch?v=${id}&t=${seconds}s`;
+  const link = element("a", "", `Watch at ${clock(moment.seconds)}`);
+  link.href = url;
   link.target = "_blank";
   link.rel = "noreferrer";
   return link;
@@ -83,29 +65,27 @@ function lineWith({ line, word, occurrence }: LogEntry): HTMLElement {
   return paragraph;
 }
 
+/** The meaning, or for an unsure entry without an answer, the question. */
 function meaning(entry: LogEntry): HTMLElement[] {
-  const picked = entry.confident ? 0 : entry.chosen;
-  const sense = picked === undefined ? undefined : entry.senses[picked];
+  const index = entry.confident ? 0 : entry.chosen;
+  const sense = index === undefined ? undefined : entry.senses[index];
   if (sense) {
     return [element("p", "definition", sense.definition)];
   }
 
   const choices = element("ul", "choices");
-  entry.senses.forEach((option, index) => {
-    const item = element("li", "");
-    const pick = element("button", "", "This one");
-    pick.type = "button";
-    pick.addEventListener("click", () => {
-      void chooseSense(entry.id, index).then(draw);
-    });
-    item.append(element("span", "", option.definition), pick);
+  entry.senses.forEach((option, i) => {
+    const item = element("li");
+    item.append(
+      element("span", "", option.definition),
+      button("This one", () => void choose(entry, i)),
+    );
     choices.append(item);
   });
   return [element("p", "question", "Which meaning did the line use?"), choices];
 }
 
 function entryItem(entry: LogEntry): HTMLElement {
-  const item = element("li", "entry");
   const head = element("div", "entry-head");
   head.append(element("h3", "", entry.headword));
   if (entry.partOfSpeech) {
@@ -117,46 +97,59 @@ function entryItem(entry: LogEntry): HTMLElement {
   if (again) {
     actions.append(again);
   }
-  const remove = element("button", "", "Remove");
-  remove.type = "button";
-  remove.addEventListener("click", () => {
-    void removeEntry(entry.id).then(draw);
-  });
-  actions.append(remove);
+  actions.append(button("Remove", () => void remove(entry)));
   head.append(actions);
 
+  const item = element("li", "entry");
   item.append(head, ...meaning(entry), lineWith(entry));
   return item;
 }
 
-function videoSection(entries: LogEntry[]): HTMLElement {
-  const { moment } = entries[0]!;
-  const section = element("section", "video");
-  const words = entries.length === 1 ? "1 word" : `${entries.length} words`;
+function videoSection(group: LogEntry[]): HTMLElement {
+  const { moment } = group[0]!;
   const platform = PLATFORMS[moment.platform] ?? moment.platform;
+  const list = element("ul", "entries");
+  list.append(...group.map(entryItem));
+
+  const section = element("section", "video");
   section.append(
     element("h2", "", moment.title || "Untitled video"),
-    element("p", "source", `${platform}, ${words}`),
+    element("p", "source", `${platform}, ${plural(group.length, "word")}`),
+    list,
   );
-  const list = element("ul", "entries");
-  list.append(...entries.map(entryItem));
-  section.append(list);
   return section;
 }
 
-function matches(entry: LogEntry, query: string): boolean {
-  return [entry.headword, entry.line].some((text) =>
-    text.toLowerCase().includes(query),
+/** Entries grouped by video; videos come in the order of their newest entry. */
+function byVideo(page: LogEntry[]): LogEntry[][] {
+  const groups = new Map<string, LogEntry[]>();
+  for (const entry of page) {
+    const key = videoKey(entry.moment);
+    const group = groups.get(key);
+    if (group) {
+      group.push(entry);
+    } else {
+      groups.set(key, [entry]);
+    }
+  }
+  return [...groups.values()];
+}
+
+function matching(): LogEntry[] {
+  const query = search.value.trim().toLowerCase();
+  if (!query) {
+    return entries;
+  }
+  return entries.filter(
+    (entry) =>
+      entry.headword.toLowerCase().includes(query) ||
+      entry.line.toLowerCase().includes(query),
   );
 }
 
-async function draw(): Promise<void> {
-  const all = await readLog();
-  const query = search.value.trim().toLowerCase();
-  const shown = query ? all.filter((entry) => matches(entry, query)) : all;
-  count.textContent = all.length === 1 ? "1 word" : `${all.length} words`;
-
-  if (!all.length) {
+function draw(): void {
+  count.textContent = plural(entries.length, "word");
+  if (!entries.length) {
     log.replaceChildren(
       element(
         "p",
@@ -166,19 +159,49 @@ async function draw(): Promise<void> {
     );
     return;
   }
-  if (!shown.length) {
-    log.replaceChildren(element("p", "empty", `Nothing matches "${query}".`));
+
+  const found = matching();
+  if (!found.length) {
+    log.replaceChildren(
+      element("p", "empty", `Nothing matches "${search.value.trim()}".`),
+    );
     return;
   }
 
-  // Entries are newest first, so videos come out ordered by their latest lookup.
-  const videos = new Map<string, LogEntry[]>();
-  for (const entry of shown) {
-    const key = videoKey(entry.moment);
-    videos.set(key, [...(videos.get(key) ?? []), entry]);
+  const sections = byVideo(found.slice(0, shown)).map(videoSection);
+  const rest = found.length - shown;
+  if (rest > 0) {
+    const more = () => {
+      shown += PAGE;
+      draw();
+    };
+    sections.push(button(`Show ${Math.min(rest, PAGE)} more`, more, "more"));
   }
-  log.replaceChildren(...[...videos.values()].map(videoSection));
+  log.replaceChildren(...sections);
 }
 
-search.addEventListener("input", () => void draw());
-void draw();
+async function choose(entry: LogEntry, index: number): Promise<void> {
+  await chooseSense(entry.id, index);
+  entry.chosen = index;
+  draw();
+}
+
+async function remove(entry: LogEntry): Promise<void> {
+  await removeEntry(entry.id);
+  entries = entries.filter((kept) => kept !== entry);
+  draw();
+}
+
+let pending: ReturnType<typeof setTimeout> | undefined;
+search.addEventListener("input", () => {
+  clearTimeout(pending);
+  pending = setTimeout(() => {
+    shown = PAGE;
+    draw();
+  }, SEARCH_DELAY_MS);
+});
+
+void readLog().then((saved) => {
+  entries = saved;
+  draw();
+});

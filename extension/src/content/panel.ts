@@ -1,4 +1,4 @@
-import type { Moment } from "../logbook/store";
+import type { Moment } from "../logbook/entry";
 import type { Rect } from "./caption-source";
 import { clamp, EDGE } from "./layout";
 import { closeCard, isCardOpen, openCard } from "./meaning-card";

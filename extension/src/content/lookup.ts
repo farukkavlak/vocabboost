@@ -1,6 +1,7 @@
 import { LookupError } from "../meaning";
 import type { Meaning, Target } from "../meaning";
-import type { LookupResult } from "../messages";
+import type { NewEntry } from "../logbook/entry";
+import type { LogLookup, LookupResult } from "../messages";
 
 async function ask(
   message: { type: "LOOKUP_WORD" | "EXPLAIN_WORD" } & Target,
@@ -29,4 +30,10 @@ export async function modelReady(): Promise<boolean> {
     type: "MODEL_READY",
   });
   return ready === true;
+}
+
+/** Hands a finished lookup to the worker, which keeps the word log. */
+export function logLookup(entry: NewEntry): void {
+  const message: LogLookup = { type: "LOG_LOOKUP", entry };
+  void chrome.runtime.sendMessage(message);
 }

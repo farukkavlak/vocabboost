@@ -1,3 +1,4 @@
+import type { NewEntry } from "./logbook/entry";
 import type { Choice } from "./lookup/local/choose";
 import type { Meaning, Target } from "./meaning";
 
@@ -24,8 +25,19 @@ export interface OffscreenIdle {
   type: "OFFSCREEN_IDLE";
 }
 
+/** A finished lookup, for the word log. The worker writes it. */
+export interface LogLookup {
+  type: "LOG_LOOKUP";
+  entry: NewEntry;
+}
+
 export type Message =
-  LookupSubtitle | LookupWord | ExplainWord | ModelReady | OffscreenIdle;
+  | LookupSubtitle
+  | LookupWord
+  | ExplainWord
+  | ModelReady
+  | OffscreenIdle
+  | LogLookup;
 
 /** From the worker to the offscreen page; `to` tells the other listeners to ignore it. */
 export interface ChooseSense extends Target {

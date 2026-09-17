@@ -1,27 +1,14 @@
 import { clamp, EDGE } from "./layout";
-import { explainWord, lookupWord, modelReady } from "./lookup";
+import { explainWord, logLookup, lookupWord, modelReady } from "./lookup";
 import { LookupError } from "../meaning";
 import type { Meaning, Sense, Target } from "../meaning";
-import { logLookup, type Moment } from "../logbook/store";
+import { button, element } from "../dom";
+import { newEntry, type Moment } from "../logbook/entry";
 
-/** Where a line came from; the word log needs it besides the answer. */
+/** Where a line came from; the word log keeps it with the answer. */
 export interface LineOrigin {
   moment: Moment;
   previous?: string;
-}
-
-function remember(target: Target, origin: LineOrigin, meaning: Meaning): void {
-  // A log that cannot be written must not break the lookup it records.
-  void logLookup({
-    headword: meaning.phrase ?? target.word,
-    word: target.word,
-    occurrence: target.occurrence,
-    ...(meaning.partOfSpeech ? { partOfSpeech: meaning.partOfSpeech } : {}),
-    senses: meaning.senses,
-    confident: meaning.confident !== false,
-    line: target.sentence,
-    ...origin,
-  }).catch(() => undefined);
 }
 
 /** Between the card and the panel it belongs to. */
@@ -59,19 +46,6 @@ function place(card: HTMLElement, word: HTMLElement, panel: HTMLElement): void {
     arrow.className = `arrow ${below ? "below" : "above"}`;
     arrow.style.left = `${clamp(centre - left - ARROW_OFFSET, 10, box.width - 20)}px`;
   }
-}
-
-function element<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  node.className = className;
-  if (text !== undefined) {
-    node.textContent = text;
-  }
-  return node;
 }
 
 function head(word: string, meaning: Meaning): HTMLElement {
@@ -112,29 +86,33 @@ function foldedSenses(others: Sense[], onToggle: () => void): HTMLElement[] {
   list.hidden = true;
 
   const noun = others.length === 1 ? "other meaning" : "other meanings";
-  const toggle = element("button", "more", `${others.length} ${noun}`);
-  toggle.type = "button";
+  const toggle = button(
+    `${others.length} ${noun}`,
+    () => {
+      list.hidden = !list.hidden;
+      toggle.setAttribute("aria-expanded", String(!list.hidden));
+      onToggle();
+    },
+    "more",
+  );
   toggle.setAttribute("aria-expanded", "false");
   toggle.setAttribute("aria-controls", list.id);
-  toggle.addEventListener("click", () => {
-    list.hidden = !list.hidden;
-    toggle.setAttribute("aria-expanded", String(!list.hidden));
-    onToggle();
-  });
   return [toggle, list];
 }
 
 /** Offered only when the reader has added a provider key. */
 function askButton(onPress: () => void): HTMLElement {
-  const button = element("button", "ask", "Ask your model");
-  button.type = "button";
-  button.addEventListener("click", () => {
-    // A provider takes seconds to answer; say so rather than look idle.
-    button.disabled = true;
-    button.textContent = "Asking…";
-    onPress();
-  });
-  return button;
+  const ask = button(
+    "Ask your model",
+    () => {
+      // A provider takes seconds to answer; say so rather than look idle.
+      ask.disabled = true;
+      ask.textContent = "Asking…";
+      onPress();
+    },
+    "ask",
+  );
+  return ask;
 }
 
 function render(
@@ -200,13 +178,13 @@ export function closeCard(root: ShadowRoot | null | undefined): void {
 export function openCard(
   root: ShadowRoot,
   panel: HTMLElement,
-  button: HTMLElement,
+  wordButton: HTMLElement,
   target: Target,
   origin: LineOrigin,
 ): void {
   const { word } = target;
   closeCard(root);
-  button.setAttribute("aria-expanded", "true");
+  wordButton.setAttribute("aria-expanded", "true");
 
   const card = element("div", "meaning pending");
   card.id = "vocab-meaning";
@@ -214,7 +192,7 @@ export function openCard(
   pending.append(element("p", "definition", `Looking up "${word}"…`));
   card.append(element("div", "arrow"), pending);
   root.appendChild(card);
-  place(card, button, panel);
+  place(card, wordButton, panel);
   card.classList.add("appear");
 
   const fill = (meaning: Meaning, ask?: () => void, note?: string): void => {
@@ -222,7 +200,7 @@ export function openCard(
     if (!card.isConnected) {
       return;
     }
-    const relayout = (): void => place(card, button, panel);
+    const relayout = (): void => place(card, wordButton, panel);
     render(card, word, meaning, relayout, ask, note);
     relayout();
     card.classList.add("appear");
@@ -249,7 +227,7 @@ export function openCard(
 
   void lookupWord(target)
     .then(async (meaning) => {
-      remember(target, origin, meaning);
+      logLookup(newEntry(target, meaning, origin.moment, origin.previous));
       fill(meaning, (await ready) ? explain(meaning) : undefined);
     })
     .catch(async (error: unknown) =>

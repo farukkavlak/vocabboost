@@ -20,6 +20,8 @@ it from the extension's popup. Words are grouped by video, can be searched and r
 and on YouTube each one links back to the second it was looked up. Where the model was
 unsure, the log asks which of its meanings the line used. The log stays on your machine.
 
+![The word log: words grouped by video, each with its meaning, its line and a link back to the moment](docs/word-log.png)
+
 ## Install
 
 ```sh
@@ -68,6 +70,10 @@ after 30 idle seconds. The page opens on the first lookup, which takes about hal
 second, and closes after two idle minutes. The model adds about 350 MB while the page is
 open, and it is handed back within about half a minute of closing
 (`npm run test:memory`).
+
+The word log is kept in IndexedDB, one record per lookup, and the log page draws it a
+hundred entries at a time; 20,000 entries open in a quarter of a second.
+
 The extension is about 62 MB unpacked: the model 23, the vocabulary 19, the runtime 14,
 the part-of-speech tagger 5.
 

@@ -6,4 +6,5 @@ export const youtube = domCaptionSource({
   containerSelector: ".ytp-caption-window-container",
   containerIsCaptionLayer: true,
   segmentSelector: ".ytp-caption-segment",
+  titleNoise: /\s+-\s+YouTube$/,
 });

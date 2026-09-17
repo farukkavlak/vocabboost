@@ -1,12 +1,27 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test";
 import { RUN, test, expect, lookup, play, watchPage } from "./fixture";
-import type { LogEntry } from "../extension/src/logbook/store";
+import type { LogEntry } from "../extension/src/logbook/entry";
+
+// The log is in the extension's IndexedDB; these reach it from the worker.
 
 async function readLog(worker: Worker): Promise<LogEntry[]> {
-  return worker.evaluate(async () => {
-    const stored = await chrome.storage.local.get("logbook");
-    return (stored.logbook as LogEntry[] | undefined) ?? [];
-  });
+  return worker.evaluate(
+    () =>
+      new Promise<LogEntry[]>((resolve) => {
+        const open = indexedDB.open("vocabboost", 1);
+        open.onupgradeneeded = () =>
+          open.result
+            .createObjectStore("log", { keyPath: "id" })
+            .createIndex("savedAt", "savedAt");
+        open.onsuccess = () => {
+          const read = open.result
+            .transaction("log")
+            .objectStore("log")
+            .getAll();
+          read.onsuccess = () => resolve(read.result as LogEntry[]);
+        };
+      }),
+  );
 }
 
 async function openLog(context: BrowserContext, worker: Worker): Promise<Page> {
@@ -15,10 +30,13 @@ async function openLog(context: BrowserContext, worker: Worker): Promise<Page> {
   return page;
 }
 
+let clock = 0;
+
 function entry(overrides: Partial<LogEntry>): LogEntry {
   return {
     id: crypto.randomUUID(),
-    savedAt: Date.now(),
+    // Seeded entries come out newest first, in the order they are listed.
+    savedAt: 1_000_000 - clock++,
     headword: "run",
     word: "run",
     occurrence: 0,
@@ -37,8 +55,17 @@ function entry(overrides: Partial<LogEntry>): LogEntry {
 }
 
 async function seed(worker: Worker, entries: LogEntry[]): Promise<void> {
+  await readLog(worker); // creates the database the extension would
   await worker.evaluate(
-    (logbook) => chrome.storage.local.set({ logbook }),
+    (rows) =>
+      new Promise<void>((resolve) => {
+        const open = indexedDB.open("vocabboost", 1);
+        open.onsuccess = () => {
+          const transaction = open.result.transaction("log", "readwrite");
+          rows.forEach((row) => transaction.objectStore("log").put(row));
+          transaction.oncomplete = () => resolve();
+        };
+      }),
     entries,
   );
 }
@@ -195,4 +222,20 @@ test("says what the log is for when it is empty", async ({
   await expect(page.locator(".empty")).toContainText(
     "Words you look up while watching",
   );
+});
+
+test("draws a long log a page at a time", async ({ context, worker }) => {
+  await seed(
+    worker,
+    Array.from({ length: 250 }, (_, i) => entry({ headword: `word${i}` })),
+  );
+  const page = await openLog(context, worker);
+
+  await expect(page.locator("#count")).toHaveText("250 words");
+  await expect(page.locator(".entry")).toHaveCount(100);
+  await page.getByRole("button", { name: "Show 100 more" }).click();
+  await expect(page.locator(".entry")).toHaveCount(200);
+  await page.getByRole("button", { name: "Show 50 more" }).click();
+  await expect(page.locator(".entry")).toHaveCount(250);
+  await expect(page.getByRole("button", { name: /Show/ })).toHaveCount(0);
 });

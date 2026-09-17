@@ -1,81 +1,82 @@
 /**
- * The word log: every successful lookup, with the line and the moment it came from. Kept
- * in `storage.local` on the reader's machine and never sent anywhere.
+ * The word log, in IndexedDB: one record per lookup, so saving one costs the same however
+ * long the log grows. Shared by the worker, which writes, and the log page, which reads.
+ * It lives on the reader's machine and is never sent anywhere.
  */
 
-import type { Sense } from "../meaning";
+import { entryId, type LogEntry, type NewEntry } from "./entry";
 
-/** Where a lookup happened. */
-export interface Moment {
-  /** The caption source's id, such as "youtube". */
-  platform: string;
-  title: string;
-  url: string;
-  /** Position in the video, in seconds. */
-  seconds: number;
+const DATABASE = "vocabboost";
+const STORE = "log";
+const BY_TIME = "savedAt";
+
+let database: Promise<IDBDatabase> | undefined;
+
+const failure = (error: DOMException | null): Error =>
+  error ?? new Error("The word log could not be read or written.");
+
+function open(): Promise<IDBDatabase> {
+  database ??= new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE, 1);
+    request.onupgradeneeded = () => {
+      const store = request.result.createObjectStore(STORE, { keyPath: "id" });
+      store.createIndex(BY_TIME, BY_TIME);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(failure(request.error));
+  });
+  return database;
 }
 
-export interface LogEntry {
-  id: string;
-  savedAt: number;
-  /** The clicked word, or the phrase it belongs to. */
-  headword: string;
-  /** The word as clicked, and which of its occurrences in the line. */
-  word: string;
-  occurrence: number;
-  partOfSpeech?: string;
-  /** The senses the card showed, best first. */
-  senses: Sense[];
-  /** False when the model could not tell which of `senses` the line uses. */
-  confident: boolean;
-  /** For an unsure entry: the sense the reader marked as right, by index. */
-  chosen?: number;
-  line: string;
-  previous?: string;
-  moment: Moment;
+/** Runs `work` in one transaction and resolves when the transaction has finished. */
+async function transact<T>(
+  mode: IDBTransactionMode,
+  work: (store: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> {
+  const transaction = (await open()).transaction(STORE, mode);
+  const request = work(transaction.objectStore(STORE));
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve(request.result);
+    transaction.onerror = () => reject(failure(transaction.error));
+  });
 }
 
-export type NewEntry = Omit<LogEntry, "id" | "savedAt" | "chosen">;
-
-const KEY = "logbook";
-
+/** Every entry, newest first. */
 export async function readLog(): Promise<LogEntry[]> {
-  const stored: Record<string, unknown> = await chrome.storage.local.get(KEY);
-  return (stored[KEY] as LogEntry[] | undefined) ?? [];
+  const oldestFirst = await transact("readonly", (store) =>
+    store.index(BY_TIME).getAll(),
+  );
+  return (oldestFirst as LogEntry[]).reverse();
 }
 
-async function writeLog(entries: LogEntry[]): Promise<void> {
-  await chrome.storage.local.set({ [KEY]: entries });
+async function readEntry(id: string): Promise<LogEntry | undefined> {
+  return (await transact("readonly", (store) => store.get(id))) as
+    LogEntry | undefined;
 }
 
-const sameLookup = (a: NewEntry, b: NewEntry): boolean =>
-  a.headword.toLowerCase() === b.headword.toLowerCase() &&
-  a.line === b.line &&
-  a.moment.url === b.moment.url;
+async function writeEntry(entry: LogEntry): Promise<void> {
+  await transact("readwrite", (store) => store.put(entry));
+}
 
-/** Adds a lookup, or moves an identical earlier one to the top. Newest first. */
+/** Adds a lookup, or brings the same earlier one to the top, keeping its chosen sense. */
 export async function logLookup(entry: NewEntry): Promise<void> {
-  const entries = await readLog();
-  const earlier = entries.find((old) => sameLookup(old, entry));
-  const kept = entries.filter((old) => old !== earlier);
-  const saved: LogEntry = {
+  const id = entryId(entry);
+  const earlier = await readEntry(id);
+  await writeEntry({
     ...entry,
-    id: earlier?.id ?? crypto.randomUUID(),
+    id,
     savedAt: Date.now(),
     ...(earlier?.chosen !== undefined ? { chosen: earlier.chosen } : {}),
-  };
-  await writeLog([saved, ...kept]);
+  });
 }
 
 export async function removeEntry(id: string): Promise<void> {
-  await writeLog((await readLog()).filter((entry) => entry.id !== id));
+  await transact("readwrite", (store) => store.delete(id));
 }
 
 export async function chooseSense(id: string, index: number): Promise<void> {
-  const entries = await readLog();
-  await writeLog(
-    entries.map((entry) =>
-      entry.id === id ? { ...entry, chosen: index } : entry,
-    ),
-  );
+  const entry = await readEntry(id);
+  if (entry) {
+    await writeEntry({ ...entry, chosen: index });
+  }
 }

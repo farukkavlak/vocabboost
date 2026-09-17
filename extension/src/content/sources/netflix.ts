@@ -7,4 +7,5 @@ export const netflix = domCaptionSource({
   containerSelector: ".player-timedtext",
   containerIsCaptionLayer: true,
   segmentSelector: ".player-timedtext-text-container",
+  titleNoise: /\s+[-|]\s+Netflix$/,
 });

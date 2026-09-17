@@ -1,3 +1,4 @@
+import { logLookup } from "./logbook/store";
 import { explainWord, lookupWord } from "./lookup";
 import { closePage } from "./lookup/local/client";
 import { configured } from "./lookup/settings";
@@ -36,6 +37,14 @@ chrome.runtime.onMessage.addListener(
     _sender,
     respond: (result: LookupResult | boolean) => void,
   ) => {
+    if (message.type === "LOG_LOOKUP") {
+      // A log that cannot be written must not break the lookup it records.
+      logLookup(message.entry).catch((error: unknown) =>
+        console.error("The word log could not be written:", error),
+      );
+      return false;
+    }
+
     if (message.type === "OFFSCREEN_IDLE") {
       void closePage();
       return false;

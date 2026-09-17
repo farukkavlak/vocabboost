@@ -12,7 +12,7 @@ export default {
   description:
     "Look up a word from the subtitles and see what it means in that line, without leaving the video.",
   // `offscreen` holds the model in a page of its own; the worker is stopped when idle.
-  // `unlimitedStorage` lets the word log grow past storage.local's 10 MB.
+  // `unlimitedStorage` lifts the quota on the word log and the answer cache.
   permissions: ["storage", "unlimitedStorage", "offscreen"],
   // The model runs as WebAssembly, which extension pages refuse without this.
   content_security_policy: {

@@ -12,14 +12,6 @@ import { sourceFor } from "./sources";
 
 const source = sourceFor(location.href);
 
-/** The page title without the site's name, which every tab carries. */
-function videoTitle(): string {
-  return document.title
-    .replace(/^Prime Video:\s*/, "")
-    .replace(/\s+[-|]\s+(YouTube|Netflix)$/, "")
-    .trim();
-}
-
 if (source) {
   const buffer = new CaptionBuffer();
   source.attach((line) => buffer.push(line));
@@ -79,7 +71,7 @@ if (source) {
       ...lines,
       moment: {
         platform: source.id,
-        title: videoTitle(),
+        title: source.getTitle(),
         url: location.href,
         seconds: Math.floor(video?.currentTime ?? 0),
       },
