@@ -3,6 +3,20 @@
 Working plan for the rewrite. Results and details live in `research/README.md` and
 `research/NOTES.md`; this file tracks what is done and what is next.
 
+## Where things stand (2026-09-17)
+
+Version 2.0.0 is built, tested and ready for the Chrome Web Store. Phases 1 to 17 are
+done; what is left below is either a release step or an improvement.
+
+Next, in this order:
+
+1. Check by hand on live YouTube, Netflix and Prime, then publish (see Release).
+2. Review mode in the word log, built from the reader's own lines (phase 9).
+3. Export the word log to CSV or Anki (phase 9).
+4. CEFR level for each word (phase 11).
+5. Model work: more rare-sense data (phase 13), and detecting lines where no sense fits
+   (phase 15).
+
 ## Why the rewrite
 
 The 2023 version screenshotted the tab, sent it to Google Cloud Vision for OCR, and asked
@@ -158,6 +172,8 @@ The research lives in `research/`, in Python. Only phase 16 touches the extensio
 - [x] Card: when unsure, show the likeliest senses side by side and say so
 - [x] The card never covers the subtitle line; long lists scroll inside it
 - [ ] Detect lines where no sense fits (the gap does not)
+- [ ] Decide what the card does for very common verbs (`have`, `get`); they were left out
+      of the labelled data and the model is weak on them
 
 ### 16 — local model in the extension
 
