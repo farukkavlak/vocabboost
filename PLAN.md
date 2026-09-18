@@ -3,10 +3,12 @@
 Working plan for the rewrite. Results and details live in `research/README.md` and
 `research/NOTES.md`; this file tracks what is done and what is next.
 
-## Where things stand (2026-09-17)
+## Where things stand (2026-09-18)
 
-Version 2.0.0 is built, tested and ready for the Chrome Web Store. Phases 1 to 17 are
-done; what is left below is either a release step or an improvement.
+Version 2.0.0 is built, tested and ready for the Chrome Web Store, and the changes since
+it — a calibrated confidence and Jev as a model you can choose — are in the changelog
+under Unreleased. Phases 1 to 20 are done; what is left below is either a release step or
+an improvement.
 
 Next, in this order:
 

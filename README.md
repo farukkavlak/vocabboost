@@ -107,8 +107,7 @@ sense of a word a subtitle line is using. On 51 held-out lines, opened once at t
 | **our model, offline**    |       64.7% |     134 ms |              $0 |
 | GPT-4o mini               |       74.5% |      1.3 s |        $0.00003 |
 | Claude Haiku 4.5          |       80.4% |      1.1 s |        $0.00022 |
-
-| Jev | 82.4% | 0.8 s | $0.00003 |
+| Jev                       |       82.4% |      0.8 s |        $0.00003 |
 
 Ours is behind the hosted models, which is why a key still unlocks them. When it is sure
 enough to show one sense it was right on all 14 such lines. `research/README.md` has the
