@@ -16,8 +16,7 @@ Next, in this order:
 4. CEFR level for each word (phase 11).
 5. Model work: more rare-sense data (phase 13), and detecting lines where no sense fits
    (phase 15).
-6. Asking the reader's provider only when the local model is unsure (phase 21); trying
-   Jev once TypeSafe lets us in (phase 19, on the waitlist) and as a provider (phase 20).
+6. Check Jev by hand against the real API before publishing (phase 20).
 
 ## Why the rewrite
 
@@ -74,8 +73,8 @@ The free dictionary built here was replaced by the local model in phase 16.
 
 ### 7 — settings ✅
 
-- [x] Popup: provider, key, optional translation language, shortcut link
-- [x] Provider host permission asked only when a key is saved
+- [x] Popup: which model answers, its key, optional translation language, shortcut link
+- [x] A model's host permission asked only when a key is saved
 - [x] Keys in `storage.local`, one per provider; preferences in `storage.sync`
 
 ### 8 — README
@@ -91,7 +90,7 @@ The free dictionary built here was replaced by the local model in phase 16.
 - [x] For unsure answers, the reader picks the right meaning in the log, not mid-film
 - [ ] Review built from the reader's own lines
 - [ ] Export to CSV or Anki
-- [ ] Decide whether "Ask your model" answers go into the log too; only the local answer does now
+- [x] Every answer goes into the log, whichever model gave it
 - [ ] Cap the answer cache in `storage.local`, which is never cleared (about 1 KB a lookup)
 
 ## Release
@@ -100,7 +99,8 @@ The free dictionary built here was replaced by the local model in phase 16.
 - [x] Version 2.0.0, a changelog, and `npm run package` for the store zip
 - [x] Privacy policy, store listing, permission reasons and store screenshots
 - [ ] Check by hand before publishing: live captions on YouTube, Netflix and Prime, the
-      keyboard shortcut, and a real Claude and OpenAI call
+      keyboard shortcut, and a real Jev, Claude and OpenAI call
+- [ ] Store screenshots are from before the card said how sure it is; retake them
 - [ ] Publish on the Chrome Web Store
 
 ## Testing
@@ -121,7 +121,7 @@ hand before a release.
 
 Goal: answer with no key and no network. A dictionary already holds the meanings; the
 model picks the sense the line uses. That is classification, which a small model can do
-in the browser. Claude and OpenAI stay as an optional second step.
+in the browser. It is also the default; the reader can choose a keyed model instead.
 
 The research lives in `research/`, in Python. Only phase 16 touches the extension.
 
@@ -226,48 +226,46 @@ card leads exactly where it did.
 - [x] Log keeps the confidence
 - [x] The card shows it when it leads with one sense ("92% sure")
 
-### 19 — trying Jev
+### 19 — trying Jev ✅
 
-Needs a TypeSafe key. Access is invite-only; on the waitlist since 2026-09-17.
+Jev 79.2% on the working lines and 82.4% on the sealed ones, against 65.1% and 64.7% for
+ours. Faster and cheaper than Claude and OpenAI too; 200 lines cost $0.0055 in total.
 
-- [ ] `research/scripts/jev.py`: each line's WordNet senses as one `choice` question
-- [ ] Score on the working set; the sealed lines only as a footnote, since they were
+- [x] `research/scripts/jev.py`: each line's WordNet senses as one `choice` question,
+      named and shuffled so neither name nor position carries the answer, with `none`
+      offered as the other models had it
+- [x] Score on the working set; the sealed lines only as a footnote, since they were
       opened in phase 17
-- [ ] Accuracy, reliability of its confidence, speed and cost next to the phase 17 table
-- [ ] Where it wins and loses against ours: slang, idioms, common words
-- [ ] Decide on the numbers whether phase 20 is worth doing
+- [x] Accuracy, reliability of its confidence, speed and cost next to the phase 17 table
+- [x] Its confidence holds up: above 0.9 it was right on 96% of the working lines
+- [x] The numbers say phase 20 is worth doing
 
-### 20 — Jev as a provider
+### 20 — Jev as a model you can choose ✅
 
-Only if phase 19 says so. Like Claude and OpenAI: optional, the reader's own key.
+One model answers a lookup, and the popup is where the reader picks it: the built-in one,
+Jev, Claude or OpenAI. A model that writes explanations still writes them, so the card's
+separate "Ask your model" step is gone.
 
-- [ ] Jev picks the sense among the local model's candidates; it writes no explanation,
-      so it is a second opinion on the sense, not a replacement for the explain step
-- [ ] Host permission requested only when a key is entered; key in `storage.local`
-- [ ] Settings, PRIVACY.md and the store's permission reasons updated
-- [ ] Tests with a mocked API
+- [x] Jev picks among the senses the dictionary gives it; the card reads like the
+      built-in model's, and leads with one sense above 0.9 confidence
+- [x] The dictionary loads without the model, so choosing Jev never loads the 23 MB
+      encoder or its 350 MB of memory
+- [x] Host permission requested only when a key is entered; key in `storage.local`
+- [x] The built-in model answers when the chosen one cannot, and the card says why
+- [x] Settings, README, PRIVACY.md and the store's permission reasons updated
+- [x] Tests with a mocked API, including no sense fitting and a rejected key
+- [ ] Check by hand against the real API before publishing
 
-### 21 — ask a provider only when unsure
+### 21 — ask a provider only when unsure — dropped
 
-For readers with a key: the local model answers when it is sure, and the provider picks
-among its candidates when it is not. Replayed from the phase 17 answers, this beat both
-on their own:
+The idea was to let the local model answer when it is sure and ask a provider when it is
+not. Replayed from the phase 17 answers it did beat Claude and OpenAI on their own, by 1
+to 7 lines. Jev then beat all of it: asking Jev on every line scored 79.2% on the working
+lines, where asking it only on the unsure ones scored 77.9%. On the lines ours calls
+itself sure, Jev was still better, 88.1% against 85.1%.
 
-| lines            | ours alone | provider alone | ours when sure, else provider |
-| ---------------- | ---------: | -------------: | ----------------------------: |
-| working, Haiku   |      65.1% |          68.5% |                         69.1% |
-| working, 4o mini |      65.1% |          65.1% |                         69.8% |
-| sealed, Haiku    |      64.7% |          80.4% |                         82.4% |
-| sealed, 4o mini  |      64.7% |          74.5% |                         76.5% |
-
-The provider was asked on 82 of 149 and 37 of 51 lines. The gains are 1 to 7 lines, and
-the sealed lines were already opened, so this shows a direction, not a result.
-
-- [ ] A replay script in `research/`, so the table can be rebuilt
-- [ ] Choose the confidence below which to ask, on the working set
-- [ ] Provider prompt: choose among the local candidates, as phase 17 did
-- [ ] Card: the local answer first, replaced when the provider answers
-- [ ] Jev as the provider here once phase 19 allows
+So the extension asks one model, and the reader picks which. Nothing was built for this
+phase; the measurement is in `research/scripts/jev.py`.
 
 ## Data sources
 

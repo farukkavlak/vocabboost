@@ -9,8 +9,9 @@ import {
   type MeaningProvider,
   type Sense,
 } from "../../meaning";
-import type { ChooseResult, ChooseSense } from "../../messages";
+import type { AskOffscreen, ChooseResult } from "../../messages";
 import type { Choice, Ranked } from "./choose";
+import { POS_NAMES } from "./vocab";
 
 const PAGE = "offscreen.html";
 
@@ -19,13 +20,6 @@ const MODEL_VERSION = 2;
 
 /** Senses shown when the model is unsure; the rest are folded away. */
 const UNSURE_SHOWN = 3;
-
-const POS_NAMES = {
-  n: "noun",
-  v: "verb",
-  a: "adjective",
-  r: "adverb",
-} as const;
 
 let opening: Promise<void> | undefined;
 
@@ -44,6 +38,12 @@ async function openPage(): Promise<void> {
       opening = undefined;
     });
   await opening;
+}
+
+/** Opens the page if it is closed and asks it one question. */
+export async function askOffscreen<T>(question: AskOffscreen): Promise<T> {
+  await openPage();
+  return chrome.runtime.sendMessage<AskOffscreen, T>(question);
 }
 
 export async function closePage(): Promise<void> {
@@ -82,24 +82,23 @@ function toMeaning(choice: Choice): Meaning {
   };
 }
 
-async function ask(question: ChooseSense): Promise<ChooseResult> {
-  await openPage();
-  const result: ChooseResult = await chrome.runtime.sendMessage(question);
-  return result;
-}
-
 export const local: MeaningProvider = {
-  id: `local ${MODEL_VERSION}`,
+  id: "local",
+  version: MODEL_VERSION,
+  label: "Built-in model",
+  explains: false,
   usesSentence: true,
 
   async lookup(target) {
-    const question: ChooseSense = {
+    const question: AskOffscreen = {
       type: "CHOOSE_SENSE",
       to: "offscreen",
       ...target,
     };
     // The page may have closed for idleness between opening it and asking.
-    const result = await ask(question).catch(() => ask(question));
+    const result = await askOffscreen<ChooseResult>(question).catch(() =>
+      askOffscreen<ChooseResult>(question),
+    );
     if (!result.ok) {
       console.error("The sense model failed:", result.error);
       throw new LookupError("The meaning could not be worked out. Try again.");

@@ -14,15 +14,16 @@ VocabBoost does not collect any data, and it has no server.
 
 ## What is sent out
 
-Only if you add an API key and click **Ask your model**: the word and its subtitle are
-sent to the company you chose (Anthropic or OpenAI). That company's privacy policy
-applies. Nothing else is sent, and nothing is ever sent to us.
+Only if you choose a model other than the built-in one and add a key for it: the word
+and its subtitle are sent to the company you chose (TypeSafe, Anthropic or OpenAI). That
+company's privacy policy applies. Nothing else is sent, and nothing is ever sent to us.
 
 ## Permissions
 
 - Access to YouTube, Netflix and Prime Video: to read the subtitles.
 - Storage and unlimited storage: to save the word log, settings and past answers.
 - Offscreen document: to run the model in the background.
-- Access to Anthropic or OpenAI: asked only when you save a key for that company.
+- Access to TypeSafe, Anthropic or OpenAI: asked only when you save a key for that
+  company.
 
 Questions: open an issue at https://github.com/farukkavlak/vocabboost/issues

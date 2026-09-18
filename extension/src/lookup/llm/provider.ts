@@ -1,5 +1,5 @@
 import { LookupError } from "../../meaning";
-import type { Cacheable, Meaning } from "../../meaning";
+import type { Ask, Meaning, MeaningProvider, Target } from "../../meaning";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 
@@ -92,30 +92,18 @@ export interface LlmConfig {
   extract(payload: unknown): string | undefined;
 }
 
-export interface Ask {
-  key: string;
-  /** Set when the reader asked for a translation. */
-  language?: string | undefined;
-}
-
-export interface LlmProvider extends Cacheable {
-  readonly label: string;
-  readonly keyUrl: string;
-  /** The host permission this provider needs. */
-  readonly origin: string;
-  lookup(word: string, sentence: string, ask: Ask): Promise<Meaning>;
-}
-
 /** Every provider is the same request: post JSON with a key, read one JSON answer back. */
-export function llmProvider(config: LlmConfig): LlmProvider {
+export function llmProvider(config: LlmConfig): MeaningProvider {
   return {
     id: config.id,
+    version: 1,
     label: config.label,
+    explains: true,
     keyUrl: config.keyUrl,
     origin: `${new URL(config.endpoint).origin}/*`,
     usesSentence: true,
 
-    async lookup(word: string, sentence: string, { key, language }: Ask) {
+    async lookup({ word, sentence }: Target, { key, language }: Ask) {
       const response = await fetch(config.endpoint, {
         method: "POST",
         headers: { "content-type": "application/json", ...config.headers(key) },

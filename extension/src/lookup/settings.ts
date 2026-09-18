@@ -1,5 +1,6 @@
-import { llmProviders, providerFor } from "./llm";
-import type { LlmProvider } from "./llm/provider";
+import type { Ask, MeaningProvider } from "../meaning";
+import { local } from "./local/client";
+import { providerFor } from "./providers";
 
 /**
  * Keys are kept in `storage.local`: `sync` would carry them to Google's servers. The
@@ -13,10 +14,10 @@ export interface Preferences {
   language: string;
 }
 
-export interface Configured {
-  provider: LlmProvider;
-  key: string;
-  language: string;
+/** The model a lookup goes to, and what it needs to answer. */
+export interface Chosen {
+  provider: MeaningProvider;
+  ask: Ask;
 }
 
 export async function preferences(): Promise<Preferences> {
@@ -26,10 +27,7 @@ export async function preferences(): Promise<Preferences> {
   ]);
 
   return {
-    provider:
-      typeof stored.provider === "string"
-        ? stored.provider
-        : (llmProviders[0]?.id ?? ""),
+    provider: typeof stored.provider === "string" ? stored.provider : local.id,
     language: typeof stored.language === "string" ? stored.language : "",
   };
 }
@@ -42,20 +40,24 @@ export async function keyFor(id: string): Promise<string> {
   return typeof key === "string" ? key : "";
 }
 
-/** What the worker needs to ask the model, or null when no key has been entered. */
-export async function configured(): Promise<Configured | null> {
-  const { provider: id, language } = await preferences();
-  const provider = providerFor(id);
-  if (!provider) {
-    return null;
-  }
+/** Whether the reader has to enter a key before this model answers. */
+export const needsKey = (provider: MeaningProvider): boolean =>
+  provider.keyUrl !== undefined;
 
-  const key = await keyFor(provider.id);
-  return key ? { provider, key, language } : null;
+/** The chosen model, or the built-in one when the choice is unknown or has no key. */
+export async function chosen(): Promise<Chosen> {
+  const { provider: id, language } = await preferences();
+  const provider = providerFor(id) ?? local;
+  const key = needsKey(provider) ? await keyFor(provider.id) : "";
+  return needsKey(provider) && !key
+    ? { provider: local, ask: { key: "" } }
+    : { provider, ask: { key, language: language || undefined } };
 }
 
 export async function save(id: string, key: string): Promise<void> {
-  await chrome.storage.local.set({ [keyName(id)]: key });
+  if (key) {
+    await chrome.storage.local.set({ [keyName(id)]: key });
+  }
   await chrome.storage.sync.set({ provider: id });
 }
 

@@ -4,10 +4,21 @@
  */
 
 import { env, pipeline } from "@huggingface/transformers";
-import { choose, type Resources } from "../lookup/local/choose";
+import { choose, entryFor, type Embed } from "../lookup/local/choose";
 import type { TaggerData } from "../lookup/local/tagger";
 import type { VocabData } from "../lookup/local/vocab";
-import type { ChooseResult, ChooseSense, OffscreenIdle } from "../messages";
+import type {
+  AskOffscreen,
+  CandidatesResult,
+  ChooseResult,
+  OffscreenIdle,
+} from "../messages";
+
+/** The dictionary and the tagger, which every question needs. */
+interface Dictionary {
+  vocab: VocabData;
+  tagger: TaggerData;
+}
 
 const IDLE_MS = 2 * 60 * 1000;
 
@@ -26,23 +37,28 @@ async function readJson<T>(file: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function load(): Promise<Resources> {
-  const [vocab, tagger, extract] = await Promise.all([
+async function loadDictionary(): Promise<Dictionary> {
+  const [vocab, tagger] = await Promise.all([
     readJson<VocabData>("vocab.json"),
     readJson<TaggerData>("tagger.json"),
-    pipeline("feature-extraction", "vocabboost", {
-      dtype: "q8",
-      device: "wasm",
-    }),
   ]);
-  const embed = async (texts: string[]) =>
+  return { vocab, tagger };
+}
+
+/** Kept apart from the dictionary: a provider that picks for itself never loads it. */
+async function loadModel(): Promise<Embed> {
+  const extract = await pipeline("feature-extraction", "vocabboost", {
+    dtype: "q8",
+    device: "wasm",
+  });
+  return async (texts: string[]) =>
     (
       await extract(texts, { pooling: "mean", normalize: true })
     ).tolist() as number[][];
-  return { vocab, tagger, embed };
 }
 
-let resources: Promise<Resources> | undefined;
+let dictionary: Promise<Dictionary> | undefined;
+let model: Promise<Embed> | undefined;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
 function restartIdleTimer(): void {
@@ -53,20 +69,36 @@ function restartIdleTimer(): void {
   }, IDLE_MS);
 }
 
+async function ranked(message: AskOffscreen): Promise<ChooseResult> {
+  const [loaded, embed] = await Promise.all([
+    (dictionary ??= loadDictionary()),
+    (model ??= loadModel()),
+  ]);
+  return { ok: true, choice: await choose({ ...loaded, embed }, message) };
+}
+
+async function candidates(message: AskOffscreen): Promise<CandidatesResult> {
+  const { vocab, tagger } = await (dictionary ??= loadDictionary());
+  return { ok: true, entry: entryFor(vocab, tagger, message) };
+}
+
 chrome.runtime.onMessage.addListener(
-  (message: ChooseSense, _sender, respond: (result: ChooseResult) => void) => {
+  (
+    message: AskOffscreen,
+    _sender,
+    respond: (result: ChooseResult | CandidatesResult) => void,
+  ) => {
     // Every extension page hears every message; answer only our own.
-    if (message.to !== "offscreen" || message.type !== "CHOOSE_SENSE") {
+    if (message.to !== "offscreen") {
       return false;
     }
 
     clearTimeout(idleTimer);
-    resources ??= load();
-    void resources
-      .then((loaded) => choose(loaded, message))
-      .then(
-        (choice) => respond({ ok: true, choice }),
-        (error: unknown) => respond({ ok: false, error: String(error) }),
+    const answer =
+      message.type === "CHOOSE_SENSE" ? ranked(message) : candidates(message);
+    void answer
+      .then(respond, (error: unknown) =>
+        respond({ ok: false, error: String(error) }),
       )
       .finally(restartIdleTimer);
 

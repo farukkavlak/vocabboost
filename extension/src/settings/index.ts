@@ -1,11 +1,21 @@
-import { llmProviders, providerFor } from "../lookup/llm";
-import type { LlmProvider } from "../lookup/llm/provider";
-import { keyFor, preferences, save, saveLanguage } from "../lookup/settings";
+import {
+  keyFor,
+  needsKey,
+  preferences,
+  save,
+  saveLanguage,
+} from "../lookup/settings";
+import type { MeaningProvider } from "../meaning";
+import { local } from "../lookup/local/client";
+import { providerFor, providers } from "../lookup/providers";
 
-const providers = document.getElementById("providers") as HTMLElement;
+const list = document.getElementById("providers") as HTMLElement;
+const does = document.getElementById("does") as HTMLElement;
+const credentials = document.getElementById("credentials") as HTMLElement;
 const key = document.getElementById("key") as HTMLInputElement;
 const getKey = document.getElementById("get-key") as HTMLAnchorElement;
 const language = document.getElementById("language") as HTMLSelectElement;
+const translate = document.getElementById("translate") as HTMLElement;
 const said = document.getElementById("said") as HTMLElement;
 const shortcut = document.getElementById("shortcut") as HTMLElement;
 
@@ -14,21 +24,44 @@ function tell(message: string, wrong = false): void {
   said.classList.toggle("wrong", wrong);
 }
 
-function chosen(): LlmProvider {
-  const picked = providers.querySelector<HTMLInputElement>(":checked")?.value;
-  return providerFor(picked ?? "") ?? (llmProviders[0] as LlmProvider);
+function chosen(): MeaningProvider {
+  const picked = list.querySelector<HTMLInputElement>(":checked")?.value;
+  return providerFor(picked ?? "") ?? local;
+}
+
+/** What the reader gets from this model, in one line. */
+function describe(provider: MeaningProvider): string {
+  if (!needsKey(provider)) {
+    return "Picks the meaning on your machine. No key, no network.";
+  }
+  return provider.explains
+    ? "Explains the word in its line, with a level and a translation. Your key, their servers."
+    : "Picks the meaning, more often right than the built-in model. Your key, their servers.";
+}
+
+/** Only a model that writes prose can translate, and only a keyed one needs a key. */
+function fields(provider: MeaningProvider): void {
+  does.textContent = describe(provider);
+  credentials.hidden = !needsKey(provider);
+  translate.hidden = !provider.explains;
 }
 
 /** Each provider keeps its own key, so switching back does not ask for it again. */
-async function show(provider: LlmProvider): Promise<void> {
-  getKey.href = provider.keyUrl;
+async function show(provider: MeaningProvider): Promise<void> {
+  fields(provider);
+  tell("");
+  if (!needsKey(provider)) {
+    // Nothing to save: the choice itself is the setting.
+    await save(provider.id, "");
+    return;
+  }
+  getKey.href = provider.keyUrl ?? "#";
   key.placeholder = `${provider.label} key`;
   key.value = await keyFor(provider.id);
-  tell("");
 }
 
 function draw(current: string): void {
-  for (const provider of llmProviders) {
+  for (const provider of providers) {
     const label = document.createElement("label");
     const radio = document.createElement("input");
     radio.type = "radio";
@@ -38,7 +71,7 @@ function draw(current: string): void {
     radio.addEventListener("change", () => void show(provider));
 
     label.append(radio, document.createTextNode(provider.label));
-    providers.append(label);
+    list.append(label);
   }
 }
 
@@ -52,16 +85,15 @@ async function onSave(): Promise<void> {
 
   // The host is optional in the manifest, so an install with no key is never asked for
   // it. This click is the user gesture the request needs.
-  const granted = await chrome.permissions.request({
-    origins: [provider.origin],
-  });
+  const origin = provider.origin ?? "";
+  const granted = await chrome.permissions.request({ origins: [origin] });
   if (!granted) {
-    tell(`Without access to ${provider.origin} the key cannot be used.`, true);
+    tell(`Without access to ${origin} the key cannot be used.`, true);
     return;
   }
 
   await save(provider.id, value);
-  tell(`Saved. "Ask your model" now asks ${provider.label}.`);
+  tell(`Saved. Words are now looked up with ${provider.label}.`);
 }
 
 async function showShortcut(): Promise<void> {
@@ -75,7 +107,13 @@ async function start(): Promise<void> {
   const saved = await preferences();
   draw(saved.provider);
   language.value = saved.language;
-  await show(chosen());
+  const provider = chosen();
+  fields(provider);
+  if (needsKey(provider)) {
+    getKey.href = provider.keyUrl ?? "#";
+    key.placeholder = `${provider.label} key`;
+    key.value = await keyFor(provider.id);
+  }
   await showShortcut();
 }
 
