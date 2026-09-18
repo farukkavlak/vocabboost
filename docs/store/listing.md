@@ -67,4 +67,4 @@ word and its subtitle are sent to the company the user chose.
 ## Assets
 
 - Icon: `icon-128.png`
-- Screenshots, 1280 × 800: `screenshot-*.png`
+- Screenshots, 1280 × 800: `screenshot-*.png`, rebuilt with `npm run store`

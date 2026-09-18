@@ -1,7 +1,7 @@
 // Writes PNGs of the panel to ./shots for visual review. Not part of `npm test`: it
 // asserts nothing, and every run overwrites the images. Run it with `npm run shots`.
 import type { BrowserContext } from "@playwright/test";
-import { test, lookup, watchPage } from "./fixture";
+import { test, lookup, settled, watchPage } from "./fixture";
 
 const OUT = process.env.SHOT_DIR ?? "shots";
 
@@ -68,12 +68,15 @@ test("@shots the settings page", async ({ context, worker }) => {
   const page = await context.newPage();
   await page.setViewportSize({ width: 328, height: 400 });
   await page.goto(`chrome-extension://${id}/settings.html`);
+  // The key field belongs to the chosen model, and the built-in one it starts on needs
+  // none, so a model that does has to be picked before there is a field to fill.
+  await page.getByRole("radio", { name: "Claude" }).check();
   await page.locator("#key").fill("sk-ant-api03-x7Kd92mQpLvR4tYn");
   await page.screenshot({ path: `${OUT}/11-settings.png` });
   await page.close();
 });
 
-test("@shots the model's answer, asked for from the card", async ({
+test("@shots the answer of a model that writes one", async ({
   context,
   worker,
 }) => {
@@ -97,21 +100,23 @@ test("@shots the model's answer, asked for from the card", async ({
       }),
     }),
   );
-  await worker.evaluate(() =>
-    chrome.storage.local.set({
-      "key anthropic": "sk-test",
-      provider: "anthropic",
-    }),
-  );
+  // The reader picked Claude in the popup, so it answers the lookup itself: since
+  // phase 20 there is no second step on the card to ask it.
+  await worker.evaluate(async () => {
+    // The key is per provider and stays on the machine; which provider answers is a
+    // preference, so it rides in sync. Putting it in local leaves the built-in model
+    // answering and the shot showing the wrong card.
+    await chrome.storage.local.set({ "key anthropic": "sk-test" });
+    await chrome.storage.sync.set({ provider: "anthropic" });
+  });
 
   await lookup(worker);
   const word = page.getByRole("button", { name: "alone", exact: true });
   await word.click();
-  await page.waitForTimeout(400);
-  await page.screenshot({ path: `${OUT}/9-ask.png` });
-
-  await page.locator("#vocab-meaning .ask").click();
-  await page.waitForTimeout(600);
+  // The card opens saying "Looking up…" and fills in when the answer lands; waiting a
+  // fixed moment instead photographs whichever of the two the machine was showing.
+  await page.waitForSelector("#vocab-meaning:not(.pending)");
+  await settled(page);
 
   const box = await page.locator("#vocab-panel").boundingBox();
   const m = await page.locator("#vocab-meaning").boundingBox();

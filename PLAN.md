@@ -102,7 +102,8 @@ The free dictionary built here was replaced by the local model in phase 16.
 - [x] Privacy policy, store listing, permission reasons and store screenshots
 - [ ] Check by hand before publishing: live captions on YouTube, Netflix and Prime, the
       keyboard shortcut, and a real Jev, Claude and OpenAI call
-- [ ] Store screenshots are from before the card said how sure it is; retake them
+- [x] Store screenshots rebuilt with the phase 18 card (`npm run store`), so the
+      listing never shows an older extension than the one uploaded
 - [ ] Publish on the Chrome Web Store
 
 ## Testing
@@ -112,6 +113,7 @@ Playwright runs a real Chromium with the built extension.
 - `npm test`: the full suite, with pages served from fixtures under the real URLs
 - `npm run test:live`: checks the DOM contract on youtube.com
 - `npm run shots`: screenshots for visual review
+- `npm run store`: the three store screenshots, into `docs/store`
 - `npm run test:memory`: checks the model's memory is given back (slow)
 - `npm run recording`: rebuilds `docs/flow.gif` (needs ffmpeg)
 
