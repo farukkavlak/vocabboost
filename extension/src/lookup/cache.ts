@@ -3,7 +3,12 @@ import type { Cacheable, Meaning, Target } from "../meaning";
 const PREFIX = "meaning";
 
 function key(provider: Cacheable, target: Target): string {
-  const parts = [PREFIX, provider.id, target.word.toLowerCase()];
+  const parts = [
+    PREFIX,
+    provider.id,
+    String(provider.version),
+    target.word.toLowerCase(),
+  ];
   if (provider.usesSentence) {
     parts.push(String(target.occurrence), target.sentence);
   }

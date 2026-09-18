@@ -6,6 +6,14 @@
 
 export type Pos = "n" | "v" | "a" | "r";
 
+/** As the card names them. */
+export const POS_NAMES: Record<Pos, string> = {
+  n: "noun",
+  v: "verb",
+  a: "adjective",
+  r: "adverb",
+};
+
 export interface Synset {
   key: string;
   gloss: string;

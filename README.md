@@ -40,18 +40,31 @@ The suggested shortcut is `Ctrl+Shift+H` (`⌘⇧H` on macOS). Chrome drops it w
 warning if something else already uses it, so check `chrome://extensions/shortcuts`. The
 popup links there and shows the one you actually have.
 
-## Keys
+## Models
 
 The meanings come from WordNet, shipped with the extension. A word WordNet does not
 have gets a card that says so. There is no pronunciation for now.
 
-The provider's model is optional and uses your own key, Claude or OpenAI.
+One model answers, and the popup says which. The first needs nothing; the rest need a
+key of your own.
+
+| Model          | What you get                                     | Right, on 51 held-out lines |
+| -------------- | ------------------------------------------------ | --------------------------: |
+| Built-in       | the meaning, offline and free                    |                       64.7% |
+| Jev            | the meaning, picked by TypeSafe's model          |                       82.4% |
+| Claude, OpenAI | a written explanation, a level and a translation |               80.4% / 74.5% |
+
+Jev answers questions with a fixed set of options rather than prose, which is what
+picking a sense is, so it gets the word's WordNet senses as the options. It writes no
+explanation. Claude and OpenAI do, and only they can translate.
 
 - The key stays on your machine, in `storage.local`. Not in `sync`, which would copy it
   to Google. There is no server of ours for it to reach.
 - It is used in the background worker, so it never reaches the script running on the
   video page.
-- Access to a provider is requested only when you enter a key for it.
+- Access to a company is requested only when you enter a key for it.
+- If the model you chose cannot answer — no network, a key it rejects — the built-in one
+  answers instead and the card says why.
 
 Nothing else leaves your machine; see [PRIVACY.md](PRIVACY.md).
 
@@ -94,6 +107,8 @@ sense of a word a subtitle line is using. On 51 held-out lines, opened once at t
 | **our model, offline**    |       64.7% |     134 ms |              $0 |
 | GPT-4o mini               |       74.5% |      1.3 s |        $0.00003 |
 | Claude Haiku 4.5          |       80.4% |      1.1 s |        $0.00022 |
+
+| Jev | 82.4% | 0.8 s | $0.00003 |
 
 Ours is behind the hosted models, which is why a key still unlocks them. When it is sure
 enough to show one sense it was right on all 14 such lines. `research/README.md` has the

@@ -7,6 +7,16 @@
 - When the model is sure of a meaning, the card says how sure ("92% sure"). The number is
   calibrated: of the answers given at about 90%, about 90% are right.
 - The word log keeps that number with each word.
+- TypeSafe's Jev as a model you can choose, with your own key. It picks the meaning from
+  the dictionary's senses and was right on 82% of the held-out lines, against 65% for the
+  built-in model.
+
+### Changed
+
+- The popup picks one model — built-in, Jev, Claude or OpenAI — and that model answers
+  every lookup. The separate "Ask your model" button on the card is gone; a model that
+  writes explanations still writes them.
+- When the model you chose cannot answer, the built-in one answers and the card says why.
 
 ## 2.0.0 (2026-09-17)
 

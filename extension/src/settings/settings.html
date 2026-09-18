@@ -45,7 +45,8 @@
 
       .providers {
         display: flex;
-        gap: 14px;
+        flex-wrap: wrap;
+        gap: 6px 14px;
       }
 
       .providers label {
@@ -149,26 +150,32 @@
     <h1>VocabBoost</h1>
 
     <fieldset>
-      <legend>Service</legend>
+      <legend>Model</legend>
       <div class="providers" id="providers"></div>
     </fieldset>
 
-    <label class="field" for="key">Key</label>
-    <input id="key" type="password" autocomplete="off" spellcheck="false" />
-    <div class="row">
-      <a id="get-key" href="#" target="_blank" rel="noreferrer">Get a key</a>
-      <button id="save" type="button">Save</button>
+    <p class="said" id="does"></p>
+
+    <div id="credentials">
+      <label class="field" for="key">Key</label>
+      <input id="key" type="password" autocomplete="off" spellcheck="false" />
+      <div class="row">
+        <a id="get-key" href="#" target="_blank" rel="noreferrer">Get a key</a>
+        <button id="save" type="button">Save</button>
+      </div>
     </div>
     <p class="said" id="said"></p>
 
-    <label class="field" for="language">Also translate into</label>
-    <select id="language">
-      <option value="">Nothing — stay in English</option>
-      <option value="Turkish">Turkish</option>
-      <option value="German">German</option>
-      <option value="Spanish">Spanish</option>
-      <option value="French">French</option>
-    </select>
+    <div id="translate">
+      <label class="field" for="language">Also translate into</label>
+      <select id="language">
+        <option value="">Nothing — stay in English</option>
+        <option value="Turkish">Turkish</option>
+        <option value="German">German</option>
+        <option value="Spanish">Spanish</option>
+        <option value="French">French</option>
+      </select>
+    </div>
 
     <hr />
 

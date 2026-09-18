@@ -27,16 +27,34 @@ export interface Meaning {
   cefr?: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
   /** Provider models only, when the reader chose a language. */
   translation?: string;
+  /** Why the answer is not from the model the reader chose. */
+  note?: string;
 }
 
 export interface Cacheable {
   readonly id: string;
+  /** Bumped when the same provider starts answering differently. */
+  readonly version: number;
   /** Whether answers depend on the line, and so are cached per line. */
   readonly usesSentence: boolean;
 }
 
+/** What a keyed provider needs beyond the word: the reader's key and preferences. */
+export interface Ask {
+  key: string;
+  /** Set when the reader asked for a translation. */
+  language?: string | undefined;
+}
+
 export interface MeaningProvider extends Cacheable {
-  lookup(target: Target): Promise<Meaning>;
+  /** The name shown to the reader. */
+  readonly label: string;
+  /** What the card gets beyond the sense, for the settings page to say. */
+  readonly explains: boolean;
+  /** Unset for the built-in model, which needs neither a key nor a host. */
+  readonly keyUrl?: string;
+  readonly origin?: string;
+  lookup(target: Target, ask: Ask): Promise<Meaning>;
 }
 
 /** An error whose message is meant for the reader. */

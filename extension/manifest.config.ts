@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { llmProviders } from "./src/lookup/llm";
+import { optionalOrigins } from "./src/lookup/providers";
 import { sources } from "./src/content/sources";
 
 // The single place platforms are declared: adding an adapter updates the manifest too.
@@ -24,7 +24,7 @@ export default {
   },
   host_permissions: matches,
   // Asked for beside the key field: an install with no key never calls these.
-  optional_host_permissions: llmProviders.map((provider) => provider.origin),
+  optional_host_permissions: optionalOrigins,
   action: { default_popup: "settings.html" },
   background: {
     service_worker: "background.js",

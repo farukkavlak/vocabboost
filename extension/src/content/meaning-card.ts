@@ -1,5 +1,5 @@
 import { clamp, EDGE } from "./layout";
-import { explainWord, logLookup, lookupWord, modelReady } from "./lookup";
+import { logLookup, lookupWord } from "./lookup";
 import { LookupError } from "../meaning";
 import type { Meaning, Sense, Target } from "../meaning";
 import { button, element } from "../dom";
@@ -115,28 +115,11 @@ function foldedSenses(others: Sense[], onToggle: () => void): HTMLElement[] {
   return [toggle, list];
 }
 
-/** Offered only when the reader has added a provider key. */
-function askButton(onPress: () => void): HTMLElement {
-  const ask = button(
-    "Ask your model",
-    () => {
-      // A provider takes seconds to answer; say so rather than look idle.
-      ask.disabled = true;
-      ask.textContent = "Asking…";
-      onPress();
-    },
-    "ask",
-  );
-  return ask;
-}
-
 function render(
   card: HTMLElement,
   word: string,
   meaning: Meaning,
   relayout: () => void,
-  ask?: () => void,
-  note?: string,
 ): void {
   card.className = "meaning";
   card.textContent = "";
@@ -155,24 +138,16 @@ function render(
   if (meaning.translation) {
     body.append(element("p", "translation", meaning.translation));
   }
-  if (note) {
-    body.append(element("p", "note", note));
+  if (meaning.note) {
+    body.append(element("p", "note", meaning.note));
   }
 
   const others = meaning.others ?? [];
-  if (others.length || ask) {
+  if (others.length) {
+    const [toggle, list] = foldedSenses(others, relayout);
     const actions = element("div", "actions");
-    const [toggle, list] = others.length ? foldedSenses(others, relayout) : [];
-    if (toggle) {
-      actions.append(toggle);
-    }
-    if (ask) {
-      actions.append(askButton(ask));
-    }
-    body.append(actions);
-    if (list) {
-      body.append(list);
-    }
+    actions.append(toggle!);
+    body.append(actions, list!);
   }
 
   card.append(element("div", "arrow"), body);
@@ -210,13 +185,13 @@ export function openCard(
   place(card, wordButton, panel);
   card.classList.add("appear");
 
-  const fill = (meaning: Meaning, ask?: () => void, note?: string): void => {
+  const fill = (meaning: Meaning): void => {
     // Closed, or another word opened, while the lookup was out.
     if (!card.isConnected) {
       return;
     }
     const relayout = (): void => place(card, wordButton, panel);
-    render(card, word, meaning, relayout, ask, note);
+    render(card, word, meaning, relayout);
     relayout();
     card.classList.add("appear");
   };
@@ -226,29 +201,10 @@ export function openCard(
       ? error.message
       : `Could not look up "${word}".`;
 
-  // If the provider fails, the local answer stays with the reason under it.
-  const explain = (local: Meaning | null) => (): void => {
-    void explainWord(target)
-      .then((meaning) => fill(meaning))
-      .catch((error: unknown) =>
-        local
-          ? fill(local, explain(local), said(error))
-          : fill({ senses: [{ definition: said(error) }] }, explain(null)),
-      );
-  };
-
-  // Asked in parallel with the lookup, which is slower when the model has to load.
-  const ready = modelReady();
-
   void lookupWord(target)
-    .then(async (meaning) => {
+    .then((meaning) => {
       logLookup(newEntry(target, meaning, origin.moment, origin.previous));
-      fill(meaning, (await ready) ? explain(meaning) : undefined);
+      fill(meaning);
     })
-    .catch(async (error: unknown) =>
-      fill(
-        { senses: [{ definition: said(error) }] },
-        (await ready) ? explain(null) : undefined,
-      ),
-    );
+    .catch((error: unknown) => fill({ senses: [{ definition: said(error) }] }));
 }

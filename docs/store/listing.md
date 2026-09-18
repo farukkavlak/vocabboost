@@ -22,8 +22,8 @@ sentence, with an example. Press play to continue watching.
 - It works offline. You don't need an account, an API key or an internet connection.
 - It keeps a word log. Every word you look up is saved with its subtitle and video. On
   YouTube, you can jump back to the moment.
-- AI answers are optional. Add your own Claude or OpenAI key to get a written
-  explanation or a translation.
+- Other models are optional. Add your own key and pick Jev, which finds the right
+  meaning more often, or Claude or OpenAI for a written explanation and a translation.
 - It is private. Your data stays on your computer.
 
 Works on YouTube, Netflix and Prime Video.
@@ -54,8 +54,8 @@ Look up the meaning of words in video subtitles.
 - **unlimitedStorage**: the word log grows over time and should not stop at 10 MB.
 - **offscreen**: the model runs in an offscreen document. A service worker is stopped
   when idle, so the model would have to load again for every word.
-- **Optional host access to api.anthropic.com, api.openai.com**: asked only when the user
-  saves a key. Used to send the word and its subtitle to that company.
+- **Optional host access to api.typesafe.ai, api.anthropic.com, api.openai.com**: asked
+  only when the user saves a key. Used to send the word and its subtitle to that company.
 - **wasm-unsafe-eval (content security policy)**: the model runs on the ONNX runtime,
   which is WebAssembly and included in the extension. No code is loaded from outside.
 

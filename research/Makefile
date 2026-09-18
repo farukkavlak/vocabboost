@@ -131,6 +131,19 @@ calibrate:
 pos-effect:
 	$(PY) scripts/pos_effect.py
 
+# --- Jev ----------------------------------------------------------------------
+
+SET ?= working
+
+jev-probe:
+	$(PY) scripts/jev.py probe
+
+jev:
+	$(PY) scripts/jev.py run --set $(SET)
+
+jev-report:
+	$(PY) scripts/jev.py report --set $(SET)
+
 # --- files the extension ships -------------------------------------------------
 
 extension: onnx tagger vocab-json
@@ -190,6 +203,7 @@ clean:
 	teacher panel panel-check labels check-teacher label-split \
 	kaggle wait-dataset \
 	baseline evaluate compare failures sense-split confidence calibrate pos-effect \
+	jev-probe jev jev-report \
 	extension onnx check-onnx tagger vocab-json lookup \
 	comparison-lines comparison \
 	lexicons phrase-split phrase-impact sense-distance \

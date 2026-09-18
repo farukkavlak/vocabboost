@@ -1,7 +1,6 @@
 import { logLookup } from "./logbook/store";
-import { explainWord, lookupWord } from "./lookup";
+import { lookupWord } from "./lookup";
 import { closePage } from "./lookup/local/client";
-import { configured } from "./lookup/settings";
 import { LookupError } from "./meaning";
 import type { LookupResult, Message } from "./messages";
 
@@ -50,21 +49,13 @@ chrome.runtime.onMessage.addListener(
       return false;
     }
 
-    if (message.type === "MODEL_READY") {
-      void configured().then((model) => respond(model !== null));
-      return true;
-    }
-
-    if (message.type !== "LOOKUP_WORD" && message.type !== "EXPLAIN_WORD") {
+    if (message.type !== "LOOKUP_WORD") {
       return false;
     }
 
     const { word, sentence, occurrence } = message;
-    const target = { word, sentence, occurrence };
-    const answer =
-      message.type === "LOOKUP_WORD" ? lookupWord(target) : explainWord(target);
 
-    void answer
+    void lookupWord({ word, sentence, occurrence })
       .then((meaning) => respond({ ok: true, meaning }))
       .catch((error: unknown) =>
         respond(

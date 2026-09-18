@@ -25,23 +25,43 @@ async function openSettings(
   return page;
 }
 
-test("lists the providers and remembers which one was chosen", async ({
+test("lists the models and starts on the built-in one", async ({
   context,
   worker,
 }) => {
   const page = await openSettings(context, worker);
 
   await expect(page.locator("#providers label")).toHaveText([
+    "Built-in model",
+    "Jev",
     "Claude",
     "OpenAI",
   ]);
-  await expect(page.locator("#providers input:checked")).toHaveValue(
-    "anthropic",
-  );
+  await expect(page.locator("#providers input:checked")).toHaveValue("local");
+  // The built-in model takes no key, so the field for one would be a dead end.
+  await expect(page.locator("#credentials")).toBeHidden();
+
+  await page.locator('#providers input[value="anthropic"]').check();
+  await expect(page.locator("#credentials")).toBeVisible();
   await expect(page.locator("#get-key")).toHaveAttribute(
     "href",
     /console\.anthropic\.com/,
   );
+});
+
+test("choosing the built-in model needs no saving", async ({
+  context,
+  worker,
+}) => {
+  const page = await openSettings(context, worker);
+  await page.locator('#providers input[value="jev"]').check();
+  await page.locator('#providers input[value="local"]').check();
+
+  await expect
+    .poll(async () =>
+      worker.evaluate(async () => (await chrome.storage.sync.get()).provider),
+    )
+    .toBe("local");
 });
 
 test("saves the key and asks for that provider's host", async ({
@@ -49,6 +69,7 @@ test("saves the key and asks for that provider's host", async ({
   worker,
 }) => {
   const page = await openSettings(context, worker);
+  await page.locator('#providers input[value="anthropic"]').check();
 
   await page.locator("#key").fill("sk-ant-example");
   await page.locator("#save").click();
@@ -71,6 +92,7 @@ test("does not save the key when access is refused", async ({
 }) => {
   // A key we cannot use is worse than no key: it would look configured and fail later.
   const page = await openSettings(context, worker, { granted: false });
+  await page.locator('#providers input[value="anthropic"]').check();
 
   await page.locator("#key").fill("sk-ant-example");
   await page.locator("#save").click();
@@ -87,6 +109,7 @@ test("keeps a key per provider, so switching back does not ask again", async ({
   worker,
 }) => {
   const page = await openSettings(context, worker);
+  await page.locator('#providers input[value="anthropic"]').check();
 
   await page.locator("#key").fill("sk-ant-example");
   await page.locator("#save").click();
@@ -112,6 +135,9 @@ test("remembers the language, and defaults to staying in English", async ({
   worker,
 }) => {
   const page = await openSettings(context, worker);
+  // Only the models that write an explanation can translate one.
+  await expect(page.locator("#translate")).toBeHidden();
+  await page.locator('#providers input[value="anthropic"]').check();
   await expect(page.locator("#language")).toHaveValue("");
 
   await page.locator("#language").selectOption("Turkish");

@@ -136,6 +136,37 @@ on the validation words and reported on the 409 test lines with more than one se
 
 With 409 lines, differences of a point or two in these numbers are noise.
 
+## Jev
+
+TypeSafe's Jev answers a question over a fixed set of options with a probability for each
+and no prose, which is the shape of picking a sense. Each line's WordNet senses go to it
+as one `choice` question, named `sense-1`, `sense-2`... in an order shuffled per line, with
+`none` offered as the panel models had it. It needs a key (`TYPESAFE_KEY` in `.env`).
+
+|                  | working, 149 lines | sealed, 51 lines |
+| ---------------- | -----------------: | ---------------: |
+| first sense      |              45.6% |            56.9% |
+| ours             |              65.1% |            64.7% |
+| GPT-4o mini      |              65.1% |            74.5% |
+| Claude Haiku 4.5 |              68.5% |            80.4% |
+| **Jev**          |          **79.2%** |        **82.4%** |
+
+It is also the fastest and the cheapest of the hosted models: 0.8 s a line, and $0.0055
+for all 200 lines together.
+
+**Its confidence holds up.** Of the working lines it answered above 0.9 confidence, 96.2%
+were right (78 lines); between 0.5 and 0.7, 70.0% (20 lines). That is why the extension
+leads with one sense above 0.9.
+
+**It can say no sense fits**, which ours cannot: on the working lines it said so 7 times
+where 5 lines were labelled that way.
+
+**Asking it only when ours is unsure is worse than asking it always** (77.9% against
+79.2%): on the lines ours calls itself sure, Jev was still ahead, 88.1% to 85.1%.
+
+With 149 and 51 lines these differences carry a few points of noise, and the sealed lines
+had been opened once already, in the phase 17 comparison.
+
 ## In the browser
 
 The model is exported to ONNX and run with `transformers.js` in an offscreen page.
@@ -217,6 +248,9 @@ make failures     # the lines the model gets wrong
 make sense-split  # commonest sense against the rest
 make confidence   # choose and report the confidence threshold
 make calibrate    # fit probabilities and a calibrated confidence
+make jev-probe    # one line to TypeSafe's Jev, printing the raw answer
+make jev          # ask Jev every line of a set, cached
+make jev-report   # Jev's accuracy, confidence, speed and cost
 make pos-effect   # with and without the part of speech
 ```
 
